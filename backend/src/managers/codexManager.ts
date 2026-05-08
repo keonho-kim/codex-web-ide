@@ -6,7 +6,7 @@ import type { SessionManager } from "./sessionManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
 import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
-import { validateCodexMentions } from "./codex/mentions";
+import { buildCodexMentionContext, validateCodexMentions } from "./codex/mentions";
 import { buildCodexPrompt } from "./codex/prompt";
 import { CodexThreadManager } from "./codex/threads";
 
@@ -65,7 +65,8 @@ export class CodexManager {
     await validateCodexMentions(session.cwd, input.mentions);
     const activeThread = await this.threadManager.active(session);
 
-    const prompt = buildCodexPrompt(input.prompt, input.mentions);
+    const mentionContext = await buildCodexMentionContext(session.cwd, input.mentions);
+    const prompt = buildCodexPrompt(input.prompt, input.mentions, mentionContext);
     await this.append(session.id, activeThread.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
     const thread = this.threadManager.sdkThreadFor(session, activeThread);
     const controller = new AbortController();

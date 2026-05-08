@@ -1,6 +1,6 @@
 import type { ComposerMention } from "../../shared/types";
 
-export function buildCodexPrompt(prompt: string, mentions: ComposerMention[]) {
+export function buildCodexPrompt(prompt: string, mentions: ComposerMention[], mentionContext = "") {
   const mentionText = mentions
     .map((mention) => (mention.type === "file" ? `- @${mention.path}${mention.isDirectory ? " (directory)" : ""}` : `- $${mention.name}`))
     .join("\n");
@@ -11,6 +11,7 @@ export function buildCodexPrompt(prompt: string, mentions: ComposerMention[]) {
     "- Use `cw service <command...>` for long-running background services.",
     "- Do not run destructive Git commands without explicit user approval.",
     mentionText ? `\nSelected context:\n${mentionText}` : "",
+    mentionContext ? `\nContext content:\n${mentionContext}` : "",
     `\nUser request:\n${prompt}`,
   ]
     .filter(Boolean)
