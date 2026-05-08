@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import { useUiStore } from "../../store/uiStore";
 
@@ -39,15 +40,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
     <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
       <div className="flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5">
         <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
-        <button
-          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          title="Save file"
-          type="button"
-          disabled={!activeFilePath || !dirty || save.isPending}
-          onClick={() => save.mutate()}
-        >
-          <Save size={16} />
-        </button>
+        <Button title="Save file" type="button" disabled={!activeFilePath || !dirty || save.isPending} onClick={() => save.mutate()} variant="outline" size="icon-sm">
+          <Save data-icon="inline-start" />
+        </Button>
       </div>
       <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1">
         {openFilePaths.map((path) => (

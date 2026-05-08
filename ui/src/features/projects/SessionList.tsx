@@ -1,4 +1,5 @@
 import { FileCode2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "../../lib/classes";
 import type { Session } from "../../lib/types";
 
@@ -28,14 +29,9 @@ export function SessionList({
             <FileCode2 size={15} />
             <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session.name}</span>
           </button>
-          <button
-            className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            title="Delete session"
-            type="button"
-            onClick={() => onDelete(session.id)}
-          >
-            <Trash2 size={14} />
-          </button>
+          <Button title="Delete session" type="button" onClick={() => onDelete(session.id)} variant="outline" size="icon-xs">
+            <Trash2 data-icon="inline-start" />
+          </Button>
         </div>
       ))}
       {sessions.length === 0 ? <p className="text-xs text-muted">Create a session to browse files.</p> : null}

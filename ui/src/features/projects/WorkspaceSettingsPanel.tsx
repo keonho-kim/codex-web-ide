@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { WorkspaceSettings } from "../../lib/types";
 
 export function WorkspaceSettingsPanel({
@@ -32,14 +33,9 @@ export function WorkspaceSettingsPanel({
           onChange={(event) => setDefaultProjectsDir(event.target.value)}
           placeholder="Default project directory"
         />
-        <button
-          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          title="Save workspace settings"
-          type="submit"
-          disabled={!settings || !defaultProjectsDir.trim() || pending}
-        >
-          <Save size={14} />
-        </button>
+        <Button title="Save workspace settings" type="submit" disabled={!settings || !defaultProjectsDir.trim() || pending} variant="outline" size="icon-xs">
+          <Save data-icon="inline-start" />
+        </Button>
       </div>
       <p className="text-xs text-muted">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
     </form>

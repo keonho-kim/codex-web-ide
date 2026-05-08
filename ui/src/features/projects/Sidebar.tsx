@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SectionTitle } from "../../components/SectionTitle";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
 import { ProjectList } from "./ProjectList";
@@ -37,14 +38,9 @@ export function Sidebar({
   if (collapsed) {
     return (
       <aside className="row-span-2 flex min-w-0 justify-center overflow-hidden border-r border-hairline bg-panel p-2 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
-        <button
-          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          title="Expand sidebar"
-          type="button"
-          onClick={() => onCollapsedChange(false)}
-        >
-          <PanelLeftOpen size={15} />
-        </button>
+        <Button title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="outline" size="icon-sm">
+          <PanelLeftOpen data-icon="inline-start" />
+        </Button>
       </aside>
     );
   }
@@ -53,14 +49,9 @@ export function Sidebar({
     <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <div className="flex items-center justify-between gap-2">
         <SectionTitle label="Projects" />
-        <button
-          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          title="Collapse sidebar"
-          type="button"
-          onClick={() => onCollapsedChange(true)}
-        >
-          <PanelLeftClose size={15} />
-        </button>
+        <Button title="Collapse sidebar" type="button" onClick={() => onCollapsedChange(true)} variant="outline" size="icon-sm">
+          <PanelLeftClose data-icon="inline-start" />
+        </Button>
       </div>
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
