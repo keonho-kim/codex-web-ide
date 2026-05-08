@@ -6,6 +6,7 @@ import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
 import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
+import { executeManagedCommand } from "./cli/managedCommands";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -88,6 +89,36 @@ describe("product smoke coverage", () => {
     expect(finished.status).toBe("succeeded");
     expect(finished.stdout.join("")).toContain("job ok");
     expect(finished.exitCode).toBe(0);
+  });
+
+  test("managed CLI commands create cwd sessions and call command APIs", async () => {
+    const cwd = await tempDir();
+    const originalCwd = process.cwd();
+    const calls: Array<{ pathName: string; body?: unknown; method?: string }> = [];
+    process.chdir(cwd);
+    try {
+      const result = await executeManagedCommand("preview", ["--approve-dangerous", "bun", "run", "dev"], async (pathName, options = {}) => {
+        calls.push({ pathName, body: options.body, method: options.method });
+        if (pathName === "/api/sessions") {
+          if (options.method === "POST") return { ...testSession(cwd), id: "created-session" } as never;
+          return [] as never;
+        }
+        if (pathName === "/api/sessions/created-session/commands/preview") {
+          return { id: "preview", sessionId: "created-session", cwd, command: ["bun", "run", "dev"] } as never;
+        }
+        throw new Error(`Unexpected API call: ${pathName}`);
+      });
+
+      expect(result.output).toContain("\"preview\"");
+      expect(calls).toContainEqual({ pathName: "/api/sessions", body: { cwd }, method: "POST" });
+      expect(calls).toContainEqual({
+        pathName: "/api/sessions/created-session/commands/preview",
+        method: "POST",
+        body: { command: ["bun", "run", "dev"], cwd, approvedDangerous: true },
+      });
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   test("marks managed services running after health check", async () => {

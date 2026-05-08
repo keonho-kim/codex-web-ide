@@ -1,31 +1,37 @@
 import path from "node:path";
-import { api } from "./apiClient";
+import { api as defaultApi } from "./apiClient";
 import type { Job, PreviewInstance, ServiceInstance, Session } from "../shared/types";
 
 export type ManagedCommandKind = "job" | "preview" | "service";
+type ApiClient = <T>(pathName: string, options?: { method?: string; body?: unknown }) => Promise<T>;
 
 export async function runManagedCommand(kind: ManagedCommandKind, commandArgs: string[]) {
+  const result = await executeManagedCommand(kind, commandArgs);
+  if (result.output) console.log(result.output);
+  if (result.error) console.error(result.error);
+  if (result.exitCode !== undefined) process.exit(result.exitCode);
+}
+
+export async function executeManagedCommand(kind: ManagedCommandKind, commandArgs: string[], api: ApiClient = defaultApi) {
   const approvedDangerous = commandArgs.includes("--approve-dangerous");
   const command = commandArgs.filter((arg) => arg !== "--approve-dangerous");
   if (command.length === 0) {
-    console.error(`Usage: cw ${kind} <command...>`);
-    process.exit(1);
+    return { exitCode: 1, error: `Usage: cw ${kind} <command...>` };
   }
-  const session = await ensureSessionForCwd();
+  const session = await ensureSessionForCwd(api);
   const result = await api<Job | PreviewInstance | ServiceInstance>(`/api/sessions/${session.id}/commands/${kind}`, {
     method: "POST",
     body: { command, cwd: process.cwd(), approvedDangerous },
   });
 
   if (kind === "job") {
-    const exitCode = await followJob(session.id, (result as Job).id);
-    process.exit(exitCode);
+    return { exitCode: await followJob(session.id, (result as Job).id, api) };
   }
 
-  console.log(JSON.stringify(result, null, 2));
+  return { output: JSON.stringify(result, null, 2) };
 }
 
-async function ensureSessionForCwd() {
+async function ensureSessionForCwd(api: ApiClient) {
   const cwd = path.resolve(process.cwd());
   const sessions = await api<Session[]>("/api/sessions");
   const existing = sessions.find((session) => session.cwd === cwd);
@@ -33,7 +39,7 @@ async function ensureSessionForCwd() {
   return api<Session>("/api/sessions", { method: "POST", body: { cwd } });
 }
 
-async function followJob(sessionId: string, jobId: string) {
+async function followJob(sessionId: string, jobId: string, api: ApiClient) {
   let stdoutOffset = 0;
   let stderrOffset = 0;
   for (;;) {
