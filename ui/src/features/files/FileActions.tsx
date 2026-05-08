@@ -9,6 +9,7 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const activeFilePath = useUiStore((state) => state.activeFilePath);
   const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
+  const closeFilePath = useUiStore((state) => state.closeFilePath);
   const [pathInput, setPathInput] = useState("");
   const trimmedPath = pathInput.trim();
   const operationPath = trimmedPath || activeFilePath;
@@ -37,6 +38,7 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
   const renameFile = useMutation({
     mutationFn: () => api(`/api/sessions/${sessionId}/files/rename`, { method: "POST", body: { from: activeFilePath, to: trimmedPath } }),
     onSuccess: async () => {
+      if (activeFilePath) closeFilePath(activeFilePath);
       setActiveFilePath(trimmedPath);
       await Promise.all([
         refreshFiles(),
@@ -49,6 +51,7 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
   const deleteFile = useMutation({
     mutationFn: () => api(`/api/sessions/${sessionId}/files/delete`, { method: "POST", body: { path: operationPath } }),
     onSuccess: async () => {
+      if (operationPath) closeFilePath(operationPath);
       if (!operationPath || operationPath === activeFilePath) setActiveFilePath(undefined);
       setPathInput("");
       await Promise.all([refreshFiles(), queryClient.invalidateQueries({ queryKey: ["file", sessionId, activeFilePath] })]);
