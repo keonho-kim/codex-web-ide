@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileCode2, Folder, Play, Plus } from "lucide-react";
+import { FileCode2, Folder, Play, Plus, Trash2 } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
-import { buttonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
+import { buttonClass, iconButtonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { Project, Session } from "../../lib/types";
 
@@ -57,6 +57,7 @@ export function Sidebar({
   activeSessionId,
   onProjectSelect,
   onSessionSelect,
+  onSessionDelete,
 }: {
   projects: Project[];
   sessions: Session[];
@@ -64,13 +65,14 @@ export function Sidebar({
   activeSessionId?: string;
   onProjectSelect(id: string): void;
   onSessionSelect(id: string): void;
+  onSessionDelete(id: string): void;
 }) {
   return (
     <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <SectionTitle label="Projects" />
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
-      <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} />
+      <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
     </aside>
   );
 }
@@ -94,19 +96,23 @@ function ProjectList({ projects, activeId, onSelect }: { projects: Project[]; ac
   );
 }
 
-function SessionList({ sessions, activeId, onSelect }: { sessions: Session[]; activeId?: string; onSelect(id: string): void }) {
+function SessionList({ sessions, activeId, onSelect, onDelete }: { sessions: Session[]; activeId?: string; onSelect(id: string): void; onDelete(id: string): void }) {
   return (
     <nav className="grid gap-1">
       {sessions.map((session) => (
-        <button
-          className={`${transparentListButtonClass} ${session.id === activeId ? selectedListButtonClass : ""}`}
-          key={session.id}
-          type="button"
-          onClick={() => onSelect(session.id)}
-        >
-          <FileCode2 size={15} />
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session.name}</span>
-        </button>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1" key={session.id}>
+          <button
+            className={`${transparentListButtonClass} ${session.id === activeId ? selectedListButtonClass : ""}`}
+            type="button"
+            onClick={() => onSelect(session.id)}
+          >
+            <FileCode2 size={15} />
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session.name}</span>
+          </button>
+          <button className={iconButtonClass} title="Delete session" type="button" onClick={() => onDelete(session.id)}>
+            <Trash2 size={14} />
+          </button>
+        </div>
       ))}
       {sessions.length === 0 ? <p className={mutedClass}>Create a session to browse files.</p> : null}
     </nav>

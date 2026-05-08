@@ -26,6 +26,13 @@ export function App() {
       ]);
     },
   });
+  const deleteSession = useMutation({
+    mutationFn: (id: string) => api(`/api/sessions/${id}`, { method: "DELETE" }),
+    onSuccess: async (_result, id) => {
+      if (activeSessionId === id) setActiveSessionId(undefined);
+      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
 
   useEffect(() => {
     if (activeProjectId || !projects.data?.length) return;
@@ -60,6 +67,9 @@ export function App() {
         activeSessionId={activeSessionId}
         onProjectSelect={(id) => selectProject(id, setActiveProjectId, openProject.mutate)}
         onSessionSelect={setActiveSessionId}
+        onSessionDelete={(id) => {
+          if (confirm("Delete this session?")) deleteSession.mutate(id);
+        }}
       />
 
       <Workbench sessionId={activeSessionId} />
