@@ -54,6 +54,25 @@ afterEach(async () => {
 });
 
 describe("product smoke coverage", () => {
+  test("uses Tailwind as the only UI stylesheet entrypoint", async () => {
+    const uiSrc = path.resolve(import.meta.dir, "../../ui/src");
+    const cssFiles: string[] = [];
+
+    for await (const file of new Bun.Glob("**/*.css").scan({ cwd: uiSrc, onlyFiles: true })) {
+      cssFiles.push(file);
+    }
+
+    expect(cssFiles.sort()).toEqual(["tailwind.css"]);
+
+    const stylesheet = await fs.readFile(path.join(uiSrc, "tailwind.css"), "utf8");
+    expect(stylesheet).toContain('@import "tailwindcss";');
+    expect(stylesheet).toContain("@theme");
+    expect(stylesheet).toContain("@layer base");
+    expect(stylesheet).not.toContain("@layer components");
+    expect(stylesheet).not.toContain("@layer utilities");
+    expect(stylesheet).not.toMatch(/^\s*(\.|#|\[[^\]]+\])/m);
+  });
+
   test("blocks symlink escapes in session paths", async () => {
     const root = await tempDir();
     const outside = await tempDir();
