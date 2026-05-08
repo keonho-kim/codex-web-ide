@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Play, RefreshCw, Square } from "lucide-react";
-import { useState } from "react";
-import { commandRowClass, iconButtonClass, inputClass, mutedClass, panelContentClass } from "../../components/uiClasses";
+import { ExternalLink, Play, RefreshCw, RotateCw, Square } from "lucide-react";
+import { useMemo, useState } from "react";
+import { commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
 import type { PreviewInstance } from "../../lib/types";
 
@@ -9,6 +9,7 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const [command, setCommand] = useState("bun run dev");
   const [selectedPreviewId, setSelectedPreviewId] = useState<string>();
+  const [iframeVersion, setIframeVersion] = useState(0);
   const previews = useQuery({
     queryKey: ["previews", sessionId],
     queryFn: () => api<PreviewInstance[]>(`/api/sessions/${sessionId}/previews`),
@@ -33,9 +34,10 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
     },
   });
   const runningPreviews = previews.data?.filter((preview) => preview.status === "running") ?? [];
-  const activePreview = runningPreviews.find((preview) => preview.id === selectedPreviewId) ?? runningPreviews[0];
+  const activePreview = (previews.data ?? []).find((preview) => preview.id === selectedPreviewId) ?? runningPreviews[0];
+  const activeLogs = useMemo(() => (activePreview ? [...activePreview.stdout, ...activePreview.stderr].join("") : ""), [activePreview]);
   return (
-    <div className={`${panelContentClass} grid grid-rows-[auto_minmax(0,1fr)] gap-2.5`}>
+    <div className={`${panelContentClass} grid grid-rows-[auto_auto_minmax(0,1fr)_80px] gap-2.5`}>
       <div className={commandRowClass}>
         <input className={`${inputClass} w-[min(520px,100%)]`} value={command} onChange={(event) => setCommand(event.target.value)} />
         <button className={iconButtonClass} type="button" disabled={!sessionId || startPreview.isPending || splitCommand(command).length === 0} onClick={() => startPreview.mutate()}>
@@ -52,6 +54,9 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
         ) : null}
         {activePreview ? (
           <>
+            <button className={iconButtonClass} title="Reload iframe" type="button" onClick={() => setIframeVersion((value) => value + 1)}>
+              <RotateCw size={15} />
+            </button>
             <button className={iconButtonClass} title="Restart preview" type="button" onClick={() => restartPreview.mutate(activePreview.id)}>
               <RefreshCw size={15} />
             </button>
@@ -64,7 +69,17 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
           </>
         ) : null}
       </div>
-      {activePreview ? <iframe className="h-full w-full rounded-md border border-[#d8d8df]" title="Preview" src={activePreview.publicUrl} /> : <p className={mutedClass}>No running preview.</p>}
+      {activePreview ? (
+        <p className={mutedClass}>
+          {activePreview.status} · port {activePreview.port} · pid {activePreview.pid || "-"} · {activePreview.command.join(" ")}
+        </p>
+      ) : null}
+      {activePreview ? (
+        <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full rounded-md border border-[#d8d8df]" title="Preview" src={activePreview.publicUrl} />
+      ) : (
+        <p className={mutedClass}>No preview selected.</p>
+      )}
+      <pre className={logClass}>{activePreview ? activeLogs || activePreview.status : "No preview logs yet."}</pre>
     </div>
   );
 }
