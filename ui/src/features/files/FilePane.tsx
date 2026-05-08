@@ -1,42 +1,73 @@
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Tree, type NodeRendererProps } from "react-arborist";
 import { FileCode2, Folder } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
-import { transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { FileTreeNode } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 
 export function FilePane({ sessionId }: { sessionId?: string }) {
+  const treeHost = useRef<HTMLDivElement>(null);
+  const size = useElementSize(treeHost);
   const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
   const tree = useQuery({
     queryKey: ["tree", sessionId],
     queryFn: () => api<FileTreeNode[]>(`/api/sessions/${sessionId}/files/tree`),
     enabled: Boolean(sessionId),
   });
+
   return (
-    <section className="h-full min-w-0 overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
+    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
       <SectionTitle label="Files" />
-      <div className="overflow-auto text-[13px]">
-        {tree.data?.map((node) => <TreeNode key={node.id} node={node} onOpen={setActiveFilePath} />)}
+      <div ref={treeHost} className="min-h-0 overflow-hidden text-[13px]">
+        <Tree<FileTreeNode>
+          data={tree.data ?? []}
+          height={Math.max(size.height, 120)}
+          width={Math.max(size.width, 180)}
+          rowHeight={28}
+          indent={14}
+          openByDefault={false}
+          idAccessor="path"
+          childrenAccessor="children"
+          disableDrag
+          disableEdit
+        >
+          {(props) => <FileTreeRow {...props} onOpen={setActiveFilePath} />}
+        </Tree>
       </div>
     </section>
   );
 }
 
-function TreeNode({ node, onOpen }: { node: FileTreeNode; onOpen(path: string): void }) {
+function FileTreeRow({ node, style, onOpen }: NodeRendererProps<FileTreeNode> & { onOpen(path: string): void }) {
+  const item = node.data;
   return (
-    <div>
-      <button className={transparentListButtonClass} type="button" onClick={() => (node.isDirectory ? undefined : onOpen(node.path))}>
-        {node.isDirectory ? <Folder size={14} /> : <FileCode2 size={14} />}
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
+    <div style={style} className="flex items-center">
+      <button
+        className="inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-[#1d1d1f] hover:bg-[#f5f5f7]"
+        type="button"
+        onClick={() => (item.isDirectory ? node.toggle() : onOpen(item.path))}
+      >
+        {item.isDirectory ? <Folder size={14} /> : <FileCode2 size={14} />}
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{item.name}</span>
       </button>
-      {node.children?.length ? (
-        <div className="ml-[9px] border-l border-[#ececf0] pl-[7px]">
-          {node.children.map((child) => (
-            <TreeNode key={child.id} node={child} onOpen={onOpen} />
-          ))}
-        </div>
-      ) : null}
     </div>
   );
+}
+
+function useElementSize(ref: RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const update = () => setSize({ width: element.clientWidth, height: element.clientHeight });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return size;
 }
