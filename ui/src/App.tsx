@@ -29,7 +29,7 @@ export function App() {
   const deleteSession = useMutation({
     mutationFn: (id: string) => api(`/api/sessions/${id}`, { method: "DELETE" }),
     onSuccess: async (_result, id) => {
-      if (activeSessionId === id) setActiveSessionId(undefined);
+      if (activeSessionId === id) setActiveSessionId((sessions.data ?? []).find((session) => session.id !== id)?.id);
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
