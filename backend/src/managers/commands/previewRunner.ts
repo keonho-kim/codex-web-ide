@@ -98,8 +98,7 @@ export class PreviewRunner {
     const preview = this.previews.get(id);
     if (!preview || preview.sessionId !== sessionId) throw new Error("Preview not found");
     preview.status = "stopped";
-    this.ports.release(preview.port);
-    this.processes.kill(id);
+    if (!this.processes.kill(id)) this.ports.release(preview.port);
     void this.persist();
     this.events.publish(sessionId, { type: "preview.stopped", previewId: id });
     return preview;
@@ -117,8 +116,7 @@ export class PreviewRunner {
     for (const preview of this.list(sessionId)) {
       if (preview.status !== "stopped") {
         preview.status = "stopped";
-        this.ports.release(preview.port);
-        this.processes.kill(preview.id);
+        if (!this.processes.kill(preview.id)) this.ports.release(preview.port);
       }
       this.previews.delete(preview.id);
     }

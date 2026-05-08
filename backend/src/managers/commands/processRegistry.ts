@@ -14,8 +14,11 @@ export class ProcessRegistry {
   }
 
   kill(id: string) {
-    this.processes.get(id)?.process.kill("SIGTERM");
+    const process = this.processes.get(id);
+    if (!process) return false;
+    process.process.kill("SIGTERM");
     this.processes.delete(id);
+    return true;
   }
 
   killAll() {
