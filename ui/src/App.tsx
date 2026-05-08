@@ -17,6 +17,7 @@ export function App() {
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => api<Session[]>("/api/sessions") });
   const settings = useQuery({ queryKey: ["workspace-settings"], queryFn: () => api<WorkspaceSettings>("/api/workspace/settings") });
   const activeSession = sessions.data?.find((session) => session.id === activeSessionId);
+  const orderedProjects = orderProjects(projects.data ?? [], settings.data);
   const openProject = useMutation({
     mutationFn: (id: string) => api<Project>(`/api/projects/${id}/open`, { method: "POST" }),
     onSuccess: async () => {
@@ -31,6 +32,12 @@ export function App() {
     onSuccess: async (_result, id) => {
       if (activeSessionId === id) setActiveSessionId((sessions.data ?? []).find((session) => session.id !== id)?.id);
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+  const updateSettings = useMutation({
+    mutationFn: (next: WorkspaceSettings) => api<WorkspaceSettings>("/api/workspace/settings", { method: "PUT", body: next }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
     },
   });
 
@@ -61,7 +68,7 @@ export function App() {
       </header>
 
       <Sidebar
-        projects={projects.data ?? []}
+        projects={orderedProjects}
         sessions={sessions.data ?? []}
         activeProjectId={activeProjectId}
         activeSessionId={activeSessionId}
@@ -70,6 +77,9 @@ export function App() {
         onSessionDelete={(id) => {
           if (confirm("Delete this session?")) deleteSession.mutate(id);
         }}
+        settings={settings.data}
+        onSettingsSave={(next) => updateSettings.mutate(next)}
+        settingsPending={updateSettings.isPending}
       />
 
       <Workbench sessionId={activeSessionId} />
@@ -82,6 +92,16 @@ export function App() {
 function selectProject(id: string, setActiveProjectId: (id: string) => void, openProject: (id: string) => void) {
   setActiveProjectId(id);
   openProject(id);
+}
+
+function orderProjects(projects: Project[], settings?: WorkspaceSettings) {
+  const recentIds = settings?.recentProjectIds ?? [];
+  return [...projects].sort((a, b) => {
+    const recentA = recentIds.indexOf(a.id);
+    const recentB = recentIds.indexOf(b.id);
+    if (recentA !== -1 || recentB !== -1) return (recentA === -1 ? Number.MAX_SAFE_INTEGER : recentA) - (recentB === -1 ? Number.MAX_SAFE_INTEGER : recentB);
+    return b.lastOpenedAt - a.lastOpenedAt;
+  });
 }
 
 function useSessionEvents(activeSessionId: string | undefined, queryClient: ReturnType<typeof useQueryClient>) {

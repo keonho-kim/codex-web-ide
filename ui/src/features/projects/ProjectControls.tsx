@@ -4,7 +4,8 @@ import { FileCode2, Folder, Play, Plus, Trash2 } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
 import { buttonClass, iconButtonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
-import type { Project, Session } from "../../lib/types";
+import type { Project, Session, WorkspaceSettings } from "../../lib/types";
+import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
 
 export function ProjectCreator({ onCreated }: { onCreated(project: Project): void }) {
   const queryClient = useQueryClient();
@@ -58,6 +59,9 @@ export function Sidebar({
   onProjectSelect,
   onSessionSelect,
   onSessionDelete,
+  settings,
+  onSettingsSave,
+  settingsPending,
 }: {
   projects: Project[];
   sessions: Session[];
@@ -66,6 +70,9 @@ export function Sidebar({
   onProjectSelect(id: string): void;
   onSessionSelect(id: string): void;
   onSessionDelete(id: string): void;
+  settings?: WorkspaceSettings;
+  onSettingsSave(settings: WorkspaceSettings): void;
+  settingsPending?: boolean;
 }) {
   return (
     <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
@@ -73,6 +80,8 @@ export function Sidebar({
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
       <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
+      <SectionTitle label="Settings" />
+      <WorkspaceSettingsPanel settings={settings} onSave={onSettingsSave} pending={settingsPending} />
     </aside>
   );
 }
