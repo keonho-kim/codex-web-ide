@@ -1,8 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { BottomPanel } from "./features/BottomPanel";
-import { ProjectCreator } from "./features/projects/ProjectCreator";
-import { SessionCreator } from "./features/projects/SessionCreator";
 import { Sidebar } from "./features/projects/Sidebar";
+import { Topbar } from "./features/app/Topbar";
 import { Workbench } from "./features/Workbench";
 import { useAppData } from "./features/app/useAppData";
 import { useSessionEvents } from "./features/app/useSessionEvents";
@@ -24,16 +23,13 @@ export function App() {
         sidebarCollapsed ? "grid-cols-[44px_minmax(0,1fr)]" : "grid-cols-[230px_minmax(0,1fr)]",
       )}
     >
-      <header className="app-header">
-        <div className="min-w-0">
-          <strong className="block text-sm">Codex Web IDE</strong>
-          <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">{app.activeSession?.cwd || "No session selected"}</span>
-        </div>
-        <div className="shell-toolbar">
-          <ProjectCreator defaultProjectsDir={app.settings?.defaultProjectsDir} onCreated={(project) => app.selectProject(project.id)} />
-          <SessionCreator projectId={app.activeProjectId} onCreated={(session) => app.setActiveSessionId(session.id)} />
-        </div>
-      </header>
+      <Topbar
+        activeProjectId={app.activeProjectId}
+        activeSession={app.activeSession}
+        defaultProjectsDir={app.settings?.defaultProjectsDir}
+        onProjectCreated={(project) => app.selectProject(project.id)}
+        onSessionCreated={(session) => app.setActiveSessionId(session.id)}
+      />
 
       <Sidebar
         projects={app.orderedProjects}
