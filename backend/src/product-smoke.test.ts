@@ -10,6 +10,7 @@ import { checkPreviewPorts } from "./cli/doctor/ports";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
+import { consumeCodexEvents } from "./managers/codex/events";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
 import { JobRunner } from "./managers/commands/jobRunner";
@@ -134,6 +135,35 @@ describe("product smoke coverage", () => {
     expect(prompt).toContain("hello codex");
     expect(prompt).toContain("file src/app.ts");
     expect(prompt).toContain("Use careful review.");
+  });
+
+  test("codex completion publishes refreshed Git state", async () => {
+    const events = new EventBus();
+    const session = testSession(await tempDir());
+    const published: Array<{ type: string }> = [];
+    let assistantText = "";
+    events.subscribe(session.id, (event) => published.push(event));
+
+    await consumeCodexEvents({
+      appendAssistantMessage: async (text) => {
+        assistantText = text;
+      },
+      eventStream: codexEventStream([
+        { type: "item.completed", item: { id: "message", type: "agent_message", text: "done" } },
+      ]),
+      events,
+      git: { state: async () => ({ branch: "main", detached: false, commit: "abc", dirty: false, stagedCount: 0, unstagedCount: 0, untrackedCount: 0 }) } as unknown as GitManager,
+      isDeleted: () => false,
+      markCancelled: () => false,
+      markNotRunning: () => undefined,
+      session,
+      sessions: { update: async () => session } as never,
+      thread: { id: "codex-thread" } as never,
+      updateThreadId: async () => undefined,
+    });
+
+    expect(assistantText).toBe("done");
+    expect(published.some((event) => event.type === "git.state.updated")).toBe(true);
   });
 
   test("file tree includes nested project files and ignores generated folders", async () => {
@@ -315,4 +345,8 @@ async function waitForJob(read: () => ReturnType<JobRunner["get"]>) {
     if (Date.now() > deadline) throw new Error("Job did not finish");
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
+}
+
+async function* codexEventStream(events: unknown[]) {
+  for (const event of events) yield event as never;
 }
