@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerApiRoutes } from "./api";
+import { AuthManager, authRequired, type AuthState } from "./auth/authManager";
 import { EventBus } from "./events/eventBus";
 import { CodexManager } from "./managers/codexManager";
 import { CommandManager } from "./managers/commandManager";
@@ -18,13 +19,15 @@ export type ServerOptions = {
   port?: number;
 };
 
-export async function createApp() {
+export async function createApp(options: ServerOptions = {}) {
   const store = new JsonStore();
   await store.ensure();
 
   const events = new EventBus();
   const workspace = new WorkspaceManager(store);
   const sessions = new SessionManager(store, workspace);
+  const auth = new AuthManager(workspace);
+  await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1"));
   const files = new FileManager(events);
   const git = new GitManager();
   const services = {
@@ -37,8 +40,10 @@ export async function createApp() {
     codex: new CodexManager(events, git),
     commands: new CommandManager(events, git),
     adapter: createPlatformAdapter(),
+    auth,
   };
   const app = express();
+  app.locals.auth = auth;
 
   for (const session of await sessions.list()) {
     files.watch(session.id, session.cwd);
@@ -46,6 +51,7 @@ export async function createApp() {
   }
 
   app.use(express.json({ limit: "5mb" }));
+  app.use(auth.middleware());
   registerApiRoutes(app, services);
   serveStaticUi(app);
   app.use(errorHandler);
@@ -56,7 +62,8 @@ export async function createApp() {
 export async function startServer(options: ServerOptions = {}) {
   const host = options.host || process.env.CODEX_WEB_HOST || "127.0.0.1";
   const port = options.port || Number(process.env.CODEX_WEB_PORT || 17321);
-  const app = await createApp();
+  const app = await createApp({ host, port });
+  const auth = app.locals.auth as AuthManager | undefined;
   let server: ReturnType<typeof app.listen>;
   app.post("/api/shutdown", (req, res) => {
     if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress || "")) {
@@ -68,11 +75,12 @@ export async function startServer(options: ServerOptions = {}) {
       server.close(() => process.exit(0));
     }, 25);
   });
-  return new Promise<{ host: string; port: number; close(): Promise<void> }>((resolve) => {
+  return new Promise<{ host: string; port: number; auth?: AuthState; close(): Promise<void> }>((resolve) => {
     server = app.listen(port, host, () => {
       resolve({
         host,
         port,
+        auth: auth?.getStatus(),
         close: () =>
           new Promise<void>((done, reject) => {
             server.close((error) => (error ? reject(error) : done()));

@@ -23,6 +23,10 @@ export type WorkspaceSettings = {
   defaultProjectsDir: string;
   activeProjectId?: string;
   recentProjectIds: string[];
+  auth: {
+    enabled: boolean;
+    token?: string;
+  };
 };
 
 export type FileTreeNode = {

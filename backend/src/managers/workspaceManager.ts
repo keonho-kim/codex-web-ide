@@ -11,11 +11,19 @@ export class WorkspaceManager {
   constructor(private store: JsonStore) {}
 
   async getSettings(): Promise<WorkspaceSettings> {
-    return this.store.read("config.json", {
+    const fallback: WorkspaceSettings = {
       defaultProjectsDir: this.adapter.getDefaultProjectsDir(),
       activeProjectId: undefined,
       recentProjectIds: [],
-    });
+      auth: { enabled: false },
+    };
+    const settings = await this.store.read<Partial<WorkspaceSettings>>("config.json", fallback);
+    return {
+      ...fallback,
+      ...settings,
+      recentProjectIds: settings.recentProjectIds ?? fallback.recentProjectIds,
+      auth: { ...fallback.auth, ...settings.auth },
+    };
   }
 
   async updateSettings(settings: WorkspaceSettings) {

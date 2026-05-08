@@ -8,6 +8,7 @@ import type { SessionManager } from "../managers/sessionManager";
 import type { SkillManager } from "../managers/skillManager";
 import type { WorkspaceManager } from "../managers/workspaceManager";
 import type { PlatformAdapter } from "../platform/adapter";
+import type { AuthManager } from "../auth/authManager";
 
 export type AppServices = {
   events: EventBus;
@@ -19,6 +20,7 @@ export type AppServices = {
   codex: CodexManager;
   commands: CommandManager;
   adapter: PlatformAdapter;
+  auth: AuthManager;
 };
 
 export function asyncHandler<T extends Request = Request>(

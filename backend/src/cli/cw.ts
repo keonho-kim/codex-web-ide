@@ -55,6 +55,9 @@ async function start(input: string[]) {
   const server = await startServer({ host, port });
   await writePidFile(port);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
+  if (server.auth?.enabled) {
+    console.log(`Auth token: ${server.auth.token}`);
+  }
   const removePid = () => void fs.rm(pidFile(), { force: true });
   process.once("SIGINT", removePid);
   process.once("SIGTERM", removePid);

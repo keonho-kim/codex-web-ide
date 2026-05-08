@@ -68,4 +68,10 @@ export const workspaceSettingsSchema = z.object({
   defaultProjectsDir: z.string().min(1),
   activeProjectId: z.string().optional(),
   recentProjectIds: z.array(z.string()).default([]),
+  auth: z
+    .object({
+      enabled: z.boolean().default(false),
+      token: z.string().optional(),
+    })
+    .default({ enabled: false }),
 });

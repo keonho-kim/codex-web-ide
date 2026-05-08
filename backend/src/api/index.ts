@@ -10,6 +10,8 @@ import { registerSessionRoutes } from "./sessionRoutes";
 import { registerWorkspaceRoutes } from "./workspaceRoutes";
 
 export function registerApiRoutes(app: Express, services: AppServices) {
+  services.auth.registerRoutes(app);
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, platform: services.adapter.platform, home: services.adapter.getHomeDir() });
   });
