@@ -15,6 +15,7 @@ import { buildCodexPrompt } from "./managers/codex/prompt";
 import { JobRunner } from "./managers/commands/jobRunner";
 import { resolveCommandCwd } from "./managers/commands/path";
 import { ProcessRegistry } from "./managers/commands/processRegistry";
+import { preparePreviewLaunch } from "./managers/commands/runtimeAdapter";
 import { assertCommandAllowed } from "./managers/commands/safety";
 import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
@@ -185,6 +186,25 @@ describe("product smoke coverage", () => {
     } finally {
       await closeServer(server);
     }
+  });
+
+  test("preview launch args are forced to the managed port", () => {
+    expect(preparePreviewLaunch(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9000"], 23456).command).toEqual([
+      "uvicorn",
+      "main:app",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "23456",
+    ]);
+    expect(preparePreviewLaunch(["streamlit", "run", "app.py", "--server.port=9000"], 23456).command).toEqual([
+      "streamlit",
+      "run",
+      "app.py",
+      "--server.port=23456",
+      "--server.address",
+      "127.0.0.1",
+    ]);
   });
 });
 
