@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type { Server } from "node:http";
 import type { AppServices } from "../../api/context";
 import { previewWebSocketHandlers } from "./bridge";
-import { isWebSocketRequest, proxyHttpRequest } from "./http";
+import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "./http";
 import { previewWebSocketTarget } from "./target";
 import type { BunServe } from "./types";
 
@@ -27,14 +27,18 @@ export async function startBunFrontProxy({
     hostname: host,
     port,
     fetch: (req, server) => {
+      const url = new URL(req.url);
       if (isWebSocketRequest(req)) {
+        if (!services.auth.isAuthorizedHeaders(req.headers, url, clientAddress(req, server))) {
+          return new Response("Authentication required", { status: 401 });
+        }
         const target = previewWebSocketTarget(req, services);
         if (!target) return new Response("Preview WebSocket target not found", { status: 404 });
         return server.upgrade(req, { data: { target } })
           ? undefined
           : new Response("WebSocket upgrade failed", { status: 502 });
       }
-      return proxyHttpRequest(req, internal.port);
+      return proxyHttpRequest(req, internal.port, server);
     },
     websocket: previewWebSocketHandlers,
   });

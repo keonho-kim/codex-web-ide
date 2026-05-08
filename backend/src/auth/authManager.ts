@@ -27,15 +27,7 @@ export class AuthManager {
 
   middleware() {
     return (req: Request, res: Response, next: NextFunction) => {
-      if (!this.state.enabled || this.isTrustedLoopback(req) || publicAssetRequest(req.path)) {
-        next();
-        return;
-      }
-      if (["/api/health", "/api/auth/status", "/api/auth/login"].includes(req.path)) {
-        next();
-        return;
-      }
-      if (this.isValidRequest(req)) {
+      if (this.isAuthorizedRequest(req)) {
         next();
         return;
       }
@@ -45,7 +37,7 @@ export class AuthManager {
 
   registerRoutes(app: Express) {
     app.get("/api/auth/status", (req, res) => {
-      res.json({ enabled: this.state.enabled, authenticated: !this.state.enabled || this.isTrustedLoopback(req) || this.isValidRequest(req) });
+      res.json({ enabled: this.state.enabled, authenticated: !this.state.enabled || this.isTrustedLoopback(req) || this.hasValidCredentials(requestCredentials(req)) });
     });
     app.post("/api/auth/login", (req, res) => {
       const token = typeof req.body?.token === "string" ? req.body.token : "";
@@ -62,16 +54,46 @@ export class AuthManager {
     return this.state;
   }
 
-  private isValidRequest(req: Request) {
-    const header = req.header("authorization");
+  isAuthorizedHeaders(headers: Headers, url: URL, remoteAddress?: string) {
+    return this.isAuthorized({
+      path: url.pathname,
+      remoteAddress,
+      credentials: {
+        authorization: headers.get("authorization") || undefined,
+        cookie: headers.get("cookie") || undefined,
+        explicitToken: headers.get("x-codex-web-token") || url.searchParams.get("token") || undefined,
+      },
+    });
+  }
+
+  private isAuthorizedRequest(req: Request) {
+    return this.isAuthorized({ path: req.path, remoteAddress: clientAddress(req), credentials: requestCredentials(req) });
+  }
+
+  private isAuthorized({
+    credentials,
+    path,
+    remoteAddress,
+  }: {
+    credentials: RequestCredentials;
+    path: string;
+    remoteAddress?: string;
+  }) {
+    if (!this.state.enabled || (!this.forceLoopbackAuth && isLoopback(remoteAddress)) || publicAssetRequest(path)) return true;
+    if (["/api/health", "/api/auth/status", "/api/auth/login"].includes(path)) return true;
+    return this.hasValidCredentials(credentials);
+  }
+
+  private hasValidCredentials(credentials: RequestCredentials) {
+    const header = credentials.authorization;
     const bearer = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
-    const explicit = req.header("x-codex-web-token") || bearer || req.query.token;
-    const cookie = parseCookie(req.header("cookie") || "").cw_token;
+    const explicit = credentials.explicitToken || bearer;
+    const cookie = parseCookie(credentials.cookie || "").cw_token;
     return this.compareToken(typeof explicit === "string" ? explicit : "") || this.compareToken(cookie || "");
   }
 
   private isTrustedLoopback(req: Request) {
-    return !this.forceLoopbackAuth && isLoopback(req.socket.remoteAddress);
+    return !this.forceLoopbackAuth && isLoopback(clientAddress(req));
   }
 
   private compareToken(input: string) {
@@ -79,6 +101,12 @@ export class AuthManager {
     return timingSafeEqual(Buffer.from(input), Buffer.from(this.state.token));
   }
 }
+
+type RequestCredentials = {
+  authorization?: string;
+  cookie?: string;
+  explicitToken?: string;
+};
 
 export function authRequired(host: string) {
   if (process.env.CODEX_WEB_AUTH === "1") return true;
@@ -88,6 +116,24 @@ export function authRequired(host: string) {
 
 function randomToken() {
   return randomBytes(24).toString("base64url");
+}
+
+export function isLoopbackRequest(req: Request) {
+  return isLoopback(clientAddress(req));
+}
+
+function clientAddress(req: Request) {
+  const remoteAddress = req.socket.remoteAddress;
+  const forwarded = req.header("x-forwarded-for")?.split(",")[0]?.trim();
+  return isLoopback(remoteAddress) && forwarded ? forwarded : remoteAddress;
+}
+
+function requestCredentials(req: Request): RequestCredentials {
+  return {
+    authorization: req.header("authorization"),
+    cookie: req.header("cookie"),
+    explicitToken: req.header("x-codex-web-token") || (typeof req.query.token === "string" ? req.query.token : undefined),
+  };
 }
 
 function isLoopback(address?: string) {

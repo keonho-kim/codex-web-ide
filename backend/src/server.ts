@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerApiRoutes } from "./api";
 import type { AppServices } from "./api/context";
-import { AuthManager, authRequired, type AuthState } from "./auth/authManager";
+import { AuthManager, authRequired, isLoopbackRequest, type AuthState } from "./auth/authManager";
 import { EventBus } from "./events/eventBus";
 import { CodexManager } from "./managers/codexManager";
 import { CodexHistoryStore } from "./managers/codex/historyStore";
@@ -84,7 +84,7 @@ export async function startServer(options: ServerOptions = {}) {
   const auth = app.locals.auth as AuthManager | undefined;
   let closeAndExit: () => void = () => process.exit(0);
   app.post("/api/shutdown", (req, res) => {
-    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress || "")) {
+    if (!isLoopbackRequest(req)) {
       res.status(403).json({ error: "Shutdown is only allowed from localhost." });
       return;
     }

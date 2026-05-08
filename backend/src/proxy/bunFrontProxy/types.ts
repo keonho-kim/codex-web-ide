@@ -16,6 +16,7 @@ export type BunServe = (options: {
 
 export type BunUpgradeServer = {
   upgrade(req: Request, options: { data: PreviewSocketData }): boolean;
+  requestIP(req: Request): { address: string; port: number } | null;
 };
 
 export type ServerSocket = {
