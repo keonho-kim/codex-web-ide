@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import type { Session } from "../shared/types";
 import type { WorkspaceManager } from "./workspaceManager";
 import { JsonStore } from "./storage";
-import { safePath } from "./fileManager";
+import { safeFsPath } from "./files/path";
 
 export class SessionManager {
   constructor(
@@ -19,7 +19,7 @@ export class SessionManager {
   async create(input: { projectId?: string; cwd?: string; name?: string }) {
     const project = input.projectId ? await this.workspace.findProject(input.projectId) : null;
     if (input.projectId && !project) throw new Error("Project not found");
-    const cwd = project ? safePath(project.cwd, input.cwd || ".") : path.resolve(input.cwd || process.cwd());
+    const cwd = project ? await safeFsPath(project.cwd, input.cwd || ".") : path.resolve(input.cwd || process.cwd());
     const stat = await fs.stat(cwd);
     if (!stat.isDirectory()) throw new Error("Session cwd must be a directory");
     const now = Date.now();
