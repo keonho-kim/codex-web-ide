@@ -18,6 +18,7 @@ import { resolveCommandCwd } from "./managers/commands/path";
 import { ProcessRegistry } from "./managers/commands/processRegistry";
 import { preparePreviewLaunch } from "./managers/commands/runtimeAdapter";
 import { assertCommandAllowed } from "./managers/commands/safety";
+import { ServiceRunner } from "./managers/commands/serviceRunner";
 import { FileManager } from "./managers/fileManager";
 import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
@@ -75,6 +76,25 @@ describe("product smoke coverage", () => {
     expect(finished.status).toBe("succeeded");
     expect(finished.stdout.join("")).toContain("job ok");
     expect(finished.exitCode).toBe(0);
+  });
+
+  test("marks managed services running after health check", async () => {
+    const root = await tempDir();
+    const events = new EventBus();
+    const runner = new ServiceRunner(events, new ProcessRegistry());
+    const session = testSession(root);
+    const published: Array<{ type: string }> = [];
+    events.subscribe(session.id, (event) => published.push(event));
+    const service = await runner.start(session, ["bun", "--eval", "setInterval(() => {}, 1000)"]);
+    try {
+      const running = await waitForService(() => runner.list(session.id).find((item) => item.id === service.id));
+
+      expect(running.status).toBe("running");
+      expect(running.lastHealthCheckAt).toBeTruthy();
+      expect(published.some((event) => event.type === "service.health.updated")).toBe(true);
+    } finally {
+      runner.stop(session.id, service.id);
+    }
   });
 
   test("removes workspace projects from active and recent state", async () => {
@@ -349,4 +369,14 @@ async function waitForJob(read: () => ReturnType<JobRunner["get"]>) {
 
 async function* codexEventStream(events: unknown[]) {
   for (const event of events) yield event as never;
+}
+
+async function waitForService<T extends { status: string } | undefined>(read: () => T) {
+  const deadline = Date.now() + 3000;
+  for (;;) {
+    const service = read();
+    if (service && service.status !== "starting") return service;
+    if (Date.now() > deadline) throw new Error("Service health check did not finish");
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
 }
