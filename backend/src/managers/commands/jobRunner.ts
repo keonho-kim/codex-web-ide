@@ -8,6 +8,7 @@ import { resolveCommandCwd } from "./path";
 import { ProcessRegistry } from "./processRegistry";
 
 const defaultJobTimeoutMs = 10 * 60 * 1000;
+const installJobTimeoutMs = 30 * 60 * 1000;
 
 export class JobRunner {
   private jobs = new Map<string, Job>();
@@ -59,7 +60,7 @@ export class JobRunner {
 
     const timeout = setTimeout(() => {
       if (job.status === "running") this.cancel(session.id, id);
-    }, options.timeoutMs ?? defaultJobTimeoutMs);
+    }, jobTimeoutMs(command, options.timeoutMs));
 
     child.stdout.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
@@ -109,4 +110,20 @@ export class JobRunner {
   private persist() {
     return this.history?.saveJobs([...this.jobs.values()]) ?? Promise.resolve();
   }
+}
+
+function jobTimeoutMs(command: string[], override?: number) {
+  if (override) return override;
+  return isInstallCommand(command) ? installJobTimeoutMs : defaultJobTimeoutMs;
+}
+
+function isInstallCommand(command: string[]) {
+  const [binary, subcommand, script] = command;
+  if (!binary) return false;
+  if (["bun", "npm", "pnpm", "yarn"].includes(binary) && subcommand === "install") return true;
+  if (binary === "bun" && subcommand === "add") return true;
+  if (binary === "bun" && subcommand === "run" && script && /^(install|setup)$/.test(script)) return true;
+  if (["pip", "pip3"].includes(binary) && subcommand === "install") return true;
+  if (["python", "python3"].includes(binary) && subcommand === "-m" && command[2] === "pip" && command[3] === "install") return true;
+  return false;
 }
