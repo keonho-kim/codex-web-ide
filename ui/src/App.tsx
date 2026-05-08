@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { BottomPanel } from "./features/BottomPanel";
-import { ProjectCreator, SessionCreator, Sidebar } from "./features/projects/ProjectControls";
+import { ProjectCreator } from "./features/projects/ProjectCreator";
+import { SessionCreator } from "./features/projects/SessionCreator";
+import { Sidebar } from "./features/projects/Sidebar";
 import { Workbench } from "./features/Workbench";
 import { useAppData } from "./features/app/useAppData";
 import { useSessionEvents } from "./features/app/useSessionEvents";
