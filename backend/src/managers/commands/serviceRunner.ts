@@ -5,6 +5,7 @@ import type { ServiceInstance, Session } from "../../shared/types";
 import type { CommandHistoryStore } from "./historyStore";
 import { pipeProcessOutput } from "./output";
 import { resolveCommandCwd } from "./path";
+import { restoreDetachedProcess } from "./processHydration";
 import { ProcessRegistry } from "./processRegistry";
 
 export class ServiceRunner {
@@ -19,7 +20,7 @@ export class ServiceRunner {
   async hydrate() {
     const services = (await this.history?.loadServices()) ?? [];
     for (const service of services) {
-      this.services.set(service.id, ["running", "starting"].includes(service.status) ? { ...service, pid: 0, status: "stopped" } : service);
+      this.services.set(service.id, restoreDetachedProcess(service));
     }
     await this.persist();
   }

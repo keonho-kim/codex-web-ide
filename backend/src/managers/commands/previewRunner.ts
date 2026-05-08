@@ -8,6 +8,7 @@ import { pipeProcessOutput } from "./output";
 import { resolveCommandCwd } from "./path";
 import { PortAllocator } from "./portAllocator";
 import { preparePreviewLaunch } from "./runtimeAdapter";
+import { restoreDetachedProcess } from "./processHydration";
 import { ProcessRegistry } from "./processRegistry";
 
 export class PreviewRunner {
@@ -23,7 +24,7 @@ export class PreviewRunner {
   async hydrate() {
     const previews = (await this.history?.loadPreviews()) ?? [];
     for (const preview of previews) {
-      this.previews.set(preview.id, ["running", "starting"].includes(preview.status) ? { ...preview, pid: 0, status: "stopped" } : preview);
+      this.previews.set(preview.id, restoreDetachedProcess(preview));
     }
     await this.persist();
   }
