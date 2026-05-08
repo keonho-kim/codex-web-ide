@@ -10,6 +10,7 @@ export type UiState = {
   composerMentions: ComposerMention[];
   mentionPopup: MentionPopupState | null;
   editorDrafts: Record<string, string>;
+  editorSyncedContents: Record<string, string>;
   openFilePaths: string[];
   selectedPanel: "preview" | "git" | "jobs" | "services";
   selectedPreviewId?: string;
@@ -40,6 +41,7 @@ export const useUiStore = create<UiState>()(
       composerMentions: [],
       mentionPopup: null,
       editorDrafts: {},
+      editorSyncedContents: {},
       selectedPanel: "git",
       sidebarCollapsed: false,
       workbenchLayout: [18, 52, 30],
@@ -53,6 +55,8 @@ export const useUiStore = create<UiState>()(
                 activeFilePath: undefined,
                 composerDraft: "",
                 composerMentions: [],
+                editorDrafts: {},
+                editorSyncedContents: {},
                 mentionPopup: null,
                 openFilePaths: [],
                 selectedPreviewId: undefined,
@@ -72,11 +76,20 @@ export const useUiStore = create<UiState>()(
           editorDrafts: { ...state.editorDrafts, [path]: content },
         })),
       hydrateEditorDraft: (path, content) =>
-        set((state) => (path in state.editorDrafts ? state : { editorDrafts: { ...state.editorDrafts, [path]: content } })),
+        set((state) => {
+          const currentDraft = state.editorDrafts[path];
+          const previousContent = state.editorSyncedContents[path];
+          const shouldUpdateDraft = currentDraft === undefined || currentDraft === previousContent;
+          return {
+            editorDrafts: shouldUpdateDraft ? { ...state.editorDrafts, [path]: content } : state.editorDrafts,
+            editorSyncedContents: { ...state.editorSyncedContents, [path]: content },
+          };
+        }),
       discardEditorDraft: (path) =>
         set((state) => {
           const { [path]: _discarded, ...editorDrafts } = state.editorDrafts;
-          return { editorDrafts };
+          const { [path]: _synced, ...editorSyncedContents } = state.editorSyncedContents;
+          return { editorDrafts, editorSyncedContents };
         }),
       closeFilePath: (path) =>
         set((state) => {
