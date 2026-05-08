@@ -1,0 +1,50 @@
+{
+  "name": "@local/codex-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cw": "./bin/cw.ts",
+    "codex-web": "./bin/cw.ts"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "bun run packages/cli/src/cw.ts start",
+    "dev:web": "bunx vite --host 127.0.0.1 --port 17322 apps/web",
+    "build": "bun run build:web && bun run typecheck",
+    "build:web": "bunx vite build apps/web",
+    "typecheck": "bunx tsc --noEmit",
+    "doctor": "bun run packages/cli/src/cw.ts doctor",
+    "cw": "bun run packages/cli/src/cw.ts"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@tanstack/react-query": "^5.90.12",
+    "@vitejs/plugin-react": "^5.1.1",
+    "chokidar": "^4.0.3",
+    "diff2html": "^3.4.52",
+    "execa": "^9.6.1",
+    "express": "^4.22.1",
+    "http-proxy-middleware": "^3.0.5",
+    "lucide-react": "^0.468.0",
+    "nanoid": "^5.1.6",
+    "react": "^19.2.1",
+    "react-arborist": "^3.4.3",
+    "react-dom": "^19.2.1",
+    "react-resizable-panels": "^2.1.9",
+    "react-router-dom": "^7.10.1",
+    "zustand": "^5.0.9",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
+  }
+}
