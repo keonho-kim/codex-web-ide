@@ -19,7 +19,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": ["node", "bun-types"]
   },
   "include": ["ui/src", "backend/**/*.ts", "bin/**/*.ts"]
 }

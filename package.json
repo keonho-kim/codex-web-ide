@@ -12,6 +12,7 @@
     "dev:web": "bunx vite --host 127.0.0.1 --port 17322 ui",
     "build": "bun run build:web && bun run typecheck",
     "build:web": "bunx vite build ui",
+    "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "doctor": "bun run backend/src/cli/cw.ts doctor",
     "cw": "bun run backend/src/cli/cw.ts"
@@ -49,6 +50,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "bun-types": "^1.3.13",
     "typescript": "^5.9.3",
     "vite": "^7.2.7"
   }
