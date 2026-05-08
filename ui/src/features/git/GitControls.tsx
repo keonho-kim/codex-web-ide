@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { GitState } from "../../lib/types";
 
 type GitControlsProps = {
@@ -69,14 +70,9 @@ export function GitControls({
             onChange={(event) => onBranchNameChange(event.target.value)}
             placeholder="New branch"
           />
-          <button
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            disabled={!sessionId || !branchName.trim() || pending.createBranch}
-            onClick={onCreateBranch}
-          >
+          <Button type="button" disabled={!sessionId || !branchName.trim() || pending.createBranch} onClick={onCreateBranch} variant="outline" size="sm">
             Create
-          </button>
+          </Button>
         </div>
         <input
           className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
@@ -84,31 +80,16 @@ export function GitControls({
           onChange={(event) => onCommitMessageChange(event.target.value)}
           placeholder="Commit message"
         />
-        <button
-          className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          type="button"
-          disabled={!sessionId || !commitMessage.trim() || pending.commit}
-          onClick={onCommit}
-        >
+        <Button type="button" disabled={!sessionId || !commitMessage.trim() || pending.commit} onClick={onCommit} variant="outline" size="sm">
           Commit
-        </button>
+        </Button>
         <div className="flex items-center gap-2">
-          <button
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            disabled={!sessionId || pending.pull}
-            onClick={onPull}
-          >
+          <Button type="button" disabled={!sessionId || pending.pull} onClick={onPull} variant="outline" size="sm">
             Pull
-          </button>
-          <button
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            disabled={!sessionId || pending.push}
-            onClick={onPush}
-          >
+          </Button>
+          <Button type="button" disabled={!sessionId || pending.push} onClick={onPush} variant="outline" size="sm">
             Push
-          </button>
+          </Button>
         </div>
       </div>
     </div>

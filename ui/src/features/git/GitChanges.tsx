@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { GitFileStatus } from "../../lib/types";
 import { GitDiffView } from "./GitDiffView";
 
@@ -16,28 +17,22 @@ export function GitChanges({ files, selectedFile, stagedDiff, unstagedDiff, onSe
     <div className="grid gap-1 font-mono text-xs">
       {files.map((file) => (
         <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5" key={`${file.path}-${file.index}-${file.worktree}`}>
-          <button
-            className="inline-flex min-h-7 items-center justify-start gap-1.5 overflow-hidden rounded-md border border-control bg-canvas px-2.5 py-1 text-left font-mono text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          <Button
+            className="min-w-0 justify-start overflow-hidden font-mono"
+            variant="outline"
+            size="sm"
             type="button"
             onClick={() => onSelectFile(file.path)}
           >
             {file.index}
             {file.worktree} {file.path}
-          </button>
-          <button
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            onClick={() => onStage(file.path)}
-          >
+          </Button>
+          <Button type="button" onClick={() => onStage(file.path)} variant="outline" size="sm">
             Stage
-          </button>
-          <button
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            onClick={() => onUnstage(file.path)}
-          >
+          </Button>
+          <Button type="button" onClick={() => onUnstage(file.path)} variant="outline" size="sm">
             Unstage
-          </button>
+          </Button>
         </div>
       ))}
       <GitDiffView selectedFile={selectedFile} stagedDiff={stagedDiff} unstagedDiff={unstagedDiff} />

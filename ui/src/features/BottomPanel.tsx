@@ -1,4 +1,5 @@
 import { Bug, GitBranch, Play, Server } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GitPanel } from "./git/GitPanel";
 import { JobsPanel } from "./jobs/JobsPanel";
 import { PreviewPanel } from "./preview/PreviewPanel";
@@ -12,50 +13,22 @@ export function BottomPanel({ sessionId }: { sessionId?: string }) {
   return (
     <section className="min-h-0 overflow-hidden border-t border-hairline bg-canvas">
       <div className="flex h-[38px] items-center gap-2 border-b border-hairline px-2 py-1">
-        <button
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50",
-            selectedPanel === "git" && "border-selected-border bg-selected text-primary",
-          )}
-          type="button"
-          onClick={() => setSelectedPanel("git")}
-        >
-          <GitBranch size={15} />
+        <Button className={cn(selectedPanel === "git" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("git")} variant="outline" size="sm">
+          <GitBranch data-icon="inline-start" />
           Git
-        </button>
-        <button
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50",
-            selectedPanel === "preview" && "border-selected-border bg-selected text-primary",
-          )}
-          type="button"
-          onClick={() => setSelectedPanel("preview")}
-        >
-          <Play size={15} />
+        </Button>
+        <Button className={cn(selectedPanel === "preview" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("preview")} variant="outline" size="sm">
+          <Play data-icon="inline-start" />
           Preview
-        </button>
-        <button
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50",
-            selectedPanel === "jobs" && "border-selected-border bg-selected text-primary",
-          )}
-          type="button"
-          onClick={() => setSelectedPanel("jobs")}
-        >
-          <Bug size={15} />
+        </Button>
+        <Button className={cn(selectedPanel === "jobs" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("jobs")} variant="outline" size="sm">
+          <Bug data-icon="inline-start" />
           Jobs
-        </button>
-        <button
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50",
-            selectedPanel === "services" && "border-selected-border bg-selected text-primary",
-          )}
-          type="button"
-          onClick={() => setSelectedPanel("services")}
-        >
-          <Server size={15} />
+        </Button>
+        <Button className={cn(selectedPanel === "services" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("services")} variant="outline" size="sm">
+          <Server data-icon="inline-start" />
           Services
-        </button>
+        </Button>
       </div>
       {selectedPanel === "git" ? <GitPanel sessionId={sessionId} /> : null}
       {selectedPanel === "preview" ? <PreviewPanel sessionId={sessionId} /> : null}
