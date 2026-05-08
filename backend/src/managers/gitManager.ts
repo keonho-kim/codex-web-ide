@@ -3,7 +3,7 @@ import path from "node:path";
 import chokidar, { type FSWatcher } from "chokidar";
 import type { GitFileStatus, GitState } from "../shared/types";
 import type { EventBus } from "../events/eventBus";
-import { safePath } from "./fileManager";
+import { safeFsPath } from "./files/path";
 import { parsePorcelainV2, parseStatus } from "./git/porcelain";
 
 export class GitManager {
@@ -56,7 +56,7 @@ export class GitManager {
   }
 
   async diff(cwd: string, file?: string, staged = false) {
-    if (file) safePath(cwd, file);
+    if (file) await safeFsPath(cwd, file);
     const args = ["diff", "--no-ext-diff"];
     if (staged) args.push("--staged");
     if (file) args.push("--", file);
@@ -65,12 +65,12 @@ export class GitManager {
   }
 
   async stage(cwd: string, files: string[]) {
-    files.forEach((file) => safePath(cwd, file));
+    await assertGitPaths(cwd, files);
     await this.git(cwd, ["add", "--", ...files]);
   }
 
   async unstage(cwd: string, files: string[]) {
-    files.forEach((file) => safePath(cwd, file));
+    await assertGitPaths(cwd, files);
     await this.git(cwd, ["restore", "--staged", "--", ...files]);
   }
 
@@ -98,4 +98,8 @@ export class GitManager {
   async createAndCheckout(cwd: string, branch: string) {
     await this.git(cwd, ["checkout", "-b", branch]);
   }
+}
+
+async function assertGitPaths(cwd: string, files: string[]) {
+  await Promise.all(files.map((file) => safeFsPath(cwd, file)));
 }
