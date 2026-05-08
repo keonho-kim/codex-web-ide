@@ -9,10 +9,12 @@ export type AuthState = {
 
 export class AuthManager {
   private state: AuthState = { enabled: false };
+  private forceLoopbackAuth = false;
 
   constructor(private workspace: WorkspaceManager) {}
 
   async initialize(required: boolean) {
+    this.forceLoopbackAuth = process.env.CODEX_WEB_AUTH === "1";
     const settings = await this.workspace.getSettings();
     const enabled = required || settings.auth.enabled;
     const token = enabled ? settings.auth.token || randomToken() : settings.auth.token;
@@ -25,7 +27,7 @@ export class AuthManager {
 
   middleware() {
     return (req: Request, res: Response, next: NextFunction) => {
-      if (!this.state.enabled || isLoopback(req.socket.remoteAddress) || publicAssetRequest(req.path)) {
+      if (!this.state.enabled || this.isTrustedLoopback(req) || publicAssetRequest(req.path)) {
         next();
         return;
       }
@@ -43,7 +45,7 @@ export class AuthManager {
 
   registerRoutes(app: Express) {
     app.get("/api/auth/status", (req, res) => {
-      res.json({ enabled: this.state.enabled, authenticated: !this.state.enabled || isLoopback(req.socket.remoteAddress) || this.isValidRequest(req) });
+      res.json({ enabled: this.state.enabled, authenticated: !this.state.enabled || this.isTrustedLoopback(req) || this.isValidRequest(req) });
     });
     app.post("/api/auth/login", (req, res) => {
       const token = typeof req.body?.token === "string" ? req.body.token : "";
@@ -66,6 +68,10 @@ export class AuthManager {
     const explicit = req.header("x-codex-web-token") || bearer || req.query.token;
     const cookie = parseCookie(req.header("cookie") || "").cw_token;
     return this.compareToken(typeof explicit === "string" ? explicit : "") || this.compareToken(cookie || "");
+  }
+
+  private isTrustedLoopback(req: Request) {
+    return !this.forceLoopbackAuth && isLoopback(req.socket.remoteAddress);
   }
 
   private compareToken(input: string) {
