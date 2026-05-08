@@ -1,9 +1,10 @@
-import { access } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
-import { safePath } from "../fileManager";
+import { safeFsPath } from "../files/path";
 
 export async function resolveCommandCwd(sessionCwd: string, input?: string) {
-  const cwd = input ? safePath(sessionCwd, path.isAbsolute(input) ? path.relative(sessionCwd, input) : input) : sessionCwd;
-  await access(cwd);
+  const cwd = input ? await safeFsPath(sessionCwd, path.isAbsolute(input) ? path.relative(sessionCwd, input) : input) : await safeFsPath(sessionCwd);
+  const cwdStat = await stat(cwd);
+  if (!cwdStat.isDirectory()) throw new Error("Command cwd must be a directory");
   return cwd;
 }
