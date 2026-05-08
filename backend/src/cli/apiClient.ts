@@ -24,18 +24,27 @@ export async function api<T>(pathName: string, options: { method?: string; body?
 
 export async function serverBaseUrl() {
   const configuredPort = process.env.CODEX_WEB_PORT;
+  const config = await readConfig();
   const pid = await readPidFile();
-  const port = Number(configuredPort || pid?.port || 17321);
+  const port = Number(configuredPort || pid?.port || config.port || 17321);
   return `http://127.0.0.1:${port}`;
 }
 
 async function authToken() {
   if (process.env.CODEX_WEB_TOKEN) return process.env.CODEX_WEB_TOKEN;
   try {
-    const config = JSON.parse(await fs.readFile(path.join(codexWebHome(), "config.json"), "utf8")) as { auth?: { token?: string } };
+    const config = await readConfig();
     return config.auth?.token || null;
   } catch {
     return null;
+  }
+}
+
+async function readConfig() {
+  try {
+    return JSON.parse(await fs.readFile(path.join(codexWebHome(), "config.json"), "utf8")) as { port?: number; auth?: { token?: string } };
+  } catch {
+    return {};
   }
 }
 

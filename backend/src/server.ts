@@ -18,6 +18,8 @@ import { createPlatformAdapter } from "./platform/adapter";
 export type ServerOptions = {
   host?: string;
   port?: number;
+  previewPortStart?: number;
+  previewPortEnd?: number;
 };
 
 export async function createApp(options: ServerOptions = {}) {
@@ -31,7 +33,7 @@ export async function createApp(options: ServerOptions = {}) {
   await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1"));
   const files = new FileManager(events);
   const git = new GitManager();
-  const commands = new CommandManager(events, git, store);
+  const commands = new CommandManager(events, git, store, options.previewPortStart, options.previewPortEnd);
   await commands.hydrate();
   const codex = new CodexManager(events, git, sessions, new CodexHistoryStore(store));
   await codex.hydrate(await sessions.list());
@@ -71,9 +73,12 @@ export async function createApp(options: ServerOptions = {}) {
 }
 
 export async function startServer(options: ServerOptions = {}) {
-  const host = options.host || process.env.CODEX_WEB_HOST || "127.0.0.1";
-  const port = options.port || Number(process.env.CODEX_WEB_PORT || 17321);
-  const app = await createApp({ host, port });
+  const persisted = await new WorkspaceManager(new JsonStore()).getSettings();
+  const host = options.host || process.env.CODEX_WEB_HOST || persisted.host;
+  const port = options.port || Number(process.env.CODEX_WEB_PORT || persisted.port);
+  const previewPortStart = options.previewPortStart || Number(process.env.CODEX_WEB_PREVIEW_PORT_START || persisted.previewPortStart);
+  const previewPortEnd = options.previewPortEnd || Number(process.env.CODEX_WEB_PREVIEW_PORT_END || persisted.previewPortEnd);
+  const app = await createApp({ host, port, previewPortStart, previewPortEnd });
   const auth = app.locals.auth as AuthManager | undefined;
   let server: ReturnType<typeof app.listen>;
   app.post("/api/shutdown", (req, res) => {

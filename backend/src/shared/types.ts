@@ -22,6 +22,10 @@ export type Project = {
 };
 
 export type WorkspaceSettings = {
+  host: string;
+  port: number;
+  previewPortStart: number;
+  previewPortEnd: number;
   defaultProjectsDir: string;
   activeProjectId?: string;
   recentProjectIds: string[];

@@ -70,6 +70,10 @@ export const gitBranchSchema = z.object({
 });
 
 export const workspaceSettingsSchema = z.object({
+  host: z.string().min(1).default("127.0.0.1"),
+  port: z.number().int().positive().default(17321),
+  previewPortStart: z.number().int().positive().default(17330),
+  previewPortEnd: z.number().int().positive().default(17399),
   defaultProjectsDir: z.string().min(1),
   activeProjectId: z.string().optional(),
   recentProjectIds: z.array(z.string()).default([]),

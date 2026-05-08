@@ -12,6 +12,10 @@ export class WorkspaceManager {
 
   async getSettings(): Promise<WorkspaceSettings> {
     const fallback: WorkspaceSettings = {
+      host: "127.0.0.1",
+      port: 17321,
+      previewPortStart: 17330,
+      previewPortEnd: 17399,
       defaultProjectsDir: this.adapter.getDefaultProjectsDir(),
       activeProjectId: undefined,
       recentProjectIds: [],
