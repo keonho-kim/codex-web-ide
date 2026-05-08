@@ -17,9 +17,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          diff: ["diff2html"],
           editor: ["@monaco-editor/react"],
+          interaction: ["react-arborist", "react-resizable-panels", "lucide-react"],
           tiptap: ["@tiptap/react", "@tiptap/starter-kit"],
-          vendor: ["react", "react-dom", "@tanstack/react-query", "zustand"],
+          vendor: ["react", "react-dom", "react-router-dom", "@tanstack/react-query", "zustand"],
         },
       },
     },
