@@ -270,6 +270,12 @@ textarea {
   right: 8px;
 }
 
+.composer-cancel {
+  bottom: 8px;
+  position: absolute;
+  right: 76px;
+}
+
 .mention-popover {
   background: #1d1d1f;
   border-radius: 6px;

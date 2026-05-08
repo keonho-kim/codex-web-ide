@@ -18,6 +18,13 @@ export class CodexManager {
     return this.messages.get(sessionId) ?? [];
   }
 
+  resume(sessionId: string) {
+    return {
+      running: this.running.has(sessionId),
+      messages: this.listMessages(sessionId),
+    };
+  }
+
   async run(session: Session, input: { prompt: string; mentions: ComposerMention[] }) {
     if (this.running.has(session.id)) throw new Error("Codex is already running for this session");
     for (const mention of input.mentions) {

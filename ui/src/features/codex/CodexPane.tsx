@@ -55,6 +55,12 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
       await queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
     },
   });
+  const cancelCodex = useMutation({
+    mutationFn: () => api(`/api/sessions/${sessionId}/codex/cancel`, { method: "POST" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
+    },
+  });
 
   const addMention = (mention: ComposerMention) => {
     setSelectedMentions((items) => (items.some((item) => mentionKey(item) === mentionKey(mention)) ? items : [...items, mention]));
@@ -122,6 +128,11 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
           <Play size={15} />
           Run
         </button>
+        {runCodex.isPending ? (
+          <button className="composer-cancel" type="button" disabled={cancelCodex.isPending} onClick={() => cancelCodex.mutate()}>
+            Cancel
+          </button>
+        ) : null}
         {mentionSearch && suggestions.length > 0 ? (
           <div className="mention-popover">
             {suggestions.map((mention, index) => (

@@ -152,8 +152,8 @@ export async function createApp() {
   app.post("/api/sessions/:id/codex/cancel", withSession(sessions, async (_req, res, session) => {
     res.json(codex.cancel(session.id));
   }));
-  app.post("/api/sessions/:id/codex/resume", withSession(sessions, async (_req, res) => {
-    res.status(501).json({ error: "Codex resume is not implemented yet." });
+  app.post("/api/sessions/:id/codex/resume", withSession(sessions, async (_req, res, session) => {
+    res.json(codex.resume(session.id));
   }));
   app.get("/api/sessions/:id/codex/events", withSession(sessions, async (req, res) => {
     res.redirect(307, `/api/sessions/${req.params.id}/events`);
