@@ -30,7 +30,7 @@ export function App() {
           <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">{app.activeSession?.cwd || "No session selected"}</span>
         </div>
         <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch">
-          <ProjectCreator onCreated={(project) => app.selectProject(project.id)} />
+          <ProjectCreator defaultProjectsDir={app.settings?.defaultProjectsDir} onCreated={(project) => app.selectProject(project.id)} />
           <SessionCreator projectId={app.activeProjectId} onCreated={(session) => app.setActiveSessionId(session.id)} />
         </div>
       </header>
