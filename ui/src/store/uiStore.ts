@@ -5,6 +5,7 @@ export type UiState = {
   activeProjectId?: string;
   activeSessionId?: string;
   activeFilePath?: string;
+  editorDrafts: Record<string, string>;
   openFilePaths: string[];
   selectedPanel: "preview" | "git" | "jobs" | "services";
   selectedPreviewId?: string;
@@ -13,6 +14,9 @@ export type UiState = {
   setActiveProjectId(id?: string): void;
   setActiveSessionId(id?: string): void;
   setActiveFilePath(path?: string): void;
+  setEditorDraft(path: string, content: string): void;
+  hydrateEditorDraft(path: string, content: string): void;
+  discardEditorDraft(path: string): void;
   closeFilePath(path: string): void;
   setSelectedPanel(panel: UiState["selectedPanel"]): void;
   setSelectedPreviewId(id?: string): void;
@@ -24,6 +28,7 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       openFilePaths: [],
+      editorDrafts: {},
       selectedPanel: "git",
       sidebarCollapsed: false,
       workbenchLayout: [18, 52, 30],
@@ -34,6 +39,17 @@ export const useUiStore = create<UiState>()(
           activeFilePath,
           openFilePaths: activeFilePath && !state.openFilePaths.includes(activeFilePath) ? [...state.openFilePaths, activeFilePath] : state.openFilePaths,
         })),
+      setEditorDraft: (path, content) =>
+        set((state) => ({
+          editorDrafts: { ...state.editorDrafts, [path]: content },
+        })),
+      hydrateEditorDraft: (path, content) =>
+        set((state) => (path in state.editorDrafts ? state : { editorDrafts: { ...state.editorDrafts, [path]: content } })),
+      discardEditorDraft: (path) =>
+        set((state) => {
+          const { [path]: _discarded, ...editorDrafts } = state.editorDrafts;
+          return { editorDrafts };
+        }),
       closeFilePath: (path) =>
         set((state) => {
           const openFilePaths = state.openFilePaths.filter((item) => item !== path);

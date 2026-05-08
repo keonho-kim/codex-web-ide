@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, X } from "lucide-react";
@@ -8,20 +8,22 @@ import { useUiStore } from "../../store/uiStore";
 export function EditorPane({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const activeFilePath = useUiStore((state) => state.activeFilePath);
+  const editorDrafts = useUiStore((state) => state.editorDrafts);
   const openFilePaths = useUiStore((state) => state.openFilePaths);
   const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
   const closeFilePath = useUiStore((state) => state.closeFilePath);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const setEditorDraft = useUiStore((state) => state.setEditorDraft);
+  const hydrateEditorDraft = useUiStore((state) => state.hydrateEditorDraft);
   const file = useQuery({
     queryKey: ["file", sessionId, activeFilePath],
     queryFn: () => api<{ path: string; content: string }>(`/api/sessions/${sessionId}/files/read?path=${encodeURIComponent(activeFilePath || "")}`),
     enabled: Boolean(sessionId && activeFilePath),
   });
-  const draft = activeFilePath ? (drafts[activeFilePath] ?? file.data?.content ?? "") : "";
+  const draft = activeFilePath ? (editorDrafts[activeFilePath] ?? file.data?.content ?? "") : "";
   const save = useMutation({
     mutationFn: () => api("/api/sessions/" + sessionId + "/files/write", { method: "PUT", body: { path: activeFilePath, content: draft } }),
     onSuccess: async () => {
-      if (activeFilePath) setDrafts((items) => ({ ...items, [activeFilePath]: draft }));
+      if (activeFilePath) setEditorDraft(activeFilePath, draft);
       await queryClient.invalidateQueries({ queryKey: ["file", sessionId, activeFilePath] });
     },
   });
@@ -30,8 +32,8 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   useEffect(() => {
     const content = file.data?.content;
     if (!activeFilePath || content === undefined) return;
-    setDrafts((items) => (activeFilePath in items ? items : { ...items, [activeFilePath]: content }));
-  }, [activeFilePath, file.data?.content]);
+    hydrateEditorDraft(activeFilePath, content);
+  }, [activeFilePath, file.data?.content, hydrateEditorDraft]);
 
   return (
     <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
@@ -77,7 +79,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           theme="vs-light"
           options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: "on", scrollBeyondLastLine: false }}
           onChange={(value) => {
-            if (activeFilePath) setDrafts((items) => ({ ...items, [activeFilePath]: value ?? "" }));
+            if (activeFilePath) setEditorDraft(activeFilePath, value ?? "");
           }}
         />
       ) : (
