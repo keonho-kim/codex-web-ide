@@ -1,17 +1,26 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { Codex, type Thread, type ThreadEvent } from "@openai/codex-sdk";
 import { nanoid } from "nanoid";
 import type { EventBus } from "../events/eventBus";
 import type { GitManager } from "./gitManager";
+import type { SessionManager } from "./sessionManager";
 import { safePath } from "./fileManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 
+type RunningTurn = {
+  controller: AbortController;
+};
+
 export class CodexManager {
+  private codex = new Codex();
   private messages = new Map<string, CodexMessage[]>();
-  private running = new Map<string, ChildProcessWithoutNullStreams>();
+  private running = new Map<string, RunningTurn>();
+  private threads = new Map<string, Thread>();
+  private cancelled = new Set<string>();
 
   constructor(
     private events: EventBus,
     private git: GitManager,
+    private sessions: SessionManager,
   ) {}
 
   listMessages(sessionId: string) {
@@ -33,45 +42,28 @@ export class CodexManager {
 
     const prompt = buildPrompt(input.prompt, input.mentions);
     this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
-    const child = spawn(
-      "codex",
-      ["exec", "--json", "--cd", session.cwd, "--sandbox", "workspace-write", "--ask-for-approval", "on-request", "-"],
-      { cwd: session.cwd, env: process.env, shell: false },
-    );
-    this.running.set(session.id, child);
-    child.stdin.end(prompt);
-
-    let assistantText = "";
-    child.stdout.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      assistantText += extractCodexText(text);
-      this.events.publish(session.id, { type: "codex.event", payload: { stream: "stdout", text } });
-    });
-    child.stderr.on("data", (chunk: Buffer) => {
-      this.events.publish(session.id, { type: "codex.event", payload: { stream: "stderr", text: chunk.toString() } });
-    });
-    child.on("error", (error) => {
-      assistantText += error.message;
-    });
-    child.on("close", async (exitCode) => {
+    const thread = this.threadFor(session);
+    const controller = new AbortController();
+    this.running.set(session.id, { controller });
+    await this.sessions.update(session.id, { status: "running" });
+    let events: AsyncGenerator<ThreadEvent>;
+    try {
+      events = (await thread.runStreamed(prompt, { signal: controller.signal })).events;
+    } catch (error) {
       this.running.delete(session.id);
-      this.append(session.id, {
-        id: nanoid(),
-        role: "assistant",
-        text: assistantText.trim() || `Codex exited with code ${exitCode ?? -1}.`,
-        createdAt: Date.now(),
-      });
-      this.events.publish(session.id, { type: "codex.event", payload: { stream: "close", exitCode } });
-      this.events.publish(session.id, { type: "git.state.updated", state: await this.git.state(session.cwd) });
-    });
+      await this.sessions.update(session.id, { status: "error" });
+      throw error;
+    }
+    void this.consumeEvents(session, thread, events);
 
-    return { running: true };
+    return { running: true, threadId: thread.id ?? session.codexThreadId };
   }
 
   cancel(sessionId: string) {
-    const child = this.running.get(sessionId);
-    if (!child) return { running: false };
-    child.kill("SIGTERM");
+    const turn = this.running.get(sessionId);
+    if (!turn) return { running: false };
+    this.cancelled.add(sessionId);
+    turn.controller.abort();
     this.running.delete(sessionId);
     return { running: false };
   }
@@ -81,6 +73,63 @@ export class CodexManager {
     messages.push(message);
     this.messages.set(sessionId, messages.slice(-200));
     this.events.publish(sessionId, { type: "codex.event", payload: { message } });
+  }
+
+  private threadFor(session: Session) {
+    const existing = this.threads.get(session.id);
+    if (existing) return existing;
+    const options = {
+      workingDirectory: session.cwd,
+      sandboxMode: "workspace-write" as const,
+      approvalPolicy: "on-request" as const,
+      skipGitRepoCheck: true,
+    };
+    const thread = session.codexThreadId ? this.codex.resumeThread(session.codexThreadId, options) : this.codex.startThread(options);
+    this.threads.set(session.id, thread);
+    return thread;
+  }
+
+  private async consumeEvents(session: Session, thread: Thread, events: AsyncGenerator<ThreadEvent>) {
+    const agentMessages = new Map<string, string>();
+    let failure: string | undefined;
+    let cancelled = false;
+    try {
+      for await (const event of events) {
+        this.events.publish(session.id, { type: "codex.event", payload: event });
+        if (event.type === "thread.started") {
+          await this.sessions.update(session.id, { codexThreadId: event.thread_id });
+        }
+        if ((event.type === "item.updated" || event.type === "item.completed") && event.item.type === "agent_message") {
+          agentMessages.set(event.item.id, event.item.text);
+        }
+        if (event.type === "turn.failed") {
+          failure = event.error.message;
+        }
+        if (event.type === "error") {
+          failure = event.message;
+        }
+      }
+    } catch (error) {
+      cancelled = this.cancelled.delete(session.id);
+      if (!cancelled) failure = error instanceof Error ? error.message : "Codex run failed.";
+    } finally {
+      this.running.delete(session.id);
+      if (!cancelled) cancelled = this.cancelled.delete(session.id);
+      if (thread.id) await this.sessions.update(session.id, { codexThreadId: thread.id });
+      const text = [...agentMessages.values()].join("\n").trim();
+      this.append(session.id, {
+        id: nanoid(),
+        role: "assistant",
+        text: text || failure || (cancelled ? "Codex run cancelled." : "Codex run finished without a response."),
+        createdAt: Date.now(),
+      });
+      await this.sessions.update(session.id, { status: failure ? "error" : "idle" });
+      try {
+        this.events.publish(session.id, { type: "git.state.updated", state: await this.git.state(session.cwd) });
+      } catch (error) {
+        this.events.publish(session.id, { type: "codex.event", payload: { type: "git.refresh.failed", message: error instanceof Error ? error.message : "Git refresh failed." } });
+      }
+    }
   }
 }
 
@@ -97,28 +146,6 @@ function buildPrompt(prompt: string, mentions: ComposerMention[]) {
     mentionText ? `\nSelected context:\n${mentionText}` : "",
     `\nUser request:\n${prompt}`,
   ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function extractCodexText(text: string) {
-  return text
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        const event = JSON.parse(line) as Record<string, unknown>;
-        return typeof event.message === "string"
-          ? event.message
-          : typeof event.text === "string"
-            ? event.text
-            : typeof event.delta === "string"
-              ? event.delta
-              : "";
-      } catch {
-        return line;
-      }
-    })
     .filter(Boolean)
     .join("\n");
 }

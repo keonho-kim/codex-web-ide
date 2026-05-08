@@ -39,7 +39,7 @@ export async function createApp(options: ServerOptions = {}) {
     files,
     git,
     skills: new SkillManager(),
-    codex: new CodexManager(events, git),
+    codex: new CodexManager(events, git, sessions),
     commands,
     adapter: createPlatformAdapter(),
     auth,
