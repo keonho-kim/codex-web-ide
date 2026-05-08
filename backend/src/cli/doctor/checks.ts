@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import net from "node:net";
 import { execa } from "execa";
+import { JsonStore } from "../../managers/storage";
+import { WorkspaceManager } from "../../managers/workspaceManager";
 import { createPlatformAdapter } from "../../platform/adapter";
 
 export type BinaryCheck = {
@@ -31,9 +33,10 @@ export type DoctorReport = {
 
 export async function collectDoctorReport(options: { appPort?: number; previewStart?: number; previewEnd?: number } = {}): Promise<DoctorReport> {
   const adapter = createPlatformAdapter();
-  const appPort = options.appPort ?? Number(process.env.CODEX_WEB_PORT || 17321);
-  const previewStart = options.previewStart ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_START || 17330);
-  const previewEnd = options.previewEnd ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_END || 17399);
+  const settings = await new WorkspaceManager(new JsonStore()).getSettings();
+  const appPort = options.appPort ?? Number(process.env.CODEX_WEB_PORT || settings.port);
+  const previewStart = options.previewStart ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_START || settings.previewPortStart);
+  const previewEnd = options.previewEnd ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_END || settings.previewPortEnd);
   const binaries = await checkBinaries(defaultBinaryChecks());
   const appPortAvailable = await isPortAvailable(appPort);
   const previewPorts = await checkPreviewPorts(previewStart, previewEnd);
