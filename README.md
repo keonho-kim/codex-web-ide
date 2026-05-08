@@ -87,6 +87,7 @@ CODEX_WEB_HOME                 Data directory, default ~/.codex-web
 CODEX_WEB_HOST                 App host, default 127.0.0.1
 CODEX_WEB_PORT                 App port, default 17321
 CODEX_WEB_AUTH                 1 to force auth, 0 to disable auth
+CODEX_WEB_TOKEN                Token for CLI/API requests when auth is enabled
 CODEX_WEB_PREVIEW_PORT_START   Preview port range start, default 17330
 CODEX_WEB_PREVIEW_PORT_END     Preview port range end, default 17399
 ```
