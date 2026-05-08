@@ -3,9 +3,9 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../events/eventBus";
 import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
-import { safePath } from "./fileManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
+import { validateCodexMentions } from "./codex/mentions";
 import { buildCodexPrompt } from "./codex/prompt";
 
 type RunningTurn = {
@@ -44,9 +44,7 @@ export class CodexManager {
 
   async run(session: Session, input: { prompt: string; mentions: ComposerMention[] }) {
     if (this.running.has(session.id)) throw new Error("Codex is already running for this session");
-    for (const mention of input.mentions) {
-      if (mention.type === "file") safePath(session.cwd, mention.path);
-    }
+    await validateCodexMentions(session.cwd, input.mentions);
 
     const prompt = buildCodexPrompt(input.prompt, input.mentions);
     await this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
