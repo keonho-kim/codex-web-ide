@@ -4,6 +4,7 @@ import type { EventBus } from "../../events/eventBus";
 import type { Job, Session } from "../../shared/types";
 import type { GitManager } from "../gitManager";
 import type { CommandHistoryStore } from "./historyStore";
+import { pipeProcessOutput } from "./output";
 import { resolveCommandCwd } from "./path";
 import { ProcessRegistry } from "./processRegistry";
 
@@ -62,15 +63,9 @@ export class JobRunner {
       if (job.status === "running") this.cancel(session.id, id);
     }, jobTimeoutMs(command, options.timeoutMs));
 
-    child.stdout.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      job.stdout.push(text);
-      this.events.publish(session.id, { type: "job.stdout", jobId: id, text });
-    });
-    child.stderr.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      job.stderr.push(text);
-      this.events.publish(session.id, { type: "job.stderr", jobId: id, text });
+    pipeProcessOutput(child, job, {
+      stdout: (text) => this.events.publish(session.id, { type: "job.stdout", jobId: id, text }),
+      stderr: (text) => this.events.publish(session.id, { type: "job.stderr", jobId: id, text }),
     });
     child.on("error", (error) => {
       job.stderr.push(`${error.message}\n`);

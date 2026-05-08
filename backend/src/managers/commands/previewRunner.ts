@@ -4,6 +4,7 @@ import type { EventBus } from "../../events/eventBus";
 import type { PreviewInstance, Session } from "../../shared/types";
 import { waitForPreviewHealth } from "./health";
 import type { CommandHistoryStore } from "./historyStore";
+import { pipeProcessOutput } from "./output";
 import { resolveCommandCwd } from "./path";
 import { PortAllocator } from "./portAllocator";
 import { preparePreviewLaunch } from "./runtimeAdapter";
@@ -62,17 +63,15 @@ export class PreviewRunner {
     this.processes.set(id, { process: child, command: launch.command, cwd });
     this.events.publish(session.id, { type: "preview.started", preview });
 
-    child.stderr.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      preview.stderr.push(text);
-      void this.persist();
-      this.events.publish(session.id, { type: "preview.stderr", previewId: id, text });
-    });
-    child.stdout.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      preview.stdout.push(text);
-      void this.persist();
-      this.events.publish(session.id, { type: "preview.stdout", previewId: id, text });
+    pipeProcessOutput(child, preview, {
+      stdout: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "preview.stdout", previewId: id, text });
+      },
+      stderr: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "preview.stderr", previewId: id, text });
+      },
     });
     child.on("close", () => {
       this.ports.release(port);

@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../../events/eventBus";
 import type { ServiceInstance, Session } from "../../shared/types";
 import type { CommandHistoryStore } from "./historyStore";
+import { pipeProcessOutput } from "./output";
 import { resolveCommandCwd } from "./path";
 import { ProcessRegistry } from "./processRegistry";
 
@@ -50,17 +51,15 @@ export class ServiceRunner {
     this.processes.set(id, { process: child, command, cwd });
     this.events.publish(session.id, { type: "service.started", service });
 
-    child.stdout.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      service.stdout.push(text);
-      void this.persist();
-      this.events.publish(session.id, { type: "service.stdout", serviceId: id, text });
-    });
-    child.stderr.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      service.stderr.push(text);
-      void this.persist();
-      this.events.publish(session.id, { type: "service.stderr", serviceId: id, text });
+    pipeProcessOutput(child, service, {
+      stdout: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "service.stdout", serviceId: id, text });
+      },
+      stderr: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "service.stderr", serviceId: id, text });
+      },
     });
     child.on("close", () => {
       this.processes.delete(id);
