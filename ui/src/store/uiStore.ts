@@ -51,6 +51,9 @@ export const useUiStore = create<UiState>()(
             : {
                 activeSessionId,
                 activeFilePath: undefined,
+                composerDraft: "",
+                composerMentions: [],
+                mentionPopup: null,
                 openFilePaths: [],
                 selectedPreviewId: undefined,
               },
