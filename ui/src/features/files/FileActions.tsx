@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2, FolderPlus, Pencil, Trash2 } from "lucide-react";
-import { iconButtonClass, inputClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import { useUiStore } from "../../store/uiStore";
 
@@ -73,18 +72,40 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
       }}
     >
       <div className="flex min-w-0 items-center gap-1">
-        <input className={`${inputClass} h-7 min-w-0 flex-1 py-1 text-xs`} value={pathInput} onChange={(event) => setPathInput(event.target.value)} placeholder="path/to/file.ts" />
-        <button className={iconButtonClass} title="Create file" type="submit" disabled={!sessionId || !trimmedPath || pending}>
+        <input
+          className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+          value={pathInput}
+          onChange={(event) => setPathInput(event.target.value)}
+          placeholder="path/to/file.ts"
+        />
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Create file"
+          type="submit"
+          disabled={!sessionId || !trimmedPath || pending}
+        >
           <FilePlus2 size={14} />
         </button>
-        <button className={iconButtonClass} title="Create folder" type="button" disabled={!sessionId || !trimmedPath || pending} onClick={() => createDirectory.mutate()}>
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Create folder"
+          type="button"
+          disabled={!sessionId || !trimmedPath || pending}
+          onClick={() => createDirectory.mutate()}
+        >
           <FolderPlus size={14} />
         </button>
-        <button className={iconButtonClass} title="Rename selected file" type="button" disabled={!sessionId || !activeFilePath || !trimmedPath || activeFilePath === trimmedPath || pending} onClick={() => renameFile.mutate()}>
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Rename selected file"
+          type="button"
+          disabled={!sessionId || !activeFilePath || !trimmedPath || activeFilePath === trimmedPath || pending}
+          onClick={() => renameFile.mutate()}
+        >
           <Pencil size={14} />
         </button>
         <button
-          className={iconButtonClass}
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
           title="Delete path"
           type="button"
           disabled={!sessionId || !operationPath || pending}

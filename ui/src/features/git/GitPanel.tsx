@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { html as diffToHtml } from "diff2html";
 import "diff2html/bundles/css/diff2html.min.css";
-import { buttonClass, inputClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { GitFileStatus, GitState } from "../../lib/types";
 
@@ -74,18 +73,23 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <div className={`${panelContentClass} grid grid-cols-[240px_minmax(0,1fr)] gap-4`}>
+    <div className="grid h-[calc(100%-38px)] grid-cols-[240px_minmax(0,1fr)] gap-4 overflow-auto p-2.5">
       <div className="grid content-start gap-2">
         <strong>{state.data?.branch || "No Git branch"}</strong>
-        <p className={mutedClass}>
+        <p className="text-xs text-muted">
           staged {state.data?.stagedCount ?? 0} / unstaged {state.data?.unstagedCount ?? 0} / untracked {state.data?.untrackedCount ?? 0}
         </p>
-        <p className={mutedClass}>
+        <p className="text-xs text-muted">
           {state.data?.dirty ? "dirty" : "clean"} · ahead {state.data?.ahead ?? 0} / behind {state.data?.behind ?? 0}
           {state.data?.detached ? " · detached" : ""}
         </p>
         <div className="grid gap-2">
-          <select className={inputClass} value={state.data?.branch ?? ""} disabled={!sessionId} onChange={(event) => checkout.mutate(event.target.value)}>
+          <select
+            className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+            value={state.data?.branch ?? ""}
+            disabled={!sessionId}
+            onChange={(event) => checkout.mutate(event.target.value)}
+          >
             <option value="" disabled>
               Select branch
             </option>
@@ -96,20 +100,50 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
             ))}
           </select>
           <div className="flex items-center gap-2">
-            <input className={inputClass} value={branchName} onChange={(event) => setBranchName(event.target.value)} placeholder="New branch" />
-            <button className={buttonClass} type="button" disabled={!sessionId || !branchName.trim() || createBranch.isPending} onClick={() => createBranch.mutate()}>
+            <input
+              className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+              value={branchName}
+              onChange={(event) => setBranchName(event.target.value)}
+              placeholder="New branch"
+            />
+            <button
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!sessionId || !branchName.trim() || createBranch.isPending}
+              onClick={() => createBranch.mutate()}
+            >
               Create
             </button>
           </div>
-          <input className={inputClass} value={commitMessage} onChange={(event) => setCommitMessage(event.target.value)} placeholder="Commit message" />
-          <button className={buttonClass} type="button" disabled={!sessionId || !commitMessage.trim() || commit.isPending} onClick={() => commit.mutate()}>
+          <input
+            className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+            value={commitMessage}
+            onChange={(event) => setCommitMessage(event.target.value)}
+            placeholder="Commit message"
+          />
+          <button
+            className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={!sessionId || !commitMessage.trim() || commit.isPending}
+            onClick={() => commit.mutate()}
+          >
             Commit
           </button>
           <div className="flex items-center gap-2">
-            <button className={buttonClass} type="button" disabled={!sessionId || pull.isPending} onClick={() => pull.mutate()}>
+            <button
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!sessionId || pull.isPending}
+              onClick={() => pull.mutate()}
+            >
               Pull
             </button>
-            <button className={buttonClass} type="button" disabled={!sessionId || push.isPending} onClick={() => push.mutate()}>
+            <button
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!sessionId || push.isPending}
+              onClick={() => push.mutate()}
+            >
               Push
             </button>
           </div>
@@ -118,14 +152,26 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
       <div className="grid gap-1 font-mono text-xs">
         {status.data?.map((file) => (
           <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5" key={`${file.path}-${file.index}-${file.worktree}`}>
-            <button className={`${buttonClass} justify-start overflow-hidden text-left font-mono`} type="button" onClick={() => setSelectedFile(file.path)}>
+            <button
+              className="inline-flex min-h-7 items-center justify-start gap-1.5 overflow-hidden rounded-md border border-control bg-canvas px-2.5 py-1 text-left font-mono text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={() => setSelectedFile(file.path)}
+            >
               {file.index}
               {file.worktree} {file.path}
             </button>
-            <button className={buttonClass} type="button" onClick={() => stage.mutate(file.path)}>
+            <button
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={() => stage.mutate(file.path)}
+            >
               Stage
             </button>
-            <button className={buttonClass} type="button" onClick={() => unstage.mutate(file.path)}>
+            <button
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={() => unstage.mutate(file.path)}
+            >
               Unstage
             </button>
           </div>

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { SectionTitle } from "../../components/SectionTitle";
-import { mutedClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { CodexMessage } from "../../lib/types";
 import { Composer } from "./Composer";
@@ -30,7 +29,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
             </article>
           ))
         ) : (
-          <p className={mutedClass}>Start a Codex run from the composer.</p>
+          <p className="text-xs text-muted">Start a Codex run from the composer.</p>
         )}
       </div>
       <Composer sessionId={sessionId} running={status.data?.running ?? false} />

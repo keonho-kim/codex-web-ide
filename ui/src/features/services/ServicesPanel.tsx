@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, RefreshCw, Square } from "lucide-react";
-import { commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { ServiceInstance } from "../../lib/types";
@@ -35,11 +34,15 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
   });
   const latest = useMemo(() => services.data?.[services.data.length - 1], [services.data]);
   return (
-    <div className={panelContentClass}>
-      <div className={commandRowClass}>
-        <input className={`${inputClass} w-[min(520px,100%)]`} value={command} onChange={(event) => setCommand(event.target.value)} />
+    <div className="h-[calc(100%-38px)] overflow-auto p-2.5">
+      <div className="flex items-center gap-2">
+        <input
+          className="w-[min(520px,100%)] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+          value={command}
+          onChange={(event) => setCommand(event.target.value)}
+        />
         <button
-          className={iconButtonClass}
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           disabled={!sessionId || startService.isPending || splitCommand(command).length === 0}
           onClick={() => {
@@ -49,7 +52,11 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
         >
           <Play size={15} />
         </button>
-        <button className={iconButtonClass} type="button" onClick={() => void refreshServices()}>
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          onClick={() => void refreshServices()}
+        >
           <RefreshCw size={15} />
         </button>
       </div>
@@ -64,18 +71,32 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
                 </span>
               </div>
               <div className="flex gap-1">
-                <button className={iconButtonClass} title="Restart service" type="button" disabled={restartService.isPending} onClick={() => restartService.mutate(service.id)}>
+                <button
+                  className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Restart service"
+                  type="button"
+                  disabled={restartService.isPending}
+                  onClick={() => restartService.mutate(service.id)}
+                >
                   <RefreshCw size={14} />
                 </button>
-                <button className={iconButtonClass} title="Stop service" type="button" disabled={service.status === "stopped" || stopService.isPending} onClick={() => stopService.mutate(service.id)}>
+                <button
+                  className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Stop service"
+                  type="button"
+                  disabled={service.status === "stopped" || stopService.isPending}
+                  onClick={() => stopService.mutate(service.id)}
+                >
                   <Square size={14} />
                 </button>
               </div>
             </article>
           ))}
-          {services.data?.length === 0 ? <p className={mutedClass}>No services yet.</p> : null}
+          {services.data?.length === 0 ? <p className="text-xs text-muted">No services yet.</p> : null}
         </div>
-        <pre className={logClass}>{latest ? [...latest.stdout, ...latest.stderr].join("") || latest.status : "No service logs yet."}</pre>
+        <pre className="h-[150px] overflow-auto rounded-md bg-ink p-2.5 text-xs whitespace-pre-wrap text-white">
+          {latest ? [...latest.stdout, ...latest.stderr].join("") || latest.status : "No service logs yet."}
+        </pre>
       </div>
     </div>
   );

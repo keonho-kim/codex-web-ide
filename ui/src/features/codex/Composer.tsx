@@ -3,8 +3,8 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play } from "lucide-react";
-import { buttonClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
+import { cn } from "../../lib/classes";
 import type { ComposerMention } from "../../lib/types";
 import { mentionKey, mentionLabel, parseMentionSearch, type MentionSearch } from "./mentionUtils";
 
@@ -118,7 +118,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
         {!draft ? <span className="pointer-events-none absolute top-2 left-2.5 text-sm text-muted">Ask Codex. Use @ for files and $ for skills.</span> : null}
         <EditorContent editor={editor} />
         <button
-          className={`${buttonClass} absolute right-2 bottom-2`}
+          className="absolute right-2 bottom-2 inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           disabled={!sessionId || running || !draft.trim() || runCodex.isPending}
           onClick={() => runCodex.mutate()}
@@ -127,7 +127,12 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
           Run
         </button>
         {running || runCodex.isPending ? (
-          <button className={`${buttonClass} absolute right-[76px] bottom-2`} type="button" disabled={cancelCodex.isPending} onClick={() => cancelCodex.mutate()}>
+          <button
+            className="absolute right-[76px] bottom-2 inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={cancelCodex.isPending}
+            onClick={() => cancelCodex.mutate()}
+          >
             Cancel
           </button>
         ) : null}
@@ -136,7 +141,10 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
         <div className="absolute right-0 bottom-24 left-0 max-h-[180px] overflow-auto rounded-md bg-ink p-2 text-[11px] text-white">
           {suggestions.map((mention, index) => (
             <button
-              className={`${transparentListButtonClass} text-white ${index === mentionSearch.selectedIndex ? selectedListButtonClass : ""}`}
+              className={cn(
+                "inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-white",
+                index === mentionSearch.selectedIndex && "border-selected-border bg-selected text-primary",
+              )}
               key={mentionKey(mention)}
               type="button"
               onMouseDown={(event) => {

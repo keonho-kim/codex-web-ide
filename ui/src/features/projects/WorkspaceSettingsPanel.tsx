@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
-import { iconButtonClass, inputClass, mutedClass } from "../../components/uiClasses";
 import type { WorkspaceSettings } from "../../lib/types";
 
 export function WorkspaceSettingsPanel({
@@ -28,16 +27,21 @@ export function WorkspaceSettingsPanel({
     >
       <div className="flex min-w-0 items-center gap-1">
         <input
-          className={`${inputClass} h-7 min-w-0 flex-1 py-1 text-xs`}
+          className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
           value={defaultProjectsDir}
           onChange={(event) => setDefaultProjectsDir(event.target.value)}
           placeholder="Default project directory"
         />
-        <button className={iconButtonClass} title="Save workspace settings" type="submit" disabled={!settings || !defaultProjectsDir.trim() || pending}>
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Save workspace settings"
+          type="submit"
+          disabled={!settings || !defaultProjectsDir.trim() || pending}
+        >
           <Save size={14} />
         </button>
       </div>
-      <p className={mutedClass}>Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
+      <p className="text-xs text-muted">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
     </form>
   );
 }

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Play, RefreshCw, RotateCw, Square } from "lucide-react";
 import { useMemo, useState } from "react";
-import { commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { PreviewInstance } from "../../lib/types";
@@ -42,11 +41,15 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
   const activePreview = (previews.data ?? []).find((preview) => preview.id === selectedPreviewId) ?? runningPreviews[0];
   const activeLogs = useMemo(() => (activePreview ? [...activePreview.stdout, ...activePreview.stderr].join("") : ""), [activePreview]);
   return (
-    <div className={`${panelContentClass} grid grid-rows-[auto_auto_minmax(0,1fr)_80px] gap-2.5`}>
-      <div className={commandRowClass}>
-        <input className={`${inputClass} w-[min(520px,100%)]`} value={command} onChange={(event) => setCommand(event.target.value)} />
+    <div className="grid h-[calc(100%-38px)] grid-rows-[auto_auto_minmax(0,1fr)_80px] gap-2.5 overflow-auto p-2.5">
+      <div className="flex items-center gap-2">
+        <input
+          className="w-[min(520px,100%)] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+          value={command}
+          onChange={(event) => setCommand(event.target.value)}
+        />
         <button
-          className={iconButtonClass}
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           disabled={!sessionId || startPreview.isPending || splitCommand(command).length === 0}
           onClick={() => {
@@ -57,7 +60,11 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
           <Play size={15} />
         </button>
         {runningPreviews.length > 1 ? (
-          <select className={inputClass} value={activePreview?.id ?? ""} onChange={(event) => setSelectedPreviewId(event.target.value)}>
+          <select
+            className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+            value={activePreview?.id ?? ""}
+            onChange={(event) => setSelectedPreviewId(event.target.value)}
+          >
             {runningPreviews.map((preview) => (
               <option key={preview.id} value={preview.id}>
                 {preview.command.join(" ")}
@@ -67,32 +74,55 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
         ) : null}
         {activePreview ? (
           <>
-            <button className={iconButtonClass} title="Reload iframe" type="button" onClick={() => setIframeVersion((value) => value + 1)}>
+            <button
+              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              title="Reload iframe"
+              type="button"
+              onClick={() => setIframeVersion((value) => value + 1)}
+            >
               <RotateCw size={15} />
             </button>
-            <button className={iconButtonClass} title="Restart preview" type="button" onClick={() => restartPreview.mutate(activePreview.id)}>
+            <button
+              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              title="Restart preview"
+              type="button"
+              onClick={() => restartPreview.mutate(activePreview.id)}
+            >
               <RefreshCw size={15} />
             </button>
-            <button className={iconButtonClass} title="Stop preview" type="button" onClick={() => stopPreview.mutate(activePreview.id)}>
+            <button
+              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              title="Stop preview"
+              type="button"
+              onClick={() => stopPreview.mutate(activePreview.id)}
+            >
               <Square size={15} />
             </button>
-            <a className={iconButtonClass} href={activePreview.publicUrl} target="_blank" rel="noreferrer" title="Open preview">
+            <a
+              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              href={activePreview.publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Open preview"
+            >
               <ExternalLink size={15} />
             </a>
           </>
         ) : null}
       </div>
       {activePreview ? (
-        <p className={mutedClass}>
+        <p className="text-xs text-muted">
           {activePreview.status} · port {activePreview.port} · pid {activePreview.pid || "-"} · {activePreview.command.join(" ")}
         </p>
       ) : null}
       {activePreview ? (
         <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full rounded-md border border-control" title="Preview" src={activePreview.publicUrl} />
       ) : (
-        <p className={mutedClass}>No preview selected.</p>
+        <p className="text-xs text-muted">No preview selected.</p>
       )}
-      <pre className={logClass}>{activePreview ? activeLogs || activePreview.status : "No preview logs yet."}</pre>
+      <pre className="h-[150px] overflow-auto rounded-md bg-ink p-2.5 text-xs whitespace-pre-wrap text-white">
+        {activePreview ? activeLogs || activePreview.status : "No preview logs yet."}
+      </pre>
     </div>
   );
 }

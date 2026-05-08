@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Plus } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
-import { buttonClass, inputClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
 import { ProjectList } from "./ProjectList";
@@ -29,8 +28,17 @@ export function ProjectCreator({ onCreated }: { onCreated(project: Project): voi
         if (cwd.trim()) createProject.mutate({ cwd: cwd.trim() });
       }}
     >
-      <input className={`${inputClass} w-[260px]`} value={cwd} onChange={(event) => setCwd(event.target.value)} placeholder="Project path" />
-      <button className={buttonClass} title="Add project" type="submit">
+      <input
+        className="w-[260px] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+        value={cwd}
+        onChange={(event) => setCwd(event.target.value)}
+        placeholder="Project path"
+      />
+      <button
+        className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+        title="Add project"
+        type="submit"
+      >
         <Plus size={16} />
       </button>
     </form>
@@ -47,7 +55,13 @@ export function SessionCreator({ projectId, onCreated }: { projectId?: string; o
     },
   });
   return (
-    <button className={buttonClass} title="Create session" type="button" onClick={() => createSession.mutate()} disabled={!projectId}>
+    <button
+      className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+      title="Create session"
+      type="button"
+      onClick={() => createSession.mutate()}
+      disabled={!projectId}
+    >
       <Play size={16} />
       Session
     </button>
