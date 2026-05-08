@@ -4,7 +4,7 @@ import type { FileTreeNode } from "../../shared/types";
 import { ignoredPathPattern, isVisibleFileName } from "./ignore";
 import { safeFsPath } from "./path";
 
-export async function readFileTree(root: string, input = ".", depth = 3): Promise<FileTreeNode[]> {
+export async function readFileTree(root: string, input = ".", depth = 12): Promise<FileTreeNode[]> {
   const base = await safeFsPath(root, input);
   const entries = await fs.readdir(base, { withFileTypes: true });
   const visible = entries

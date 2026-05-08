@@ -8,6 +8,8 @@ import { searchFiles } from "./files/search";
 import { readFileTree } from "./files/tree";
 export { safePath } from "./files/path";
 
+const DEFAULT_FILE_TREE_DEPTH = 12;
+
 export class FileManager {
   private watchers = new Map<string, FSWatcher>();
 
@@ -34,7 +36,7 @@ export class FileManager {
     await watcher.close();
   }
 
-  tree(root: string, input = ".", depth = 3) {
+  tree(root: string, input = ".", depth = DEFAULT_FILE_TREE_DEPTH) {
     return readFileTree(root, input, depth);
   }
 

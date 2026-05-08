@@ -17,6 +17,7 @@ import { resolveCommandCwd } from "./managers/commands/path";
 import { ProcessRegistry } from "./managers/commands/processRegistry";
 import { preparePreviewLaunch } from "./managers/commands/runtimeAdapter";
 import { assertCommandAllowed } from "./managers/commands/safety";
+import { FileManager } from "./managers/fileManager";
 import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
 import { SkillManager } from "./managers/skillManager";
@@ -121,6 +122,20 @@ describe("product smoke coverage", () => {
     expect(prompt).toContain("hello codex");
     expect(prompt).toContain("file src/app.ts");
     expect(prompt).toContain("Use careful review.");
+  });
+
+  test("file tree includes nested project files and ignores generated folders", async () => {
+    const root = await tempDir();
+    await fs.mkdir(path.join(root, "a", "b", "c", "d", "e"), { recursive: true });
+    await fs.writeFile(path.join(root, "a", "b", "c", "d", "e", "deep.ts"), "export {}\n");
+    await fs.mkdir(path.join(root, "node_modules", "pkg"), { recursive: true });
+    await fs.writeFile(path.join(root, "node_modules", "pkg", "hidden.ts"), "hidden\n");
+
+    const tree = await new FileManager(new EventBus()).tree(root);
+    const serialized = JSON.stringify(tree);
+
+    expect(serialized).toContain("deep.ts");
+    expect(serialized).not.toContain("hidden.ts");
   });
 
   test("proxies HTTP and preview WebSockets through Bun front proxy", async () => {
