@@ -6,16 +6,20 @@ import os from "node:os";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
 import type { AppServices } from "./api/context";
+import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
+import { JobRunner } from "./managers/commands/jobRunner";
 import { resolveCommandCwd } from "./managers/commands/path";
+import { ProcessRegistry } from "./managers/commands/processRegistry";
 import { assertCommandAllowed } from "./managers/commands/safety";
 import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
 import { SkillManager } from "./managers/skillManager";
 import { startBunFrontProxy } from "./proxy/bunFrontProxy";
+import type { Session } from "./shared/types";
 
 const tempRoots: string[] = [];
 
@@ -53,6 +57,19 @@ describe("product smoke coverage", () => {
     await fs.symlink(outside, path.join(root, "linked"));
 
     await expect(new GitManager().stage(root, ["linked/secret.txt"])).rejects.toThrow("Path escape blocked");
+  });
+
+  test("runs managed jobs and captures output", async () => {
+    const root = await tempDir();
+    const runner = new JobRunner(new EventBus(), new GitManager(), new ProcessRegistry());
+    const session = testSession(root);
+    const job = await runner.start(session, ["bun", "--eval", "console.log('job ok')"], { timeoutMs: 5000 });
+
+    const finished = await waitForJob(() => runner.get(session.id, job.id));
+
+    expect(finished.status).toBe("succeeded");
+    expect(finished.stdout.join("")).toContain("job ok");
+    expect(finished.exitCode).toBe(0);
   });
 
   test("removes workspace projects from active and recent state", async () => {
@@ -173,4 +190,25 @@ function webSocketRoundTrip(url: string, message: string) {
       reject(new Error("WebSocket error"));
     });
   });
+}
+
+function testSession(cwd: string): Session {
+  return {
+    id: "session",
+    cwd,
+    name: "Session",
+    createdAt: Date.now(),
+    lastActiveAt: Date.now(),
+    status: "idle",
+  };
+}
+
+async function waitForJob(read: () => ReturnType<JobRunner["get"]>) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const job = read();
+    if (["succeeded", "failed", "cancelled"].includes(job.status)) return job;
+    if (Date.now() > deadline) throw new Error("Job did not finish");
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
 }
