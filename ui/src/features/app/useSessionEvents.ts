@@ -31,7 +31,7 @@ export function useSessionEvents(activeSessionId: string | undefined, queryClien
         void queryClient.invalidateQueries({ queryKey: ["previews", activeSessionId] });
       });
     }
-    for (const eventName of ["service.started", "service.stdout", "service.stderr", "service.stopped"]) {
+    for (const eventName of ["service.started", "service.stdout", "service.stderr", "service.health.updated", "service.stopped"]) {
       source.addEventListener(eventName, () => {
         void queryClient.invalidateQueries({ queryKey: ["services", activeSessionId] });
       });

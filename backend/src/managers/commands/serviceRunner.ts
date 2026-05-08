@@ -46,7 +46,6 @@ export class ServiceRunner {
     };
     const child = spawn(command[0], command.slice(1), { cwd, env: process.env, shell: false });
     service.pid = child.pid ?? 0;
-    service.status = "running";
     this.services.set(id, service);
     void this.persist();
     this.processes.set(id, { process: child, command, cwd });
@@ -76,6 +75,7 @@ export class ServiceRunner {
       void this.persist();
       this.events.publish(session.id, { type: "service.stopped", serviceId: id });
     });
+    void this.markRunningWhenHealthy(session.id, service);
     return service;
   }
 
@@ -112,4 +112,17 @@ export class ServiceRunner {
   private persist() {
     return this.history?.saveServices([...this.services.values()]) ?? Promise.resolve();
   }
+
+  private async markRunningWhenHealthy(sessionId: string, service: ServiceInstance) {
+    await delay(500);
+    service.lastHealthCheckAt = Date.now();
+    if (service.status !== "starting") return;
+    service.status = this.processes.isAlive(service.id) ? "running" : "failed";
+    void this.persist();
+    this.events.publish(sessionId, { type: "service.health.updated", service });
+  }
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

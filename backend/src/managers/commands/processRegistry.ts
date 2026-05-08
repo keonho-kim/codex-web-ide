@@ -25,6 +25,11 @@ export class ProcessRegistry {
     for (const id of this.processes.keys()) this.kill(id);
   }
 
+  isAlive(id: string) {
+    const process = this.processes.get(id)?.process;
+    return Boolean(process && process.exitCode === null && process.signalCode === null);
+  }
+
   delete(id: string) {
     this.processes.delete(id);
   }

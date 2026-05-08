@@ -96,6 +96,7 @@ export type ServiceInstance = {
   pid: number;
   status: "starting" | "running" | "failed" | "stopped";
   startedAt: number;
+  lastHealthCheckAt?: number;
   restartCount: number;
   stdout: string[];
   stderr: string[];
@@ -151,6 +152,7 @@ export type SessionEvent =
   | { type: "service.started"; service: ServiceInstance }
   | { type: "service.stdout"; serviceId: string; text: string }
   | { type: "service.stderr"; serviceId: string; text: string }
+  | { type: "service.health.updated"; service: ServiceInstance }
   | { type: "service.stopped"; serviceId: string }
   | { type: "git.state.updated"; state: GitState }
   | { type: "file.changed"; path: string };
