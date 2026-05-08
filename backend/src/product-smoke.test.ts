@@ -7,6 +7,7 @@ import { AuthManager, authRequired } from "./auth/authManager";
 import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
+import { initProject } from "./cli/projectInit";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -174,6 +175,30 @@ describe("product smoke coverage", () => {
     const settings = await workspace.getSettings();
     expect(settings.activeProjectId).toBeUndefined();
     expect(settings.recentProjectIds).not.toContain(project.id);
+  });
+
+  test("initializes projects with runtime AGENTS policy", async () => {
+    const home = await tempDir();
+    const projectRoot = await tempDir();
+    const previousHome = process.env.CODEX_WEB_HOME;
+    const originalLog = console.log;
+    try {
+      process.env.CODEX_WEB_HOME = home;
+      console.log = () => undefined;
+      await initProject([projectRoot]);
+
+      const agents = await fs.readFile(path.join(projectRoot, "AGENTS.md"), "utf8");
+      const workspace = new WorkspaceManager(new JsonStore(home));
+      const projects = await workspace.listProjects();
+      const settings = await workspace.getSettings();
+
+      expect(agents).toContain("cw preview <command...>");
+      expect(projects).toHaveLength(1);
+      expect(settings.activeProjectId).toBe(projects[0].id);
+    } finally {
+      console.log = originalLog;
+      restoreEnv("CODEX_WEB_HOME", previousHome);
+    }
   });
 
   test("generates and applies workspace auth token settings", async () => {
