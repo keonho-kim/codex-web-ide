@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
 import type { AppServices } from "./api/context";
+import { checkPreviewPorts } from "./cli/doctor/ports";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -171,6 +172,20 @@ describe("product smoke coverage", () => {
       restoreEnv("CODEX_WEB_HOME", previousHome);
     }
   });
+
+  test("doctor reports occupied preview ports", async () => {
+    const port = await freePort();
+    const server = net.createServer();
+    await listenOn(server, port);
+    try {
+      await expect(checkPreviewPorts(port, port)).resolves.toEqual({
+        available: false,
+        sampled: [`${port}:in-use`],
+      });
+    } finally {
+      await closeServer(server);
+    }
+  });
 });
 
 async function tempDir() {
@@ -190,6 +205,22 @@ function freePort() {
       }
       server.close(() => resolve(address.port));
     });
+  });
+}
+
+function listenOn(server: net.Server, port: number) {
+  return new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+}
+
+function closeServer(server: net.Server) {
+  return new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
   });
 }
 
