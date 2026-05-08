@@ -1,14 +1,19 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import express from "express";
 import fs from "node:fs/promises";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
+import type { AppServices } from "./api/context";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
+import { resolveCommandCwd } from "./managers/commands/path";
 import { safeFsPath } from "./managers/files/path";
 import { SkillManager } from "./managers/skillManager";
+import { startBunFrontProxy } from "./proxy/bunFrontProxy";
 
 const tempRoots: string[] = [];
 
@@ -24,6 +29,13 @@ describe("product smoke coverage", () => {
     await fs.symlink(outside, path.join(root, "linked"));
 
     await expect(safeFsPath(root, "linked/secret.txt")).rejects.toThrow("Path escape blocked");
+  });
+
+  test("blocks command cwd escapes", async () => {
+    const root = await tempDir();
+    const outside = await tempDir();
+
+    await expect(resolveCommandCwd(root, outside)).rejects.toThrow("Path escape blocked");
   });
 
   test("removes workspace projects from active and recent state", async () => {
@@ -73,10 +85,75 @@ describe("product smoke coverage", () => {
     expect(prompt).toContain("file src/app.ts");
     expect(prompt).toContain("Use careful review.");
   });
+
+  test("proxies HTTP and preview WebSockets through Bun front proxy", async () => {
+    const upstreamPort = await freePort();
+    const frontPort = await freePort();
+    const upstream = Bun.serve({
+      hostname: "127.0.0.1",
+      port: upstreamPort,
+      fetch(req, server) {
+        return server.upgrade(req) ? undefined : new Response("upstream");
+      },
+      websocket: {
+        message(ws, message) {
+          ws.send(`echo:${String(message)}`);
+        },
+      },
+    });
+    const app = express();
+    app.get("/api/health", (_req, res) => res.json({ ok: true }));
+    const services = {
+      auth: { isAuthorizedHeaders: () => true },
+      commands: {
+        getPreviewTarget: (sessionId: string, previewId: string) =>
+          sessionId === "session" && previewId === "preview" ? `http://127.0.0.1:${upstreamPort}` : null,
+      },
+    } as unknown as AppServices;
+    const front = await startBunFrontProxy({ app, host: "127.0.0.1", port: frontPort, services });
+    try {
+      await expect(fetch(`http://127.0.0.1:${frontPort}/api/health`).then((res) => res.json())).resolves.toEqual({ ok: true });
+      await expect(webSocketRoundTrip(`ws://127.0.0.1:${frontPort}/preview/session/preview/hmr`, "ping")).resolves.toBe("echo:ping");
+    } finally {
+      await front.close();
+      upstream.stop(true);
+    }
+  });
 });
 
 async function tempDir() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "codex-web-test-"));
   tempRoots.push(dir);
   return dir;
+}
+
+function freePort() {
+  return new Promise<number>((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("No port assigned"));
+        return;
+      }
+      server.close(() => resolve(address.port));
+    });
+  });
+}
+
+function webSocketRoundTrip(url: string, message: string) {
+  return new Promise<string>((resolve, reject) => {
+    const ws = new WebSocket(url);
+    const timer = setTimeout(() => reject(new Error("WebSocket timeout")), 3000);
+    ws.addEventListener("open", () => ws.send(message));
+    ws.addEventListener("message", (event) => {
+      clearTimeout(timer);
+      ws.close();
+      resolve(String(event.data));
+    });
+    ws.addEventListener("error", () => {
+      clearTimeout(timer);
+      reject(new Error("WebSocket error"));
+    });
+  });
 }
