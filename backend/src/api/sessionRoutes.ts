@@ -35,11 +35,15 @@ export function registerSessionRoutes(app: Express, { codex, commands, events, f
       Connection: "keep-alive",
     });
     res.write("retry: 1000\n\n");
-    const unsubscribe = events.subscribe(req.params.id, (event) => {
-      res.write(`id: ${event.id}\n`);
-      res.write(`event: ${event.type}\n`);
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    });
+    const unsubscribe = events.subscribe(
+      req.params.id,
+      (event) => {
+        res.write(`id: ${event.id}\n`);
+        res.write(`event: ${event.type}\n`);
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      },
+      req.header("last-event-id"),
+    );
     req.on("close", unsubscribe);
   }));
 }
