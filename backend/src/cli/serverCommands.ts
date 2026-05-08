@@ -4,11 +4,13 @@ import { createPlatformAdapter } from "../platform/adapter";
 import { JsonStore } from "../managers/storage";
 import { WorkspaceManager } from "../managers/workspaceManager";
 import { api, serverBaseUrl } from "./apiClient";
+import { collectStartupDoctorWarnings } from "./doctor/checks";
 import { readPidFile, removePidFile, writePidFile } from "./pidFile";
 
 export async function start(input: string[]) {
   const host = readFlag(input, "--host") || undefined;
   const port = numberFlag(input, "--port");
+  await printStartupDoctorWarnings();
   const server = await startServer({ host, port });
   await persistRuntimeSettings(server.host, server.port);
   await writePidFile(server.port);
@@ -65,6 +67,20 @@ export async function init(input: string[]) {
 export async function update() {
   console.log("Use Bun to update the installed package:");
   console.log("  bun update -g @local/codex-web");
+}
+
+async function printStartupDoctorWarnings() {
+  const store = new JsonStore();
+  await store.ensure();
+  const settings = await new WorkspaceManager(store).getSettings();
+  const warnings = await collectStartupDoctorWarnings({
+    previewStart: Number(process.env.CODEX_WEB_PREVIEW_PORT_START || settings.previewPortStart),
+    previewEnd: Number(process.env.CODEX_WEB_PREVIEW_PORT_END || settings.previewPortEnd),
+  });
+  if (warnings.length === 0) return;
+  console.log("Startup warnings:");
+  for (const warning of warnings) console.log(`- ${warning}`);
+  console.log("");
 }
 
 function readFlag(input: string[], name: string) {
