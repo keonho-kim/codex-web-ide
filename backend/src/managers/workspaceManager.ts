@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
+import { workspaceSettingsSchema } from "../shared/schemas";
 import type { Project, WorkspaceSettings } from "../shared/types";
 import { createPlatformAdapter } from "../platform/adapter";
 import { JsonStore } from "./storage";
@@ -22,17 +23,18 @@ export class WorkspaceManager {
       auth: { enabled: false },
     };
     const settings = await this.store.read<Partial<WorkspaceSettings>>("config.json", fallback);
-    return {
+    return workspaceSettingsSchema.parse({
       ...fallback,
       ...settings,
       recentProjectIds: settings.recentProjectIds ?? fallback.recentProjectIds,
       auth: { ...fallback.auth, ...settings.auth },
-    };
+    });
   }
 
   async updateSettings(settings: WorkspaceSettings) {
-    await this.store.write("config.json", settings);
-    return settings;
+    const next = workspaceSettingsSchema.parse(settings);
+    await this.store.write("config.json", next);
+    return next;
   }
 
   async listProjects(): Promise<Project[]> {

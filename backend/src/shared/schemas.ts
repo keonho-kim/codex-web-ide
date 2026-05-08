@@ -69,11 +69,13 @@ export const gitBranchSchema = z.object({
   branch: z.string().min(1),
 });
 
+const portSchema = z.number().int().min(1).max(65535);
+
 export const workspaceSettingsSchema = z.object({
   host: z.string().min(1).default("127.0.0.1"),
-  port: z.number().int().positive().default(17321),
-  previewPortStart: z.number().int().positive().default(17330),
-  previewPortEnd: z.number().int().positive().default(17399),
+  port: portSchema.default(17321),
+  previewPortStart: portSchema.default(17330),
+  previewPortEnd: portSchema.default(17399),
   defaultProjectsDir: z.string().min(1),
   activeProjectId: z.string().optional(),
   recentProjectIds: z.array(z.string()).default([]),
@@ -83,4 +85,7 @@ export const workspaceSettingsSchema = z.object({
       token: z.string().optional(),
     })
     .default({ enabled: false }),
+}).refine((settings) => settings.previewPortStart <= settings.previewPortEnd, {
+  message: "Preview port start must be less than or equal to preview port end",
+  path: ["previewPortEnd"],
 });
