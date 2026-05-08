@@ -1,4 +1,3 @@
-import path from "node:path";
 import { startServer } from "../server";
 import { createPlatformAdapter } from "../platform/adapter";
 import { JsonStore } from "../managers/storage";
@@ -6,6 +5,7 @@ import { WorkspaceManager } from "../managers/workspaceManager";
 import { api, serverBaseUrl } from "./apiClient";
 import { collectStartupDoctorWarnings } from "./doctor/checks";
 import { readPidFile, removePidFile, writePidFile } from "./pidFile";
+import { initProject } from "./projectInit";
 
 export async function start(input: string[]) {
   const host = readFlag(input, "--host") || undefined;
@@ -54,14 +54,7 @@ export async function stop() {
 }
 
 export async function init(input: string[]) {
-  const cwd = path.resolve(input[0] || process.cwd());
-  const store = new JsonStore();
-  await store.ensure();
-  const workspace = new WorkspaceManager(store);
-  const project = await workspace.addProject({ cwd });
-  await workspace.openProject(project.id);
-  console.log(`Initialized project: ${project.name}`);
-  console.log(project.cwd);
+  await initProject(input);
 }
 
 export async function update() {
