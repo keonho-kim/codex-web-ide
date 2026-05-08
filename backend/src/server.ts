@@ -49,6 +49,10 @@ export async function createApp(options: ServerOptions = {}) {
   };
   const app = express();
   app.locals.auth = auth;
+  app.locals.cleanup = async () => {
+    const activeSessions = await sessions.list();
+    await Promise.all(activeSessions.flatMap((session) => [files.unwatch(session.id), git.unwatch(session.id)]));
+  };
 
   for (const session of await sessions.list()) {
     files.watch(session.id, session.cwd);
@@ -77,7 +81,7 @@ export async function startServer(options: ServerOptions = {}) {
     }
     res.json({ ok: true });
     setTimeout(() => {
-      server.close(() => process.exit(0));
+      void app.locals.cleanup?.().finally(() => server.close(() => process.exit(0)));
     }, 25);
   });
   return new Promise<{ host: string; port: number; auth?: AuthState; close(): Promise<void> }>((resolve) => {
@@ -86,10 +90,12 @@ export async function startServer(options: ServerOptions = {}) {
         host,
         port,
         auth: auth?.getStatus(),
-        close: () =>
-          new Promise<void>((done, reject) => {
+        close: async () => {
+          await app.locals.cleanup?.();
+          await new Promise<void>((done, reject) => {
             server.close((error) => (error ? reject(error) : done()));
-          }),
+          });
+        },
       });
     });
   });
