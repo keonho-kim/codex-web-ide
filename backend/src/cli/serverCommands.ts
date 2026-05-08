@@ -13,7 +13,7 @@ export async function start(input: string[]) {
   await printStartupDoctorWarnings();
   const server = await startServer({ host, port });
   await persistRuntimeSettings(server.host, server.port);
-  await writePidFile(server.port);
+  await writePidFile(server.port, server.host);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
   if (server.auth?.enabled) {
     console.log(`Auth token: ${server.auth.token}`);
