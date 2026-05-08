@@ -25,6 +25,7 @@ export class SessionManager {
     const now = Date.now();
     const session: Session = {
       id: nanoid(),
+      projectId: project?.id,
       cwd,
       name: input.name || project?.name || path.basename(cwd) || cwd,
       createdAt: now,

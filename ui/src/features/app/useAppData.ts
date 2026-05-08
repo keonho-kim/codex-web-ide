@@ -14,7 +14,9 @@ export function useAppData() {
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => api<Session[]>("/api/sessions") });
   const settings = useQuery({ queryKey: ["workspace-settings"], queryFn: () => api<WorkspaceSettings>("/api/workspace/settings") });
   const orderedProjects = orderProjects(projects.data ?? [], settings.data);
-  const activeSession = sessions.data?.find((session) => session.id === activeSessionId);
+  const activeProject = orderedProjects.find((project) => project.id === activeProjectId);
+  const projectSessions = filterSessionsForProject(sessions.data ?? [], activeProject);
+  const activeSession = projectSessions.find((session) => session.id === activeSessionId);
 
   const openProject = useMutation({
     mutationFn: (id: string) => api<Project>(`/api/projects/${id}/open`, { method: "POST" }),
@@ -29,7 +31,7 @@ export function useAppData() {
   const deleteSession = useMutation({
     mutationFn: (id: string) => api(`/api/sessions/${id}`, { method: "DELETE" }),
     onSuccess: async (_result, id) => {
-      if (activeSessionId === id) setActiveSessionId((sessions.data ?? []).find((session) => session.id !== id)?.id);
+      if (activeSessionId === id) setActiveSessionId(undefined);
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
@@ -49,15 +51,19 @@ export function useAppData() {
   }, [activeProjectId, projects.data, setActiveProjectId, settings.data?.activeProjectId]);
 
   useEffect(() => {
-    if (!activeSessionId && sessions.data?.[0]) setActiveSessionId(sessions.data[0].id);
-  }, [activeSessionId, sessions.data, setActiveSessionId]);
+    if (!activeProjectId) return;
+    if (activeSessionId && projectSessions.some((session) => session.id === activeSessionId)) return;
+    const nextSessionId = projectSessions[0]?.id;
+    if (activeSessionId === nextSessionId) return;
+    setActiveSessionId(nextSessionId);
+  }, [activeProjectId, activeSessionId, projectSessions, setActiveSessionId]);
 
   return {
     activeProjectId,
     activeSessionId,
     activeSession,
     orderedProjects,
-    sessions: sessions.data ?? [],
+    sessions: projectSessions,
     settings: settings.data,
     settingsPending: updateSettings.isPending,
     setActiveSessionId,
@@ -68,6 +74,15 @@ export function useAppData() {
     deleteSession: (id: string) => deleteSession.mutate(id),
     updateSettings: (next: WorkspaceSettings) => updateSettings.mutate(next),
   };
+}
+
+function filterSessionsForProject(sessions: Session[], project?: Project) {
+  if (!project) return sessions;
+  return sessions.filter((session) => session.projectId === project.id || (!session.projectId && isInsideProject(session.cwd, project.cwd)));
+}
+
+function isInsideProject(cwd: string, projectCwd: string) {
+  return cwd === projectCwd || cwd.startsWith(`${projectCwd.replace(/\/+$/, "")}/`);
 }
 
 function orderProjects(projects: Project[], settings?: WorkspaceSettings) {

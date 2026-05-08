@@ -4,6 +4,7 @@ export type Runtime = "bun" | "python" | "go" | "rust" | "shell";
 
 export type Session = {
   id: string;
+  projectId?: string;
   name: string;
   cwd: string;
   createdAt: number;
