@@ -19,6 +19,7 @@ import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
 import { SkillManager } from "./managers/skillManager";
 import { startBunFrontProxy } from "./proxy/bunFrontProxy";
+import { startServer } from "./server";
 import type { Session } from "./shared/types";
 
 const tempRoots: string[] = [];
@@ -153,6 +154,23 @@ describe("product smoke coverage", () => {
       upstream.stop(true);
     }
   });
+
+  test("starts the app server and serves health and static fallback", async () => {
+    const home = await tempDir();
+    const previousHome = process.env.CODEX_WEB_HOME;
+    let server: Awaited<ReturnType<typeof startServer>> | undefined;
+    try {
+      process.env.CODEX_WEB_HOME = home;
+      const port = await freePort();
+      server = await startServer({ host: "127.0.0.1", port, previewPortStart: 24000, previewPortEnd: 24010 });
+      await expect(fetch(`http://127.0.0.1:${port}/api/health`).then((res) => res.json())).resolves.toMatchObject({ ok: true });
+      const html = await fetch(`http://127.0.0.1:${port}/`).then((res) => res.text());
+      expect(html).toContain("Codex Web IDE");
+    } finally {
+      await server?.close();
+      restoreEnv("CODEX_WEB_HOME", previousHome);
+    }
+  });
 });
 
 async function tempDir() {
@@ -190,6 +208,14 @@ function webSocketRoundTrip(url: string, message: string) {
       reject(new Error("WebSocket error"));
     });
   });
+}
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
 }
 
 function testSession(cwd: string): Session {
