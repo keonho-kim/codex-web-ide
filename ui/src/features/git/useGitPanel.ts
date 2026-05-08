@@ -25,9 +25,14 @@ export function useGitPanel(sessionId?: string) {
     queryFn: () => api<string[]>(`/api/sessions/${sessionId}/git/branch`, { method: "POST" }),
     enabled: Boolean(sessionId),
   });
-  const diff = useQuery({
-    queryKey: ["git", sessionId, "diff", selectedFile],
+  const unstagedDiff = useQuery({
+    queryKey: ["git", sessionId, "diff", "unstaged", selectedFile],
     queryFn: () => api<{ diff: string }>(`/api/sessions/${sessionId}/git/diff?path=${encodeURIComponent(selectedFile || "")}`),
+    enabled: Boolean(sessionId && selectedFile),
+  });
+  const stagedDiff = useQuery({
+    queryKey: ["git", sessionId, "diff", "staged", selectedFile],
+    queryFn: () => api<{ diff: string }>(`/api/sessions/${sessionId}/git/diff/staged?path=${encodeURIComponent(selectedFile || "")}`),
     enabled: Boolean(sessionId && selectedFile),
   });
 
@@ -76,7 +81,8 @@ export function useGitPanel(sessionId?: string) {
     branchName,
     branches: branches.data ?? [],
     commitMessage,
-    diff: diff.data?.diff,
+    stagedDiff: stagedDiff.data?.diff,
+    unstagedDiff: unstagedDiff.data?.diff,
     selectedFile,
     state: state.data,
     status: status.data ?? [],

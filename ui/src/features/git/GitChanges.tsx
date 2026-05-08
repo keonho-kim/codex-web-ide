@@ -2,15 +2,16 @@ import type { GitFileStatus } from "../../lib/types";
 import { GitDiffView } from "./GitDiffView";
 
 type GitChangesProps = {
-  diff?: string;
   files: GitFileStatus[];
   selectedFile?: string;
+  stagedDiff?: string;
+  unstagedDiff?: string;
   onSelectFile(path: string): void;
   onStage(path: string): void;
   onUnstage(path: string): void;
 };
 
-export function GitChanges({ diff, files, selectedFile, onSelectFile, onStage, onUnstage }: GitChangesProps) {
+export function GitChanges({ files, selectedFile, stagedDiff, unstagedDiff, onSelectFile, onStage, onUnstage }: GitChangesProps) {
   return (
     <div className="grid gap-1 font-mono text-xs">
       {files.map((file) => (
@@ -39,7 +40,7 @@ export function GitChanges({ diff, files, selectedFile, onSelectFile, onStage, o
           </button>
         </div>
       ))}
-      <GitDiffView diff={diff} selectedFile={selectedFile} />
+      <GitDiffView selectedFile={selectedFile} stagedDiff={stagedDiff} unstagedDiff={unstagedDiff} />
     </div>
   );
 }

@@ -23,9 +23,10 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
         onPush={git.actions.push}
       />
       <GitChanges
-        diff={git.diff}
         files={git.status}
         selectedFile={git.selectedFile}
+        stagedDiff={git.stagedDiff}
+        unstagedDiff={git.unstagedDiff}
         onSelectFile={git.setSelectedFile}
         onStage={git.actions.stage}
         onUnstage={git.actions.unstage}
