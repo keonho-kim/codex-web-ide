@@ -5,6 +5,7 @@ import { JobRunner } from "./commands/jobRunner";
 import { PortAllocator } from "./commands/portAllocator";
 import { PreviewRunner } from "./commands/previewRunner";
 import { ProcessRegistry } from "./commands/processRegistry";
+import { assertCommandAllowed } from "./commands/safety";
 import { ServiceRunner } from "./commands/serviceRunner";
 export { detectRuntime } from "./commands/runtimeAdapter";
 
@@ -34,7 +35,8 @@ export class CommandManager {
     return this.jobs.get(sessionId, id);
   }
 
-  startJob(session: Session, command: string[], options: { cwd?: string; timeoutMs?: number } = {}) {
+  startJob(session: Session, command: string[], options: { cwd?: string; timeoutMs?: number; approvedDangerous?: boolean } = {}) {
+    assertCommandAllowed(command, options.approvedDangerous);
     return this.jobs.start(session, command, options);
   }
 
@@ -46,7 +48,8 @@ export class CommandManager {
     return this.previews.list(sessionId);
   }
 
-  startPreview(session: Session, command: string[], options: { cwd?: string } = {}) {
+  startPreview(session: Session, command: string[], options: { cwd?: string; approvedDangerous?: boolean } = {}) {
+    assertCommandAllowed(command, options.approvedDangerous);
     return this.previews.start(session, command, options);
   }
 
@@ -66,7 +69,8 @@ export class CommandManager {
     return this.services.list(sessionId);
   }
 
-  startService(session: Session, command: string[], options: { cwd?: string } = {}) {
+  startService(session: Session, command: string[], options: { cwd?: string; approvedDangerous?: boolean } = {}) {
+    assertCommandAllowed(command, options.approvedDangerous);
     return this.services.start(session, command, options);
   }
 

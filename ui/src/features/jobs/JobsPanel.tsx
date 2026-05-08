@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, RefreshCw, Square } from "lucide-react";
 import { buttonClass, commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass, selectedListButtonClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { Job } from "../../lib/types";
 
 export function JobsPanel({ sessionId }: { sessionId?: string }) {
@@ -15,7 +16,11 @@ export function JobsPanel({ sessionId }: { sessionId?: string }) {
     enabled: Boolean(sessionId),
   });
   const startJob = useMutation({
-    mutationFn: (commandArgs: string[]) => api<Job>(`/api/sessions/${sessionId}/commands/job`, { method: "POST", body: { command: commandArgs } }),
+    mutationFn: (commandArgs: string[]) =>
+      api<Job>(`/api/sessions/${sessionId}/commands/job`, {
+        method: "POST",
+        body: { command: commandArgs, approvedDangerous: requiresDangerousApproval(commandArgs) },
+      }),
     onSuccess: async (job) => {
       setSelectedJobId(job.id);
       await queryClient.invalidateQueries({ queryKey: ["jobs", sessionId] });
@@ -37,7 +42,10 @@ export function JobsPanel({ sessionId }: { sessionId?: string }) {
           className={iconButtonClass}
           type="button"
           disabled={!sessionId || startJob.isPending || splitCommand(command).length === 0}
-          onClick={() => startJob.mutate(splitCommand(command))}
+          onClick={() => {
+            const commandArgs = splitCommand(command);
+            if (confirmDangerousCommand(commandArgs)) startJob.mutate(commandArgs);
+          }}
         >
           <Play size={15} />
         </button>
@@ -65,7 +73,9 @@ export function JobsPanel({ sessionId }: { sessionId?: string }) {
                   className={buttonClass}
                   type="button"
                   disabled={!sessionId || startJob.isPending}
-                  onClick={() => startJob.mutate(job.command)}
+                  onClick={() => {
+                    if (confirmDangerousCommand(job.command)) startJob.mutate(job.command);
+                  }}
                 >
                   Rerun
                 </button>

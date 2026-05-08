@@ -145,14 +145,16 @@ async function update() {
 }
 
 async function runManagedCommand(kind: "job" | "preview" | "service", commandArgs: string[]) {
-  if (commandArgs.length === 0) {
+  const approvedDangerous = commandArgs.includes("--approve-dangerous");
+  const command = commandArgs.filter((arg) => arg !== "--approve-dangerous");
+  if (command.length === 0) {
     console.error(`Usage: cw ${kind} <command...>`);
     process.exit(1);
   }
   const session = await ensureSessionForCwd();
   const result = await api<Job | PreviewInstance | ServiceInstance>(`/api/sessions/${session.id}/commands/${kind}`, {
     method: "POST",
-    body: { command: commandArgs, cwd: process.cwd() },
+    body: { command, cwd: process.cwd(), approvedDangerous },
   });
 
   if (kind === "job") {
@@ -205,9 +207,9 @@ function printHelp() {
   cw open
   cw init [project-path]
   cw update
-  cw job <command...>
-  cw preview <command...>
-  cw service <command...>`);
+  cw job [--approve-dangerous] <command...>
+  cw preview [--approve-dangerous] <command...>
+  cw service [--approve-dangerous] <command...>`);
 }
 
 async function ensureSessionForCwd() {

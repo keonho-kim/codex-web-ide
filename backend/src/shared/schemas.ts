@@ -38,6 +38,7 @@ export const commandRequestSchema = z.object({
   command: commandSchema,
   cwd: z.string().optional(),
   timeoutMs: z.number().positive().optional(),
+  approvedDangerous: z.boolean().default(false),
 });
 
 export const codexRunSchema = z.object({

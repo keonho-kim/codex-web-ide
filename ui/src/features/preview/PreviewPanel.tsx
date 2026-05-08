@@ -3,6 +3,7 @@ import { ExternalLink, Play, RefreshCw, RotateCw, Square } from "lucide-react";
 import { useMemo, useState } from "react";
 import { commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { PreviewInstance } from "../../lib/types";
 
 export function PreviewPanel({ sessionId }: { sessionId?: string }) {
@@ -16,7 +17,11 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
     enabled: Boolean(sessionId),
   });
   const startPreview = useMutation({
-    mutationFn: () => api<PreviewInstance>(`/api/sessions/${sessionId}/previews`, { method: "POST", body: { command: splitCommand(command) } }),
+    mutationFn: (commandArgs: string[]) =>
+      api<PreviewInstance>(`/api/sessions/${sessionId}/previews`, {
+        method: "POST",
+        body: { command: commandArgs, approvedDangerous: requiresDangerousApproval(commandArgs) },
+      }),
     onSuccess: async (preview) => {
       setSelectedPreviewId(preview.id);
       await queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
@@ -40,7 +45,15 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
     <div className={`${panelContentClass} grid grid-rows-[auto_auto_minmax(0,1fr)_80px] gap-2.5`}>
       <div className={commandRowClass}>
         <input className={`${inputClass} w-[min(520px,100%)]`} value={command} onChange={(event) => setCommand(event.target.value)} />
-        <button className={iconButtonClass} type="button" disabled={!sessionId || startPreview.isPending || splitCommand(command).length === 0} onClick={() => startPreview.mutate()}>
+        <button
+          className={iconButtonClass}
+          type="button"
+          disabled={!sessionId || startPreview.isPending || splitCommand(command).length === 0}
+          onClick={() => {
+            const commandArgs = splitCommand(command);
+            if (confirmDangerousCommand(commandArgs)) startPreview.mutate(commandArgs);
+          }}
+        >
           <Play size={15} />
         </button>
         {runningPreviews.length > 1 ? (

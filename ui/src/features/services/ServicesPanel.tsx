@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, RefreshCw, Square } from "lucide-react";
 import { commandRowClass, iconButtonClass, inputClass, logClass, mutedClass, panelContentClass } from "../../components/uiClasses";
 import { api, splitCommand } from "../../lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { ServiceInstance } from "../../lib/types";
 
 export function ServicesPanel({ sessionId }: { sessionId?: string }) {
@@ -17,7 +18,11 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
     await queryClient.invalidateQueries({ queryKey: ["services", sessionId] });
   };
   const startService = useMutation({
-    mutationFn: () => api<ServiceInstance>(`/api/sessions/${sessionId}/services`, { method: "POST", body: { command: splitCommand(command) } }),
+    mutationFn: (commandArgs: string[]) =>
+      api<ServiceInstance>(`/api/sessions/${sessionId}/services`, {
+        method: "POST",
+        body: { command: commandArgs, approvedDangerous: requiresDangerousApproval(commandArgs) },
+      }),
     onSuccess: refreshServices,
   });
   const stopService = useMutation({
@@ -33,7 +38,15 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
     <div className={panelContentClass}>
       <div className={commandRowClass}>
         <input className={`${inputClass} w-[min(520px,100%)]`} value={command} onChange={(event) => setCommand(event.target.value)} />
-        <button className={iconButtonClass} type="button" disabled={!sessionId || startService.isPending || splitCommand(command).length === 0} onClick={() => startService.mutate()}>
+        <button
+          className={iconButtonClass}
+          type="button"
+          disabled={!sessionId || startService.isPending || splitCommand(command).length === 0}
+          onClick={() => {
+            const commandArgs = splitCommand(command);
+            if (confirmDangerousCommand(commandArgs)) startService.mutate(commandArgs);
+          }}
+        >
           <Play size={15} />
         </button>
         <button className={iconButtonClass} type="button" onClick={() => void refreshServices()}>
