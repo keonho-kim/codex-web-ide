@@ -60,7 +60,11 @@ export function useAppData() {
   });
 
   useEffect(() => {
-    if (activeProjectId || !projects.data?.length) return;
+    if (!projects.data?.length) {
+      if (activeProjectId) setActiveProjectId(undefined);
+      return;
+    }
+    if (activeProjectId && projects.data.some((project) => project.id === activeProjectId)) return;
     const storedProjectId = settings.data?.activeProjectId;
     const storedProject = storedProjectId ? projects.data.find((project) => project.id === storedProjectId) : undefined;
     setActiveProjectId(storedProject?.id ?? projects.data[0].id);
