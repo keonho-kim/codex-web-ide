@@ -11,6 +11,12 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
     queryFn: () => api<CodexMessage[]>(`/api/sessions/${sessionId}/codex/messages`),
     enabled: Boolean(sessionId),
   });
+  const status = useQuery({
+    queryKey: ["codex", sessionId, "resume"],
+    queryFn: () => api<{ running: boolean; messages: CodexMessage[] }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
+    enabled: Boolean(sessionId),
+    refetchInterval: (query) => (query.state.data?.running ? 1000 : false),
+  });
 
   return (
     <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-hairline bg-canvas p-2.5">
@@ -27,7 +33,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
           <p className={mutedClass}>Start a Codex run from the composer.</p>
         )}
       </div>
-      <Composer sessionId={sessionId} />
+      <Composer sessionId={sessionId} running={status.data?.running ?? false} />
     </section>
   );
 }

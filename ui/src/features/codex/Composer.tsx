@@ -8,7 +8,7 @@ import { api } from "../../lib/api";
 import type { ComposerMention } from "../../lib/types";
 import { mentionKey, mentionLabel, parseMentionSearch, type MentionSearch } from "./mentionUtils";
 
-export function Composer({ sessionId }: { sessionId?: string }) {
+export function Composer({ sessionId, running = false }: { sessionId?: string; running?: boolean }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [mentionSearch, setMentionSearch] = useState<MentionSearch | null>(null);
@@ -120,13 +120,13 @@ export function Composer({ sessionId }: { sessionId?: string }) {
         <button
           className={`${buttonClass} absolute right-2 bottom-2`}
           type="button"
-          disabled={!sessionId || !draft.trim() || runCodex.isPending}
+          disabled={!sessionId || running || !draft.trim() || runCodex.isPending}
           onClick={() => runCodex.mutate()}
         >
           <Play size={15} />
           Run
         </button>
-        {runCodex.isPending ? (
+        {running || runCodex.isPending ? (
           <button className={`${buttonClass} absolute right-[76px] bottom-2`} type="button" disabled={cancelCodex.isPending} onClick={() => cancelCodex.mutate()}>
             Cancel
           </button>
