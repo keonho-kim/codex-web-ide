@@ -19,6 +19,7 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
         onStart={preview.actions.start}
         onStop={preview.actions.stop}
       />
+      {preview.actions.error ? <p className="m-0 text-xs text-destructive">{preview.actions.error}</p> : null}
       {preview.activePreview ? (
         <p className="text-xs text-muted">
           {preview.activePreview.status} · port {preview.activePreview.port} · pid {preview.activePreview.pid || "-"} · {preview.activePreview.command.join(" ")}

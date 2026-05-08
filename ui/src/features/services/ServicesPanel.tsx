@@ -14,6 +14,7 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
         onRefresh={services.actions.refresh}
         onStart={services.actions.start}
       />
+      {services.actions.error ? <p className="mt-2 text-xs text-destructive">{services.actions.error}</p> : null}
       <div className="mt-2.5 grid grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5">
         <ServiceList
           restartPending={services.actions.restartPending}

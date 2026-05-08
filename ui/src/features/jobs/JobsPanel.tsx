@@ -17,6 +17,7 @@ export function JobsPanel({ sessionId }: { sessionId?: string }) {
         onRefresh={jobs.actions.refresh}
         onStart={jobs.actions.start}
       />
+      {jobs.actions.error ? <p className="m-0 text-xs text-destructive">{jobs.actions.error}</p> : null}
       <div className="grid min-h-0 grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5">
         <JobList
           jobs={jobs.orderedJobs}

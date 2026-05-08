@@ -31,6 +31,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
           </Button>
         ) : null}
       </div>
+      {composer.error ? <p className="mt-1 text-xs text-destructive">{composer.error}</p> : null}
       <MentionSuggestions mentionSearch={composer.mentionSearch} suggestions={composer.suggestions} onSelect={composer.addMention} />
     </div>
   );

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
+import { getErrorMessage } from "../../lib/errors";
 import type { PreviewInstance } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 
@@ -64,6 +65,13 @@ export function usePreviewPanel(sessionId?: string) {
       stop: () => {
         if (activePreview) stopPreview.mutate(activePreview.id);
       },
+      error: startPreview.error
+        ? getErrorMessage(startPreview.error)
+        : stopPreview.error
+          ? getErrorMessage(stopPreview.error)
+          : restartPreview.error
+            ? getErrorMessage(restartPreview.error)
+            : null,
       startDisabled: !sessionId || startPreview.isPending || commandArgs.length === 0,
     },
   };

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
+import { getErrorMessage } from "../../lib/errors";
 import type { ServiceInstance } from "../../lib/types";
 
 export function useServicesPanel(sessionId?: string) {
@@ -49,6 +50,13 @@ export function useServicesPanel(sessionId?: string) {
         if (confirmDangerousCommand(commandArgs)) startService.mutate(commandArgs);
       },
       stop: (id: string) => stopService.mutate(id),
+      error: startService.error
+        ? getErrorMessage(startService.error)
+        : stopService.error
+          ? getErrorMessage(stopService.error)
+          : restartService.error
+            ? getErrorMessage(restartService.error)
+            : null,
       restartPending: restartService.isPending,
       startDisabled: !sessionId || startService.isPending || commandArgs.length === 0,
       stopPending: stopService.isPending,

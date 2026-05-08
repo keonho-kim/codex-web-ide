@@ -3,6 +3,7 @@ import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { getErrorMessage } from "../../lib/errors";
 import type { ComposerMention } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 import { mentionKey, parseMentionSearch } from "./mentionUtils";
@@ -115,6 +116,7 @@ export function useComposer(sessionId?: string) {
     cancelPending: cancelCodex.isPending,
     draft,
     editor,
+    error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : null,
     mentionSearch,
     onKeyDown,
     removeMention,

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
+import { getErrorMessage } from "../../lib/errors";
 import type { Job } from "../../lib/types";
 
 export function useJobsPanel(sessionId?: string) {
@@ -53,6 +54,7 @@ export function useJobsPanel(sessionId?: string) {
         if (confirmDangerousCommand(commandArgs)) startJob.mutate(commandArgs);
       },
       cancelPending: cancelJob.isPending,
+      error: startJob.error ? getErrorMessage(startJob.error) : cancelJob.error ? getErrorMessage(cancelJob.error) : null,
       startDisabled: !sessionId || startJob.isPending || commandArgs.length === 0,
       startPending: startJob.isPending,
     },

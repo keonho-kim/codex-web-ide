@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { getErrorMessage } from "../../lib/errors";
 import type { GitFileStatus, GitState } from "../../lib/types";
 
 export function useGitPanel(sessionId?: string) {
@@ -97,6 +98,7 @@ export function useGitPanel(sessionId?: string) {
       push: () => push.mutate(),
       stage: (pathName: string) => stage.mutate(pathName),
       unstage: (pathName: string) => unstage.mutate(pathName),
+      error: firstError([stage.error, unstage.error, commit.error, pull.error, push.error, checkout.error, createBranch.error]),
       pending: {
         commit: commit.isPending,
         createBranch: createBranch.isPending,
@@ -105,4 +107,9 @@ export function useGitPanel(sessionId?: string) {
       },
     },
   };
+}
+
+function firstError(errors: unknown[]) {
+  const error = errors.find(Boolean);
+  return error ? getErrorMessage(error) : null;
 }
