@@ -1,6 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Express, NextFunction, Request, Response } from "express";
 import type { WorkspaceManager } from "../managers/workspaceManager";
+import type { WorkspaceSettings } from "../shared/types";
 
 export type AuthState = {
   enabled: boolean;
@@ -15,7 +16,15 @@ export class AuthManager {
 
   async initialize(required: boolean) {
     this.forceLoopbackAuth = process.env.CODEX_WEB_AUTH === "1";
+    return this.syncWithSettings(required);
+  }
+
+  async syncWithSettings(required: boolean) {
     const settings = await this.workspace.getSettings();
+    return this.applySettings(settings, required);
+  }
+
+  async applySettings(settings: WorkspaceSettings, required: boolean) {
     const enabled = required || settings.auth.enabled;
     const token = enabled ? settings.auth.token || randomToken() : settings.auth.token;
     this.state = { enabled, token };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceSettings } from "../../lib/types";
 
@@ -17,6 +17,8 @@ export function WorkspaceSettingsPanel({
   const [port, setPort] = useState("");
   const [previewPortStart, setPreviewPortStart] = useState("");
   const [previewPortEnd, setPreviewPortEnd] = useState("");
+  const [authEnabled, setAuthEnabled] = useState(false);
+  const [authToken, setAuthToken] = useState("");
 
   useEffect(() => {
     setDefaultProjectsDir(settings?.defaultProjectsDir ?? "");
@@ -24,6 +26,8 @@ export function WorkspaceSettingsPanel({
     setPort(settings ? String(settings.port) : "");
     setPreviewPortStart(settings ? String(settings.previewPortStart) : "");
     setPreviewPortEnd(settings ? String(settings.previewPortEnd) : "");
+    setAuthEnabled(settings?.auth.enabled ?? false);
+    setAuthToken(settings?.auth.token ?? "");
   }, [settings]);
 
   const parsedPort = parsePort(port);
@@ -44,6 +48,7 @@ export function WorkspaceSettingsPanel({
           previewPortStart: parsedPreviewPortStart,
           previewPortEnd: parsedPreviewPortEnd,
           defaultProjectsDir: defaultProjectsDir.trim(),
+          auth: { enabled: authEnabled, token: authToken.trim() || undefined },
         });
       }}
     >
@@ -54,7 +59,7 @@ export function WorkspaceSettingsPanel({
           onChange={(event) => setDefaultProjectsDir(event.target.value)}
           placeholder="Default project directory"
         />
-        <Button className="row-span-3" title="Save workspace settings" type="submit" disabled={!canSave} variant="outline" size="icon-xs">
+        <Button className="row-span-5" title="Save workspace settings" type="submit" disabled={!canSave} variant="outline" size="icon-xs">
           <Save data-icon="inline-start" />
         </Button>
         <input
@@ -86,6 +91,22 @@ export function WorkspaceSettingsPanel({
             placeholder="Preview to"
           />
         </div>
+        <label className="flex h-7 min-w-0 items-center gap-2 text-xs text-muted">
+          <input type="checkbox" checked={authEnabled} onChange={(event) => setAuthEnabled(event.target.checked)} />
+          Require token authentication
+        </label>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-1">
+          <input
+            className="compact-input"
+            value={authToken}
+            onChange={(event) => setAuthToken(event.target.value)}
+            placeholder="Auth token"
+            disabled={!authEnabled}
+          />
+          <Button title="Rotate auth token" type="button" variant="outline" size="icon-xs" disabled={!authEnabled} onClick={() => setAuthToken(generateToken())}>
+            <RefreshCw data-icon="inline-start" />
+          </Button>
+        </div>
       </div>
       <p className="empty-state">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
     </form>
@@ -95,4 +116,10 @@ export function WorkspaceSettingsPanel({
 function parsePort(value: string) {
   const port = Number(value);
   return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+}
+
+function generateToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

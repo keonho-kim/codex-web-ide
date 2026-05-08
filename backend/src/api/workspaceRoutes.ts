@@ -1,13 +1,16 @@
 import type { Express } from "express";
 import { createProjectSchema, workspaceSettingsSchema } from "../shared/schemas";
+import { authRequired } from "../auth/authManager";
 import { asyncHandler, type AppServices } from "./context";
 
-export function registerWorkspaceRoutes(app: Express, { workspace }: AppServices) {
+export function registerWorkspaceRoutes(app: Express, { auth, workspace }: AppServices) {
   app.get("/api/workspace/settings", asyncHandler(async (_req, res) => {
     res.json(await workspace.getSettings());
   }));
   app.put("/api/workspace/settings", asyncHandler(async (req, res) => {
-    res.json(await workspace.updateSettings(workspaceSettingsSchema.parse(req.body)));
+    const settings = await workspace.updateSettings(workspaceSettingsSchema.parse(req.body));
+    await auth.applySettings(settings, authRequired(settings.host));
+    res.json(await workspace.getSettings());
   }));
   app.get("/api/projects", asyncHandler(async (_req, res) => {
     res.json(await workspace.listProjects());

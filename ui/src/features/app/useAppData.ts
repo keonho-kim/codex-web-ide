@@ -39,7 +39,10 @@ export function useAppData() {
   const updateSettings = useMutation({
     mutationFn: (next: WorkspaceSettings) => api<WorkspaceSettings>("/api/workspace/settings", { method: "PUT", body: next }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["workspace-settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["auth-status"] }),
+      ]);
     },
   });
 
