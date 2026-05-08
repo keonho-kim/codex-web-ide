@@ -14,6 +14,7 @@ import { WorkspaceManager } from "./managers/workspaceManager";
 import { consumeCodexEvents } from "./managers/codex/events";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
+import { CommandManager } from "./managers/commandManager";
 import { JobRunner } from "./managers/commands/jobRunner";
 import { resolveCommandCwd } from "./managers/commands/path";
 import { PortAllocator } from "./managers/commands/portAllocator";
@@ -160,6 +161,27 @@ describe("product smoke coverage", () => {
     } finally {
       runner.stop(session.id, preview.id);
     }
+  });
+
+  test("hydrates stale running commands into terminal states", async () => {
+    const root = await tempDir();
+    const storeRoot = await tempDir();
+    const store = new JsonStore(storeRoot);
+    const session = testSession(root);
+    await store.write("jobs.json", [{ id: "job", sessionId: session.id, cwd: root, command: ["bun", "test"], status: "running", startedAt: Date.now(), stdout: [], stderr: [] }]);
+    await store.write("previews.json", [
+      { id: "preview", sessionId: session.id, cwd: root, command: ["bun", "run", "dev"], port: 23456, pid: 123, status: "running", localUrl: "http://127.0.0.1:23456/", publicUrl: "/preview/session/preview/", startedAt: Date.now(), stdout: [], stderr: [] },
+    ]);
+    await store.write("services.json", [
+      { id: "service", sessionId: session.id, cwd: root, command: ["bun", "worker.ts"], pid: 456, status: "starting", startedAt: Date.now(), restartCount: 0, stdout: [], stderr: [] },
+    ]);
+
+    const commands = new CommandManager(new EventBus(), new GitManager(), store);
+    await commands.hydrate();
+
+    expect(commands.getJob(session.id, "job").status).toBe("failed");
+    expect(commands.listPreviews(session.id)[0]).toMatchObject({ id: "preview", pid: 0, status: "stopped" });
+    expect(commands.listServices(session.id)[0]).toMatchObject({ id: "service", pid: 0, status: "stopped" });
   });
 
   test("removes workspace projects from active and recent state", async () => {
