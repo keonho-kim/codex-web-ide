@@ -23,9 +23,9 @@ export async function start(input: string[]) {
   if (server.auth?.enabled) {
     console.log(`Auth token: ${server.auth.token}`);
   }
-  const removePid = () => void removePidFile();
-  process.once("SIGINT", removePid);
-  process.once("SIGTERM", removePid);
+  const shutdown = createSignalShutdown(server.close);
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
   await new Promise(() => undefined);
 }
 
@@ -113,4 +113,20 @@ async function persistRuntimeSettings(host: string, port: number, previewPortSta
     previewPortStart: previewPortStart ?? settings.previewPortStart,
     previewPortEnd: previewPortEnd ?? settings.previewPortEnd,
   });
+}
+
+export function createSignalShutdown(closeServer: () => Promise<void>) {
+  let closing = false;
+  return () => {
+    if (closing) return;
+    closing = true;
+    void closeServer()
+      .catch((error) => {
+        console.error(error instanceof Error ? error.message : "Failed to close Codex Web IDE.");
+        process.exitCode = 1;
+      })
+      .finally(() => {
+        void removePidFile().finally(() => process.exit(process.exitCode ?? 0));
+      });
+  };
 }
