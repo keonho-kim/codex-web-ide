@@ -126,6 +126,22 @@ describe("product smoke coverage", () => {
     expect(finished.exitCode).toBe(0);
   });
 
+  test("cancels managed jobs with an immediate terminal event", async () => {
+    const root = await tempDir();
+    const events = new EventBus();
+    const runner = new JobRunner(events, new GitManager(), new ProcessRegistry());
+    const session = testSession(root);
+    const published: Array<{ type: string; jobId?: string; exitCode?: number }> = [];
+    events.subscribe(session.id, (event) => published.push(event));
+    const job = await runner.start(session, ["bun", "--eval", "setInterval(() => {}, 1000)"], { timeoutMs: 5000 });
+
+    const cancelled = runner.cancel(session.id, job.id);
+
+    expect(cancelled.status).toBe("cancelled");
+    expect(cancelled.exitCode).toBe(-1);
+    expect(published).toContainEqual(expect.objectContaining({ type: "job.finished", jobId: job.id, exitCode: -1 }));
+  });
+
   test("managed CLI commands create cwd sessions and call command APIs", async () => {
     const cwd = await tempDir();
     const originalCwd = process.cwd();

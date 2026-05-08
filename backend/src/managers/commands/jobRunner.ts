@@ -81,11 +81,16 @@ export class JobRunner {
     child.on("close", async (exitCode) => {
       clearTimeout(timeout);
       this.processes.delete(id);
-      if (job.status !== "cancelled") job.status = exitCode === 0 ? "succeeded" : "failed";
-      job.exitCode = exitCode ?? undefined;
+      const wasCancelled = job.status === "cancelled";
+      if (!wasCancelled) {
+        job.status = exitCode === 0 ? "succeeded" : "failed";
+        job.exitCode = exitCode ?? undefined;
+      } else {
+        job.exitCode ??= -1;
+      }
       job.finishedAt = Date.now();
       void this.persist();
-      this.events.publish(session.id, { type: "job.finished", jobId: id, exitCode: exitCode ?? -1 });
+      if (!wasCancelled) this.events.publish(session.id, { type: "job.finished", jobId: id, exitCode: exitCode ?? -1 });
       this.events.publish(session.id, { type: "git.state.updated", state: await this.git.state(session.cwd) });
     });
 
@@ -94,10 +99,13 @@ export class JobRunner {
 
   cancel(sessionId: string, id: string) {
     const job = this.get(sessionId, id);
+    if (job.status !== "running" && job.status !== "queued") return job;
     job.status = "cancelled";
+    job.exitCode = -1;
     job.finishedAt = Date.now();
     this.processes.kill(id);
     void this.persist();
+    this.events.publish(sessionId, { type: "job.finished", jobId: id, exitCode: -1 });
     return job;
   }
 
