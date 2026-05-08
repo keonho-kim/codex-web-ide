@@ -5,6 +5,7 @@ import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
 import { safePath } from "./fileManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
+import type { CodexHistoryStore } from "./codex/historyStore";
 
 type RunningTurn = {
   controller: AbortController;
@@ -21,7 +22,12 @@ export class CodexManager {
     private events: EventBus,
     private git: GitManager,
     private sessions: SessionManager,
+    private history: CodexHistoryStore,
   ) {}
+
+  async hydrate(sessions: Session[]) {
+    this.messages = await this.history.hydrate(sessions);
+  }
 
   listMessages(sessionId: string) {
     return this.messages.get(sessionId) ?? [];
@@ -41,7 +47,7 @@ export class CodexManager {
     }
 
     const prompt = buildPrompt(input.prompt, input.mentions);
-    this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
+    await this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
     const thread = this.threadFor(session);
     const controller = new AbortController();
     this.running.set(session.id, { controller });
@@ -68,10 +74,11 @@ export class CodexManager {
     return { running: false };
   }
 
-  private append(sessionId: string, message: CodexMessage) {
+  private async append(sessionId: string, message: CodexMessage) {
     const messages = this.messages.get(sessionId) ?? [];
-    messages.push(message);
-    this.messages.set(sessionId, messages.slice(-200));
+    const next = [...messages, message].slice(-200);
+    this.messages.set(sessionId, next);
+    await this.history.save(sessionId, next);
     this.events.publish(sessionId, { type: "codex.event", payload: { message } });
   }
 
@@ -117,7 +124,7 @@ export class CodexManager {
       if (!cancelled) cancelled = this.cancelled.delete(session.id);
       if (thread.id) await this.sessions.update(session.id, { codexThreadId: thread.id });
       const text = [...agentMessages.values()].join("\n").trim();
-      this.append(session.id, {
+      await this.append(session.id, {
         id: nanoid(),
         role: "assistant",
         text: text || failure || (cancelled ? "Codex run cancelled." : "Codex run finished without a response."),

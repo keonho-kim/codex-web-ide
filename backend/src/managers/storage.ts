@@ -11,7 +11,7 @@ export class JsonStore {
 
   async ensure() {
     await fs.mkdir(this.root, { recursive: true });
-    for (const dir of ["logs", "jobs", "previews", "services", "cache"]) {
+    for (const dir of ["logs", "jobs", "previews", "services", "cache", "codex"]) {
       await fs.mkdir(path.join(this.root, dir), { recursive: true });
     }
   }

@@ -5,6 +5,7 @@ import { registerApiRoutes } from "./api";
 import { AuthManager, authRequired, type AuthState } from "./auth/authManager";
 import { EventBus } from "./events/eventBus";
 import { CodexManager } from "./managers/codexManager";
+import { CodexHistoryStore } from "./managers/codex/historyStore";
 import { CommandManager } from "./managers/commandManager";
 import { FileManager } from "./managers/fileManager";
 import { GitManager } from "./managers/gitManager";
@@ -32,6 +33,8 @@ export async function createApp(options: ServerOptions = {}) {
   const git = new GitManager();
   const commands = new CommandManager(events, git, store);
   await commands.hydrate();
+  const codex = new CodexManager(events, git, sessions, new CodexHistoryStore(store));
+  await codex.hydrate(await sessions.list());
   const services = {
     events,
     workspace,
@@ -39,7 +42,7 @@ export async function createApp(options: ServerOptions = {}) {
     files,
     git,
     skills: new SkillManager(),
-    codex: new CodexManager(events, git, sessions),
+    codex,
     commands,
     adapter: createPlatformAdapter(),
     auth,
