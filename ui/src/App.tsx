@@ -30,13 +30,13 @@ export function App() {
   useSessionEvents(activeSessionId, queryClient);
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <strong>Codex Web IDE</strong>
-          <span>{activeSession?.cwd || "No session selected"}</span>
+    <main className="grid h-screen grid-cols-[230px_minmax(0,1fr)] grid-rows-[48px_minmax(0,1fr)_230px] bg-[#f5f5f7] text-[#1d1d1f] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]">
+      <header className="col-span-full flex items-center justify-between gap-4 border-b border-[#e0e0e0] bg-white px-3 max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2">
+        <div className="min-w-0">
+          <strong className="block text-sm">Codex Web IDE</strong>
+          <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-[#7a7a7a]">{activeSession?.cwd || "No session selected"}</span>
         </div>
-        <div className="topbar-actions">
+        <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch">
           <ProjectCreator onCreated={(project) => setActiveProjectId(project.id)} />
           <SessionCreator projectId={activeProjectId} onCreated={(session) => setActiveSessionId(session.id)} />
         </div>
@@ -51,7 +51,7 @@ export function App() {
         onSessionSelect={setActiveSessionId}
       />
 
-      <section className="workbench">
+      <section className="grid min-h-0 grid-cols-[240px_minmax(360px,1fr)_minmax(280px,34%)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[160px_minmax(260px,1fr)_220px]">
         <FilePane sessionId={activeSessionId} />
         <EditorPane sessionId={activeSessionId} />
         <CodexPane sessionId={activeSessionId} />

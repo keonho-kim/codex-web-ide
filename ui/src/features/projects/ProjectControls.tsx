@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileCode2, Folder, Play, Plus } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
+import { buttonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { Project, Session } from "../../lib/types";
 
@@ -18,14 +19,14 @@ export function ProjectCreator({ onCreated }: { onCreated(project: Project): voi
   });
   return (
     <form
-      className="inline-form"
+      className="flex items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (cwd.trim()) createProject.mutate({ cwd: cwd.trim() });
       }}
     >
-      <input value={cwd} onChange={(event) => setCwd(event.target.value)} placeholder="Project path" />
-      <button title="Add project" type="submit">
+      <input className={`${inputClass} w-[260px]`} value={cwd} onChange={(event) => setCwd(event.target.value)} placeholder="Project path" />
+      <button className={buttonClass} title="Add project" type="submit">
         <Plus size={16} />
       </button>
     </form>
@@ -42,7 +43,7 @@ export function SessionCreator({ projectId, onCreated }: { projectId?: string; o
     },
   });
   return (
-    <button title="Create session" type="button" onClick={() => createSession.mutate()} disabled={!projectId}>
+    <button className={buttonClass} title="Create session" type="button" onClick={() => createSession.mutate()} disabled={!projectId}>
       <Play size={16} />
       Session
     </button>
@@ -65,7 +66,7 @@ export function Sidebar({
   onSessionSelect(id: string): void;
 }) {
   return (
-    <aside className="sidebar">
+    <aside className="row-span-2 min-w-0 overflow-auto border-r border-[#e0e0e0] bg-[#fbfbfd] p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <SectionTitle label="Projects" />
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
@@ -76,28 +77,38 @@ export function Sidebar({
 
 function ProjectList({ projects, activeId, onSelect }: { projects: Project[]; activeId?: string; onSelect(id: string): void }) {
   return (
-    <nav className="stack-list">
+    <nav className="grid gap-1">
       {projects.map((project) => (
-        <button className={project.id === activeId ? "selected" : ""} key={project.id} type="button" onClick={() => onSelect(project.id)}>
+        <button
+          className={`${transparentListButtonClass} ${project.id === activeId ? selectedListButtonClass : ""}`}
+          key={project.id}
+          type="button"
+          onClick={() => onSelect(project.id)}
+        >
           <Folder size={15} />
-          <span>{project.name}</span>
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{project.name}</span>
         </button>
       ))}
-      {projects.length === 0 ? <p className="empty">Add a local project path.</p> : null}
+      {projects.length === 0 ? <p className={mutedClass}>Add a local project path.</p> : null}
     </nav>
   );
 }
 
 function SessionList({ sessions, activeId, onSelect }: { sessions: Session[]; activeId?: string; onSelect(id: string): void }) {
   return (
-    <nav className="stack-list">
+    <nav className="grid gap-1">
       {sessions.map((session) => (
-        <button className={session.id === activeId ? "selected" : ""} key={session.id} type="button" onClick={() => onSelect(session.id)}>
+        <button
+          className={`${transparentListButtonClass} ${session.id === activeId ? selectedListButtonClass : ""}`}
+          key={session.id}
+          type="button"
+          onClick={() => onSelect(session.id)}
+        >
           <FileCode2 size={15} />
-          <span>{session.name}</span>
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session.name}</span>
         </button>
       ))}
-      {sessions.length === 0 ? <p className="empty">Create a session to browse files.</p> : null}
+      {sessions.length === 0 ? <p className={mutedClass}>Create a session to browse files.</p> : null}
     </nav>
   );
 }

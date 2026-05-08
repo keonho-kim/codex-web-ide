@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
+import { iconButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import { useUiStore } from "../../store/uiStore";
 
@@ -26,10 +27,10 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   }, [file.data?.content]);
 
   return (
-    <section className="pane editor-pane">
-      <div className="pane-toolbar">
-        <span>{activeFilePath || "No file open"}</span>
-        <button title="Save file" type="button" disabled={!activeFilePath || save.isPending} onClick={() => save.mutate()}>
+    <section className="grid min-w-0 grid-rows-[38px_minmax(0,1fr)] overflow-hidden border-r border-[#e0e0e0] bg-white">
+      <div className="flex min-w-0 items-center justify-between border-b border-[#e0e0e0] px-2 py-1.5">
+        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath || "No file open"}</span>
+        <button className={iconButtonClass} title="Save file" type="button" disabled={!activeFilePath || save.isPending} onClick={() => save.mutate()}>
           <Save size={16} />
         </button>
       </div>
@@ -43,7 +44,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           onChange={(value) => setDraft(value ?? "")}
         />
       ) : (
-        <div className="empty-center">Open a file from the tree.</div>
+        <div className="flex items-center justify-center text-[13px] text-[#7a7a7a]">Open a file from the tree.</div>
       )}
     </section>
   );

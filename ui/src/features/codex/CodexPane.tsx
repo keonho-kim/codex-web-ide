@@ -2,6 +2,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
+import { buttonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { CodexMessage, ComposerMention } from "../../lib/types";
 
@@ -88,24 +89,25 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   };
 
   return (
-    <section className="pane chat-pane">
+    <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
       <SectionTitle label="Codex" />
-      <div className="chat-surface">
+      <div className="overflow-auto rounded-md border border-[#ececf0] p-2.5">
         {messages.data?.length ? (
           messages.data.map((message) => (
-            <article className={`chat-message ${message.role}`} key={message.id}>
-              <strong>{message.role}</strong>
-              <p>{message.text}</p>
+            <article className="border-b border-[#ececf0] py-2 last:border-b-0" key={message.id}>
+              <strong className="mb-1 block text-xs text-[#0066cc] capitalize">{message.role}</strong>
+              <p className="m-0 text-[13px] leading-[1.45] whitespace-pre-wrap">{message.text}</p>
             </article>
           ))
         ) : (
-          <p className="empty">Start a Codex run from the composer.</p>
+          <p className={mutedClass}>Start a Codex run from the composer.</p>
         )}
       </div>
-      <div className="composer">
-        <div className="mention-chips">
+      <div className="relative">
+        <div className="mb-1 flex flex-wrap gap-1">
           {selectedMentions.map((mention) => (
             <button
+              className="inline-flex min-h-6 items-center rounded-md border border-[#d8d8df] bg-white px-2 py-0.5 text-xs text-[#0066cc]"
               key={mentionKey(mention)}
               type="button"
               onClick={() => setSelectedMentions((items) => items.filter((item) => mentionKey(item) !== mentionKey(mention)))}
@@ -115,6 +117,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
           ))}
         </div>
         <textarea
+          className={`${inputClass} h-[92px] w-full resize-none`}
           value={draft}
           onChange={(event) => {
             const value = event.target.value;
@@ -124,20 +127,25 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
           onKeyDown={onComposerKeyDown}
           placeholder="Ask Codex. Use @ for files and $ for skills."
         />
-        <button className="composer-send" type="button" disabled={!sessionId || !draft.trim() || runCodex.isPending} onClick={() => runCodex.mutate()}>
+        <button
+          className={`${buttonClass} absolute right-2 bottom-2`}
+          type="button"
+          disabled={!sessionId || !draft.trim() || runCodex.isPending}
+          onClick={() => runCodex.mutate()}
+        >
           <Play size={15} />
           Run
         </button>
         {runCodex.isPending ? (
-          <button className="composer-cancel" type="button" disabled={cancelCodex.isPending} onClick={() => cancelCodex.mutate()}>
+          <button className={`${buttonClass} absolute right-[76px] bottom-2`} type="button" disabled={cancelCodex.isPending} onClick={() => cancelCodex.mutate()}>
             Cancel
           </button>
         ) : null}
         {mentionSearch && suggestions.length > 0 ? (
-          <div className="mention-popover">
+          <div className="absolute right-0 bottom-24 left-0 max-h-[180px] overflow-auto rounded-md bg-[#1d1d1f] p-2 text-[11px] text-white">
             {suggestions.map((mention, index) => (
               <button
-                className={index === mentionSearch.selectedIndex ? "selected" : ""}
+                className={`${transparentListButtonClass} text-white ${index === mentionSearch.selectedIndex ? selectedListButtonClass : ""}`}
                 key={mentionKey(mention)}
                 type="button"
                 onMouseDown={(event) => {
