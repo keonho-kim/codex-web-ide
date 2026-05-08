@@ -18,6 +18,9 @@ export function useSessionEvents(activeSessionId: string | undefined, queryClien
       void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
       void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
     });
+    source.addEventListener("git.state.updated", () => {
+      void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
+    });
     for (const eventName of ["job.started", "job.stdout", "job.stderr"]) {
       source.addEventListener(eventName, () => {
         void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
@@ -35,6 +38,7 @@ export function useSessionEvents(activeSessionId: string | undefined, queryClien
     }
     source.addEventListener("file.changed", () => {
       void queryClient.invalidateQueries({ queryKey: ["tree", activeSessionId] });
+      void queryClient.invalidateQueries({ queryKey: ["file", activeSessionId] });
     });
     return () => source.close();
   }, [activeSessionId, queryClient]);
