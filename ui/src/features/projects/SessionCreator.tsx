@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import type { Session } from "../../lib/types";
 
@@ -13,15 +14,16 @@ export function SessionCreator({ projectId, onCreated }: { projectId?: string; o
     },
   });
   return (
-    <button
-      className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+    <Button
       title="Create session"
       type="button"
       onClick={() => createSession.mutate()}
       disabled={!projectId}
+      variant="outline"
+      size="sm"
     >
-      <Play size={16} />
+      <Play data-icon="inline-start" />
       Session
-    </button>
+    </Button>
   );
 }
