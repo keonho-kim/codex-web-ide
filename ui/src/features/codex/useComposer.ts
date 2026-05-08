@@ -23,7 +23,7 @@ export function useComposer(sessionId?: string) {
     content: draft,
     editorProps: {
       attributes: {
-        class: "composer-input",
+        class: "min-h-[92px] w-full rounded-md border border-control bg-canvas px-2.5 py-1.5 pr-32 text-sm text-ink outline-none [&_p]:m-0",
       },
     },
     onUpdate: ({ editor }) => {

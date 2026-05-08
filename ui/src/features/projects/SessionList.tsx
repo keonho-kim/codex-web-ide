@@ -15,13 +15,13 @@ export function SessionList({
   onDelete(id: string): void;
 }) {
   return (
-    <nav className="nav-list">
+    <nav className="grid gap-1">
       {sessions.map((session) => (
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1" key={session.id}>
           <button
             className={cn(
-              "nav-item",
-              session.id === activeId && "nav-item-selected",
+              "inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink hover:bg-page",
+              session.id === activeId && "border-selected-border bg-selected text-primary",
             )}
             type="button"
             onClick={() => onSelect(session.id)}
@@ -34,7 +34,7 @@ export function SessionList({
           </Button>
         </div>
       ))}
-      {sessions.length === 0 ? <p className="empty-state">Create a session to browse files.</p> : null}
+      {sessions.length === 0 ? <p className="text-xs text-muted">Create a session to browse files.</p> : null}
     </nav>
   );
 }

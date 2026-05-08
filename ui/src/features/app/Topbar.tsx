@@ -21,12 +21,12 @@ export function Topbar({
   onSessionCreated(session: Session): void;
 }) {
   return (
-    <header className="app-header">
+    <header className="col-span-full flex items-center justify-between gap-4 border-b border-hairline bg-canvas px-3 max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2">
       <div className="min-w-0">
         <strong className="block text-sm">Codex Web IDE</strong>
         <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">{activeSession?.cwd || "No session selected"}</span>
       </div>
-      <div className="shell-toolbar">
+      <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch">
         <TopbarStatus session={activeSession} />
         <ProjectCreator defaultProjectsDir={defaultProjectsDir} onCreated={onProjectCreated} />
         <SessionCreator projectId={activeProjectId} onCreated={onSessionCreated} />
@@ -81,20 +81,20 @@ function TopbarStatus({ session }: { session?: Session }) {
   const dirtyLabel = git.data?.dirty ? `${git.data.stagedCount}/${git.data.unstagedCount}/${git.data.untrackedCount}` : "clean";
 
   return (
-    <div className="topbar-status">
-      <span className="status-pill" title="Git branch">
+    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden max-[900px]:flex-wrap">
+      <span className="inline-flex h-7 max-w-[180px] items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2 text-xs text-muted" title="Git branch">
         <GitBranch size={14} />
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{sessionId ? branchLabel : "no session"}</span>
       </span>
-      <span className="status-pill" title="Session and Git status">
+      <span className="inline-flex h-7 max-w-[180px] items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2 text-xs text-muted" title="Session and Git status">
         <Activity size={14} />
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session ? `${session.status} · ${dirtyLabel}` : "idle"}</span>
       </span>
-      <span className="status-pill" title="Running jobs">
+      <span className="inline-flex h-7 max-w-[180px] items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2 text-xs text-muted" title="Running jobs">
         <Terminal size={14} />
         <span>{runningJobs}</span>
       </span>
-      <span className="status-pill" title="Running services">
+      <span className="inline-flex h-7 max-w-[180px] items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2 text-xs text-muted" title="Running services">
         <Server size={14} />
         <span>{runningServices}</span>
       </span>
@@ -115,7 +115,7 @@ function TopbarStatus({ session }: { session?: Session }) {
         <Play data-icon="inline-start" />
         {activePreview ? "Preview" : "Start preview"}
       </Button>
-      {startPreview.error ? <span className="error-text">{startPreview.error instanceof Error ? startPreview.error.message : "Preview failed."}</span> : null}
+      {startPreview.error ? <span className="text-xs text-destructive">{startPreview.error instanceof Error ? startPreview.error.message : "Preview failed."}</span> : null}
     </div>
   );
 }

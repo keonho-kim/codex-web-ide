@@ -6,7 +6,7 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
   const services = useServicesPanel(sessionId);
 
   return (
-    <div className="panel-body">
+    <div className="h-[calc(100%-38px)] overflow-auto p-2.5">
       <ServiceToolbar
         command={services.command}
         startDisabled={services.actions.startDisabled}
@@ -14,8 +14,8 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
         onRefresh={services.actions.refresh}
         onStart={services.actions.start}
       />
-      {services.actions.error ? <p className="error-text mt-2">{services.actions.error}</p> : null}
-      <div className="split-grid mt-2.5">
+      {services.actions.error ? <p className="mt-2 text-xs text-destructive">{services.actions.error}</p> : null}
+      <div className="mt-2.5 grid min-h-0 grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5">
         <ServiceList
           restartPending={services.actions.restartPending}
           services={services.services}
@@ -23,7 +23,7 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
           onRestart={services.actions.restart}
           onStop={services.actions.stop}
         />
-        <pre className="log-output">{services.latestLog}</pre>
+        <pre className="h-[150px] overflow-auto rounded-md bg-ink p-2.5 text-xs whitespace-pre-wrap text-white">{services.latestLog}</pre>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
     >
       <div className="flex min-w-0 items-center gap-1">
         <input
-          className="compact-input flex-1"
+          className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
           value={files.pathInput}
           onChange={(event) => files.setPathInput(event.target.value)}
           placeholder="path/to/file.ts"
@@ -56,7 +56,7 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
           <Trash2 data-icon="inline-start" />
         </Button>
       </div>
-      {files.error ? <p className="error-text m-0">{files.error instanceof Error ? files.error.message : "File operation failed."}</p> : null}
+      {files.error ? <p className="m-0 text-xs text-destructive">{files.error instanceof Error ? files.error.message : "File operation failed."}</p> : null}
     </form>
   );
 }

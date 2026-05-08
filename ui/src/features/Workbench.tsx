@@ -13,11 +13,11 @@ export function Workbench({ sessionId }: { sessionId?: string }) {
       <Panel defaultSize={workbenchLayout[0] ?? 18} minSize={14}>
         <FilePane sessionId={sessionId} />
       </Panel>
-      <PanelResizeHandle className="resize-handle" />
+      <PanelResizeHandle className="w-px bg-hairline transition-colors hover:bg-primary" />
       <Panel defaultSize={workbenchLayout[1] ?? 52} minSize={28}>
         <EditorPane sessionId={sessionId} />
       </Panel>
-      <PanelResizeHandle className="resize-handle" />
+      <PanelResizeHandle className="w-px bg-hairline transition-colors hover:bg-primary" />
       <Panel defaultSize={workbenchLayout[2] ?? 30} minSize={22}>
         <CodexPane sessionId={sessionId} />
       </Panel>

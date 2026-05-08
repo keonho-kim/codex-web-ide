@@ -19,7 +19,7 @@ export function App() {
   return (
     <main
       className={cn(
-        "app-shell",
+        "grid h-screen grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]",
         sidebarCollapsed ? "grid-cols-[44px_minmax(0,1fr)]" : "grid-cols-[230px_minmax(0,1fr)]",
       )}
     >

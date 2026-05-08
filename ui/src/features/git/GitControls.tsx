@@ -40,16 +40,16 @@ export function GitControls({
   return (
     <div className="grid content-start gap-2">
       <strong>{state?.branch || "No Git branch"}</strong>
-      <p className="empty-state">
+      <p className="text-xs text-muted">
         staged {state?.stagedCount ?? 0} / unstaged {state?.unstagedCount ?? 0} / untracked {state?.untrackedCount ?? 0}
       </p>
-      <p className="empty-state">
+      <p className="text-xs text-muted">
         {state?.dirty ? "dirty" : "clean"} · ahead {state?.ahead ?? 0} / behind {state?.behind ?? 0}
         {state?.detached ? " · detached" : ""}
       </p>
       <div className="grid gap-2">
         <select
-          className="field-input"
+          className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
           value={state?.branch ?? ""}
           disabled={!sessionId}
           onChange={(event) => onCheckout(event.target.value)}
@@ -65,7 +65,7 @@ export function GitControls({
         </select>
         <div className="flex items-center gap-2">
           <input
-            className="field-input"
+            className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
             value={branchName}
             onChange={(event) => onBranchNameChange(event.target.value)}
             placeholder="New branch"
@@ -75,7 +75,7 @@ export function GitControls({
           </Button>
         </div>
         <input
-          className="field-input"
+          className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
           value={commitMessage}
           onChange={(event) => onCommitMessageChange(event.target.value)}
           placeholder="Commit message"

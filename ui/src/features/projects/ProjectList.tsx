@@ -15,13 +15,13 @@ export function ProjectList({
   onSelect(id: string): void;
 }) {
   return (
-    <nav className="nav-list">
+    <nav className="grid gap-1">
       {projects.map((project) => (
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1" key={project.id}>
           <button
             className={cn(
-              "nav-item",
-              project.id === activeId && "nav-item-selected",
+              "inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink hover:bg-page",
+              project.id === activeId && "border-selected-border bg-selected text-primary",
             )}
             type="button"
             onClick={() => onSelect(project.id)}
@@ -34,7 +34,7 @@ export function ProjectList({
           </Button>
         </div>
       ))}
-      {projects.length === 0 ? <p className="empty-state">Add a local project path.</p> : null}
+      {projects.length === 0 ? <p className="text-xs text-muted">Add a local project path.</p> : null}
     </nav>
   );
 }

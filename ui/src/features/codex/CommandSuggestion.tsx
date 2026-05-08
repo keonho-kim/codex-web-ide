@@ -47,7 +47,7 @@ export function CommandSuggestion({ sessionId, text }: { sessionId?: string; tex
   if (!sessionId || !suggestion || dismissed) return null;
 
   return (
-    <div className="list-card mt-2 grid gap-2 bg-panel">
+    <div className="mt-2 grid gap-2 rounded-md border border-subtle bg-panel p-2 text-xs">
       <div className="min-w-0">
         <strong className="block text-xs text-primary">Suggested command</strong>
         <code className="block overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-ink">{suggestion.source}</code>
@@ -69,7 +69,7 @@ export function CommandSuggestion({ sessionId, text }: { sessionId?: string; tex
           <X data-icon="inline-start" />
         </Button>
       </div>
-      {run.error ? <p className="error-text m-0">{getErrorMessage(run.error)}</p> : null}
+      {run.error ? <p className="m-0 text-xs text-destructive">{getErrorMessage(run.error)}</p> : null}
     </div>
   );
 }

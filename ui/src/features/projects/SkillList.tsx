@@ -13,10 +13,10 @@ export function SkillList({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <nav className="nav-list">
+    <nav className="grid gap-1">
       {skills.data?.slice(0, 8).map((skill) => (
         <div
-          className="nav-item"
+          className="inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink hover:bg-page"
           key={skill.id}
           title={`$${skill.name}`}
         >
@@ -24,8 +24,8 @@ export function SkillList({ sessionId }: { sessionId?: string }) {
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">{skill.name}</span>
         </div>
       ))}
-      {!sessionId ? <p className="empty-state">Create a session to load skills.</p> : null}
-      {sessionId && skills.data?.length === 0 ? <p className="empty-state">No skills found.</p> : null}
+      {!sessionId ? <p className="text-xs text-muted">Create a session to load skills.</p> : null}
+      {sessionId && skills.data?.length === 0 ? <p className="text-xs text-muted">No skills found.</p> : null}
     </nav>
   );
 }

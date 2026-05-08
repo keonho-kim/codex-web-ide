@@ -11,21 +11,21 @@ export function BottomPanel({ sessionId }: { sessionId?: string }) {
   const selectedPanel = useUiStore((state) => state.selectedPanel);
   const setSelectedPanel = useUiStore((state) => state.setSelectedPanel);
   return (
-    <section className="bottom-panel">
-      <div className="bottom-tabs">
-        <Button className={cn(selectedPanel === "git" && "panel-tab-selected")} type="button" onClick={() => setSelectedPanel("git")} variant="outline" size="sm">
+    <section className="min-h-0 overflow-hidden border-t border-hairline bg-canvas">
+      <div className="flex h-[38px] items-center gap-2 border-b border-hairline px-2 py-1">
+        <Button className={cn(selectedPanel === "git" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("git")} variant="outline" size="sm">
           <GitBranch data-icon="inline-start" />
           Git
         </Button>
-        <Button className={cn(selectedPanel === "preview" && "panel-tab-selected")} type="button" onClick={() => setSelectedPanel("preview")} variant="outline" size="sm">
+        <Button className={cn(selectedPanel === "preview" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("preview")} variant="outline" size="sm">
           <Play data-icon="inline-start" />
           Preview
         </Button>
-        <Button className={cn(selectedPanel === "jobs" && "panel-tab-selected")} type="button" onClick={() => setSelectedPanel("jobs")} variant="outline" size="sm">
+        <Button className={cn(selectedPanel === "jobs" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("jobs")} variant="outline" size="sm">
           <Bug data-icon="inline-start" />
           Jobs
         </Button>
-        <Button className={cn(selectedPanel === "services" && "panel-tab-selected")} type="button" onClick={() => setSelectedPanel("services")} variant="outline" size="sm">
+        <Button className={cn(selectedPanel === "services" && "border-selected-border bg-selected text-primary")} type="button" onClick={() => setSelectedPanel("services")} variant="outline" size="sm">
           <Server data-icon="inline-start" />
           Services
         </Button>

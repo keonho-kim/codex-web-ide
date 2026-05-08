@@ -21,10 +21,10 @@ export function JobList({
   return (
     <div className="min-h-0 overflow-auto">
       {jobs.map((job) => (
-        <article className={cn("list-card mb-1 grid gap-1", job.id === selectedJob?.id ? "list-card-selected" : "bg-canvas")} key={job.id}>
+        <article className={cn("mb-1 grid gap-1 rounded-md border border-subtle p-2 text-xs", job.id === selectedJob?.id ? "border-selected-border bg-selected text-primary" : "bg-canvas")} key={job.id}>
           <button className="grid gap-1 text-left" type="button" onClick={() => onSelect(job.id)}>
             <strong className="overflow-hidden text-ellipsis whitespace-nowrap">{job.command.join(" ")}</strong>
-            <span className="empty-state">
+            <span className="text-xs text-muted">
               {job.status} · {formatDuration(job)} {job.exitCode !== undefined ? `· exit ${job.exitCode}` : ""}
             </span>
           </button>
@@ -35,7 +35,7 @@ export function JobList({
           </div>
         </article>
       ))}
-      {jobs.length === 0 ? <p className="empty-state">No jobs yet.</p> : null}
+      {jobs.length === 0 ? <p className="text-xs text-muted">No jobs yet.</p> : null}
     </div>
   );
 }

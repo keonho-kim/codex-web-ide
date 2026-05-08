@@ -30,7 +30,7 @@ export function ProjectCreator({ defaultProjectsDir, onCreated }: { defaultProje
       }}
     >
       <input
-        className="field-input w-[260px]"
+        className="w-[260px] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
         value={cwd}
         onChange={(event) => setCwd(event.target.value)}
         placeholder={defaultProjectsDir || "Project path"}

@@ -24,7 +24,7 @@ export function JobToolbar({
   return (
     <div className="flex items-center gap-2">
       <input
-        className="command-input"
+        className="w-[min(520px,100%)] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
         value={command}
         onChange={(event) => onCommandChange(event.target.value)}
       />
