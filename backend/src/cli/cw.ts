@@ -97,16 +97,18 @@ async function doctor() {
 }
 
 async function open() {
-  await createPlatformAdapter().openUrl("http://127.0.0.1:17321");
+  await createPlatformAdapter().openUrl(await serverBaseUrl());
 }
 
 async function status() {
   try {
-    const response = await fetch("http://127.0.0.1:17321/api/health");
+    const baseUrl = await serverBaseUrl();
+    const response = await fetch(`${baseUrl}/api/health`);
     const body = await response.json();
     console.log(`running: ${body.ok ? "yes" : "unknown"}`);
     const pid = await readPidFile();
     if (pid) console.log(`pid: ${pid.pid}`);
+    console.log(`url: ${baseUrl}`);
   } catch {
     console.log("running: no");
     process.exitCode = 1;
@@ -232,7 +234,7 @@ async function followJob(sessionId: string, jobId: string) {
 async function api<T>(pathName: string, options: { method?: string; body?: unknown } = {}) {
   let response: Response;
   try {
-    response = await fetch(`http://127.0.0.1:17321${pathName}`, {
+    response = await fetch(`${await serverBaseUrl()}${pathName}`, {
       method: options.method || "GET",
       headers: options.body ? { "Content-Type": "application/json" } : undefined,
       body: options.body ? JSON.stringify(options.body) : undefined,
@@ -242,6 +244,13 @@ async function api<T>(pathName: string, options: { method?: string; body?: unkno
   }
   if (!response.ok) throw new Error(await response.text());
   return (await response.json()) as T;
+}
+
+async function serverBaseUrl() {
+  const configuredPort = process.env.CODEX_WEB_PORT;
+  const pid = await readPidFile();
+  const port = Number(configuredPort || pid?.port || 17321);
+  return `http://127.0.0.1:${port}`;
 }
 
 function pidFile() {
