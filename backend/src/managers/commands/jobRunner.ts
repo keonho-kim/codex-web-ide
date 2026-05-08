@@ -62,8 +62,14 @@ export class JobRunner {
     }, jobTimeoutMs(command, options.timeoutMs));
 
     pipeProcessOutput(child, job, {
-      stdout: (text) => this.events.publish(session.id, { type: "job.stdout", jobId: id, text }),
-      stderr: (text) => this.events.publish(session.id, { type: "job.stderr", jobId: id, text }),
+      stdout: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "job.stdout", jobId: id, text });
+      },
+      stderr: (text) => {
+        void this.persist();
+        this.events.publish(session.id, { type: "job.stderr", jobId: id, text });
+      },
     });
     child.on("error", (error) => {
       const text = `${error.message}\n`;
