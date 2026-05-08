@@ -85,6 +85,15 @@ describe("product smoke coverage", () => {
     await expect(new GitManager().stage(root, ["linked/secret.txt"])).rejects.toThrow("Path escape blocked");
   });
 
+  test("returns empty Git read models outside repositories", async () => {
+    const root = await tempDir();
+    const git = new GitManager();
+
+    await expect(git.status(root)).resolves.toEqual([]);
+    await expect(git.branch(root)).resolves.toEqual([]);
+    await expect(git.diff(root)).resolves.toBe("");
+  });
+
   test("runs managed jobs and captures output", async () => {
     const root = await tempDir();
     const runner = new JobRunner(new EventBus(), new GitManager(), new ProcessRegistry());

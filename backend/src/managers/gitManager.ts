@@ -51,8 +51,12 @@ export class GitManager {
   }
 
   async status(cwd: string): Promise<GitFileStatus[]> {
-    const { stdout } = await this.git(cwd, ["status", "--porcelain=v2"]);
-    return parseStatus(stdout);
+    try {
+      const { stdout } = await this.git(cwd, ["status", "--porcelain=v2"]);
+      return parseStatus(stdout);
+    } catch {
+      return [];
+    }
   }
 
   async diff(cwd: string, file?: string, staged = false) {
@@ -60,8 +64,12 @@ export class GitManager {
     const args = ["diff", "--no-ext-diff"];
     if (staged) args.push("--staged");
     if (file) args.push("--", file);
-    const { stdout } = await this.git(cwd, args);
-    return stdout;
+    try {
+      const { stdout } = await this.git(cwd, args);
+      return stdout;
+    } catch {
+      return "";
+    }
   }
 
   async stage(cwd: string, files: string[]) {
@@ -87,8 +95,12 @@ export class GitManager {
   }
 
   async branch(cwd: string) {
-    const { stdout } = await this.git(cwd, ["branch", "--format", "%(refname:short)"]);
-    return stdout.split("\n").filter(Boolean);
+    try {
+      const { stdout } = await this.git(cwd, ["branch", "--format", "%(refname:short)"]);
+      return stdout.split("\n").filter(Boolean);
+    } catch {
+      return [];
+    }
   }
 
   async checkout(cwd: string, branch: string) {
