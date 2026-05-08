@@ -34,7 +34,7 @@ export function useServicesPanel(sessionId?: string) {
   });
 
   const items = services.data ?? [];
-  const latest = useMemo(() => items.at(-1), [items]);
+  const latest = useMemo(() => newestService(items), [items]);
   const latestLog = latest ? [...latest.stdout, ...latest.stderr].join("") || latest.status : "No service logs yet.";
   const commandArgs = splitCommand(command);
 
@@ -62,4 +62,8 @@ export function useServicesPanel(sessionId?: string) {
       stopPending: stopService.isPending,
     },
   };
+}
+
+function newestService(services: ServiceInstance[]) {
+  return services.reduce<ServiceInstance | undefined>((latest, service) => (!latest || service.startedAt > latest.startedAt ? service : latest), undefined);
 }

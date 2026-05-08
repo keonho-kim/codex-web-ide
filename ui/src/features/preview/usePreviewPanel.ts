@@ -31,7 +31,10 @@ export function usePreviewPanel(sessionId?: string) {
   });
   const stopPreview = useMutation({
     mutationFn: (id: string) => api(`/api/sessions/${sessionId}/previews/${id}/stop`, { method: "POST" }),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["previews", sessionId] }),
+    onSuccess: async (_result, id) => {
+      if (selectedPreviewId === id) setSelectedPreviewId(undefined);
+      await queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
+    },
   });
   const restartPreview = useMutation({
     mutationFn: (id: string) => api(`/api/sessions/${sessionId}/previews/${id}/restart`, { method: "POST" }),
@@ -41,7 +44,7 @@ export function usePreviewPanel(sessionId?: string) {
     },
   });
 
-  const runningPreviews = previews.data?.filter((preview) => preview.status === "running") ?? [];
+  const runningPreviews = previews.data?.filter((preview) => preview.status === "running" || preview.status === "starting") ?? [];
   const activePreview = (previews.data ?? []).find((preview) => preview.id === selectedPreviewId) ?? runningPreviews[0];
   const activeLogs = useMemo(() => (activePreview ? [...activePreview.stdout, ...activePreview.stderr].join("") : ""), [activePreview]);
   const commandArgs = splitCommand(command);
