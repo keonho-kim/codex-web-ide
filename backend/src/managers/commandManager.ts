@@ -89,4 +89,8 @@ export class CommandManager {
   restartService(session: Session, id: string) {
     return this.services.restart(session, id);
   }
+
+  async deleteSession(sessionId: string) {
+    await Promise.all([this.jobs.deleteSession(sessionId), this.previews.deleteSession(sessionId), this.services.deleteSession(sessionId)]);
+  }
 }

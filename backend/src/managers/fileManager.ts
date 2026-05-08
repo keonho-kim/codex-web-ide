@@ -34,6 +34,13 @@ export class FileManager {
     this.watchers.set(sessionId, watcher);
   }
 
+  async unwatch(sessionId: string) {
+    const watcher = this.watchers.get(sessionId);
+    if (!watcher) return;
+    this.watchers.delete(sessionId);
+    await watcher.close();
+  }
+
   async tree(root: string, input = ".", depth = 3): Promise<FileTreeNode[]> {
     const base = safePath(root, input);
     const entries = await fs.readdir(base, { withFileTypes: true });

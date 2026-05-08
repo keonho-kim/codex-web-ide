@@ -33,4 +33,8 @@ export class JsonStore {
     await fs.writeFile(temp, JSON.stringify(value, null, 2));
     await fs.rename(temp, file);
   }
+
+  async delete(name: string): Promise<void> {
+    await fs.rm(path.join(this.root, name), { force: true });
+  }
 }

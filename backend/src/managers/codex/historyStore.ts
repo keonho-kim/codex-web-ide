@@ -17,6 +17,10 @@ export class CodexHistoryStore {
     await this.store.write(this.fileName(sessionId), messages.slice(-200));
   }
 
+  async delete(sessionId: string) {
+    await this.store.delete(this.fileName(sessionId));
+  }
+
   private fileName(sessionId: string) {
     return `codex/${sessionId}.json`;
   }

@@ -98,6 +98,14 @@ export class JobRunner {
     return job;
   }
 
+  async deleteSession(sessionId: string) {
+    for (const job of this.list(sessionId)) {
+      if (job.status === "running" || job.status === "queued") this.processes.kill(job.id);
+      this.jobs.delete(job.id);
+    }
+    await this.persist();
+  }
+
   private persist() {
     return this.history?.saveJobs([...this.jobs.values()]) ?? Promise.resolve();
   }

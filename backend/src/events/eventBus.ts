@@ -6,8 +6,10 @@ type Listener = (event: Envelope) => void;
 export class EventBus {
   private listeners = new Map<string, Set<Listener>>();
   private buffers = new Map<string, Envelope[]>();
+  private disposed = new Set<string>();
 
   subscribe(sessionId: string, listener: Listener) {
+    if (this.disposed.has(sessionId)) throw new Error("Session event stream is closed");
     const set = this.listeners.get(sessionId) ?? new Set<Listener>();
     set.add(listener);
     this.listeners.set(sessionId, set);
@@ -19,6 +21,7 @@ export class EventBus {
   }
 
   publish(sessionId: string, event: SessionEvent) {
+    if (this.disposed.has(sessionId)) return null;
     const envelope: Envelope = {
       ...event,
       id: nanoid(),
@@ -30,5 +33,11 @@ export class EventBus {
     this.buffers.set(sessionId, buffer.slice(-300));
     for (const listener of this.listeners.get(sessionId) ?? []) listener(envelope);
     return envelope;
+  }
+
+  dispose(sessionId: string) {
+    this.listeners.delete(sessionId);
+    this.buffers.delete(sessionId);
+    this.disposed.add(sessionId);
   }
 }

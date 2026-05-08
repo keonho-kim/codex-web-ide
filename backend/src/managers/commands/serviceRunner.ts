@@ -91,6 +91,17 @@ export class ServiceRunner {
     return this.start(session, command, { cwd, restartCount });
   }
 
+  async deleteSession(sessionId: string) {
+    for (const service of this.list(sessionId)) {
+      if (service.status !== "stopped") {
+        service.status = "stopped";
+        this.processes.kill(service.id);
+      }
+      this.services.delete(service.id);
+    }
+    await this.persist();
+  }
+
   private persist() {
     return this.history?.saveServices([...this.services.values()]) ?? Promise.resolve();
   }

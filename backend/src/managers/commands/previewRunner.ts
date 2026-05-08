@@ -106,6 +106,18 @@ export class PreviewRunner {
     return this.start(session, command, { cwd });
   }
 
+  async deleteSession(sessionId: string) {
+    for (const preview of this.list(sessionId)) {
+      if (preview.status !== "stopped") {
+        preview.status = "stopped";
+        this.ports.release(preview.port);
+        this.processes.kill(preview.id);
+      }
+      this.previews.delete(preview.id);
+    }
+    await this.persist();
+  }
+
   getTarget(sessionId: string, previewId: string) {
     const preview = this.previews.get(previewId);
     if (!preview || preview.sessionId !== sessionId || preview.status === "stopped") return null;

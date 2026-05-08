@@ -25,6 +25,13 @@ export class GitManager {
     this.watchers.set(sessionId, watcher);
   }
 
+  async unwatch(sessionId: string) {
+    const watcher = this.watchers.get(sessionId);
+    if (!watcher) return;
+    this.watchers.delete(sessionId);
+    await watcher.close();
+  }
+
   async state(cwd: string): Promise<GitState> {
     try {
       const { stdout } = await this.git(cwd, ["status", "--porcelain=v2", "--branch"]);

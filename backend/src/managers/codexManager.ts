@@ -17,6 +17,7 @@ export class CodexManager {
   private running = new Map<string, RunningTurn>();
   private threads = new Map<string, Thread>();
   private cancelled = new Set<string>();
+  private deleted = new Set<string>();
 
   constructor(
     private events: EventBus,
@@ -74,7 +75,17 @@ export class CodexManager {
     return { running: false };
   }
 
+  async deleteSession(sessionId: string) {
+    this.deleted.add(sessionId);
+    this.cancel(sessionId);
+    this.messages.delete(sessionId);
+    this.threads.delete(sessionId);
+    this.cancelled.delete(sessionId);
+    await this.history.delete(sessionId);
+  }
+
   private async append(sessionId: string, message: CodexMessage) {
+    if (this.deleted.has(sessionId)) return;
     const messages = this.messages.get(sessionId) ?? [];
     const next = [...messages, message].slice(-200);
     this.messages.set(sessionId, next);
@@ -121,6 +132,7 @@ export class CodexManager {
       if (!cancelled) failure = error instanceof Error ? error.message : "Codex run failed.";
     } finally {
       this.running.delete(session.id);
+      if (this.deleted.has(session.id)) return;
       if (!cancelled) cancelled = this.cancelled.delete(session.id);
       if (thread.id) await this.sessions.update(session.id, { codexThreadId: thread.id });
       const text = [...agentMessages.values()].join("\n").trim();
