@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { PreviewInstance } from "../../lib/types";
+import { useUiStore } from "../../store/uiStore";
 
 export function PreviewPanel({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const [command, setCommand] = useState("bun run dev");
-  const [selectedPreviewId, setSelectedPreviewId] = useState<string>();
+  const selectedPreviewId = useUiStore((state) => state.selectedPreviewId);
+  const setSelectedPreviewId = useUiStore((state) => state.setSelectedPreviewId);
   const [iframeVersion, setIframeVersion] = useState(0);
   const previews = useQuery({
     queryKey: ["previews", sessionId],

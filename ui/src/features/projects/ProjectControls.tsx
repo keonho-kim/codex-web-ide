@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, Plus } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Play, Plus } from "lucide-react";
 import { SectionTitle } from "../../components/SectionTitle";
 import { api } from "../../lib/api";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
@@ -79,6 +79,8 @@ export function Sidebar({
   settings,
   onSettingsSave,
   settingsPending,
+  collapsed,
+  onCollapsedChange,
 }: {
   projects: Project[];
   sessions: Session[];
@@ -90,10 +92,37 @@ export function Sidebar({
   settings?: WorkspaceSettings;
   onSettingsSave(settings: WorkspaceSettings): void;
   settingsPending?: boolean;
+  collapsed: boolean;
+  onCollapsedChange(collapsed: boolean): void;
 }) {
+  if (collapsed) {
+    return (
+      <aside className="row-span-2 flex min-w-0 justify-center overflow-hidden border-r border-hairline bg-panel p-2 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Expand sidebar"
+          type="button"
+          onClick={() => onCollapsedChange(false)}
+        >
+          <PanelLeftOpen size={15} />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
-      <SectionTitle label="Projects" />
+      <div className="flex items-center justify-between gap-2">
+        <SectionTitle label="Projects" />
+        <button
+          className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          title="Collapse sidebar"
+          type="button"
+          onClick={() => onCollapsedChange(true)}
+        >
+          <PanelLeftClose size={15} />
+        </button>
+      </div>
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
       <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />

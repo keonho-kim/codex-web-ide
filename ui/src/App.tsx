@@ -4,15 +4,24 @@ import { ProjectCreator, SessionCreator, Sidebar } from "./features/projects/Pro
 import { Workbench } from "./features/Workbench";
 import { useAppData } from "./features/app/useAppData";
 import { useSessionEvents } from "./features/app/useSessionEvents";
+import { cn } from "./lib/classes";
+import { useUiStore } from "./store/uiStore";
 
 export function App() {
   const queryClient = useQueryClient();
   const app = useAppData();
+  const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
 
   useSessionEvents(app.activeSessionId, queryClient);
 
   return (
-    <main className="grid h-screen grid-cols-[230px_minmax(0,1fr)] grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]">
+    <main
+      className={cn(
+        "grid h-screen grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]",
+        sidebarCollapsed ? "grid-cols-[44px_minmax(0,1fr)]" : "grid-cols-[230px_minmax(0,1fr)]",
+      )}
+    >
       <header className="col-span-full flex items-center justify-between gap-4 border-b border-hairline bg-canvas px-3 max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2">
         <div className="min-w-0">
           <strong className="block text-sm">Codex Web IDE</strong>
@@ -37,6 +46,8 @@ export function App() {
         settings={app.settings}
         onSettingsSave={app.updateSettings}
         settingsPending={app.settingsPending}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
       />
 
       <Workbench sessionId={app.activeSessionId} />
