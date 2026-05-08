@@ -11,7 +11,9 @@ import { WorkspaceManager } from "./managers/workspaceManager";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
 import { resolveCommandCwd } from "./managers/commands/path";
+import { assertCommandAllowed } from "./managers/commands/safety";
 import { safeFsPath } from "./managers/files/path";
+import { GitManager } from "./managers/gitManager";
 import { SkillManager } from "./managers/skillManager";
 import { startBunFrontProxy } from "./proxy/bunFrontProxy";
 
@@ -36,6 +38,21 @@ describe("product smoke coverage", () => {
     const outside = await tempDir();
 
     await expect(resolveCommandCwd(root, outside)).rejects.toThrow("Path escape blocked");
+  });
+
+  test("requires approval for destructive commands", () => {
+    expect(() => assertCommandAllowed(["git", "reset", "--hard"])).toThrow("explicit approval");
+    expect(() => assertCommandAllowed(["git", "reset", "--hard"], true)).not.toThrow();
+    expect(() => assertCommandAllowed(["rm", "-rf", "dist"])).toThrow("explicit approval");
+  });
+
+  test("blocks Git path escapes before staging", async () => {
+    const root = await tempDir();
+    const outside = await tempDir();
+    await fs.writeFile(path.join(outside, "secret.txt"), "secret");
+    await fs.symlink(outside, path.join(root, "linked"));
+
+    await expect(new GitManager().stage(root, ["linked/secret.txt"])).rejects.toThrow("Path escape blocked");
   });
 
   test("removes workspace projects from active and recent state", async () => {
