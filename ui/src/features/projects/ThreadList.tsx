@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquarePlus, MessagesSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/classes";
 import type { CodexThreadRecord } from "../../lib/types";
@@ -33,15 +34,17 @@ export function ThreadList({ sessionId }: { sessionId?: string }) {
 
   return (
     <nav className="grid gap-1">
-      <button
-        className="inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-control bg-canvas px-2.5 py-1 text-left text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
+        className="w-full justify-start overflow-hidden"
+        variant="outline"
+        size="sm"
         type="button"
         disabled={!sessionId || createThread.isPending}
         onClick={() => createThread.mutate()}
       >
-        <MessageSquarePlus size={15} />
+        <MessageSquarePlus data-icon="inline-start" />
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">New thread</span>
-      </button>
+      </Button>
       {threads.data?.threads.map((thread) => (
         <button
           className={cn(

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 
 type AuthStatus = {
@@ -43,13 +44,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
           type="password"
           autoFocus
         />
-        <button
-          className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          type="submit"
-          disabled={!token.trim() || login.isPending}
-        >
+        <Button type="submit" disabled={!token.trim() || login.isPending} variant="outline" size="sm">
           Unlock
-        </button>
+        </Button>
         {login.isError ? <p className="text-xs text-red-600">Invalid token.</p> : null}
       </form>
     </main>
