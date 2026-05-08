@@ -6,6 +6,7 @@ import { SectionTitle } from "../../components/SectionTitle";
 import { api } from "../../lib/api";
 import type { FileTreeNode } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
+import { FileActions } from "./FileActions";
 
 export function FilePane({ sessionId }: { sessionId?: string }) {
   const treeHost = useRef<HTMLDivElement>(null);
@@ -18,8 +19,9 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas p-2.5">
+    <section className="grid h-full min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-2 overflow-hidden border-r border-hairline bg-canvas p-2.5">
       <SectionTitle label="Files" />
+      <FileActions sessionId={sessionId} />
       <div ref={treeHost} className="min-h-0 overflow-hidden text-[13px]">
         <Tree<FileTreeNode>
           data={tree.data ?? []}
