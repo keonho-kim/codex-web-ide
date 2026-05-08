@@ -92,14 +92,34 @@ export class GitManager {
   }
 
   async checkout(cwd: string, branch: string) {
+    await assertExistingBranch(cwd, branch, this.branch.bind(this));
     await this.git(cwd, ["checkout", branch]);
   }
 
   async createAndCheckout(cwd: string, branch: string) {
+    await assertValidBranchName(cwd, branch);
     await this.git(cwd, ["checkout", "-b", branch]);
   }
 }
 
 async function assertGitPaths(cwd: string, files: string[]) {
   await Promise.all(files.map((file) => safeFsPath(cwd, file)));
+}
+
+async function assertExistingBranch(cwd: string, branch: string, listBranches: (cwd: string) => Promise<string[]>) {
+  assertSafeBranchArg(branch);
+  if (!(await listBranches(cwd)).includes(branch)) throw new Error("Git branch not found");
+}
+
+async function assertValidBranchName(cwd: string, branch: string) {
+  assertSafeBranchArg(branch);
+  try {
+    await execa("git", ["check-ref-format", "--branch", branch], { cwd });
+  } catch {
+    throw new Error("Invalid Git branch name");
+  }
+}
+
+function assertSafeBranchArg(branch: string) {
+  if (!branch.trim() || branch.startsWith("-")) throw new Error("Invalid Git branch name");
 }
