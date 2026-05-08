@@ -1,4 +1,4 @@
-import { useMemo, type KeyboardEvent } from "react";
+import { useEffect, useMemo, type KeyboardEvent } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,11 @@ export function useComposer(sessionId?: string) {
       setMentionSearch(parseMentionSearch(text));
     },
   });
+
+  useEffect(() => {
+    if (!editor || editor.getText() === draft) return;
+    editor.commands.setContent(textDocument(draft), { emitUpdate: false });
+  }, [draft, editor]);
 
   const fileMentions = useQuery({
     queryKey: ["mentions", "files", sessionId, mentionSearch?.query],
@@ -77,7 +82,7 @@ export function useComposer(sessionId?: string) {
   const addMention = (mention: ComposerMention) => {
     setSelectedMentions(selectedMentions.some((item) => mentionKey(item) === mentionKey(mention)) ? selectedMentions : [...selectedMentions, mention]);
     const nextText = draft.replace(/(^|\s)([@$])([^\s@$]*)$/, "$1");
-    editor?.commands.setContent(nextText ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: nextText }] }] } : "");
+    editor?.commands.setContent(textDocument(nextText));
     setDraft(nextText);
     setMentionSearch(null);
     editor?.commands.focus();
@@ -118,4 +123,8 @@ export function useComposer(sessionId?: string) {
     selectedMentions,
     suggestions,
   };
+}
+
+function textDocument(text: string) {
+  return text ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] } : "";
 }
