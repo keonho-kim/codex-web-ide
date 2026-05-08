@@ -192,4 +192,8 @@
   .mention-option {
     @apply inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-white;
   }
+
+  .codex-event-stream {
+    @apply min-h-0 overflow-hidden rounded-md border border-subtle bg-panel p-2;
+  }
 }

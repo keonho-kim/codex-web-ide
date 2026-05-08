@@ -3,6 +3,7 @@ import { SectionTitle } from "../../components/SectionTitle";
 import { api } from "../../lib/api";
 import type { CodexMessage, CodexThreadRecord } from "../../lib/types";
 import { CommandSuggestion } from "./CommandSuggestion";
+import { CodexEventStream } from "./CodexEventStream";
 import { Composer } from "./Composer";
 
 export function CodexPane({ sessionId }: { sessionId?: string }) {
@@ -19,7 +20,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="workspace-pane grid-rows-[auto_minmax(0,1fr)_112px] p-2.5">
+    <section className="workspace-pane grid-rows-[auto_minmax(0,1fr)_68px_112px] gap-2 p-2.5">
       <SectionTitle label={status.data?.thread.title || "Codex"} />
       <div className="bordered-panel">
         {messages.data?.length ? (
@@ -34,6 +35,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
           <p className="empty-state">Start a Codex run from the composer.</p>
         )}
       </div>
+      <CodexEventStream running={status.data?.running ?? false} sessionId={sessionId} />
       <Composer sessionId={sessionId} running={status.data?.running ?? false} />
     </section>
   );

@@ -2,11 +2,19 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ComposerMention, MentionPopupState } from "../lib/types";
 
+export type CodexEventSummary = {
+  id: string;
+  label: string;
+  detail?: string;
+  timestamp: number;
+};
+
 export type UiState = {
   activeProjectId?: string;
   activeSessionId?: string;
   activeFilePath?: string;
   composerDraft: string;
+  codexEvents: Record<string, CodexEventSummary[]>;
   composerMentions: ComposerMention[];
   mentionPopup: MentionPopupState | null;
   editorDrafts: Record<string, string>;
@@ -23,6 +31,8 @@ export type UiState = {
   setComposerMentions(mentions: ComposerMention[]): void;
   setMentionPopup(popup: MentionPopupState | null): void;
   clearComposer(): void;
+  appendCodexEvent(sessionId: string, event: CodexEventSummary): void;
+  clearCodexEvents(sessionId: string): void;
   setEditorDraft(path: string, content: string): void;
   hydrateEditorDraft(path: string, content: string): void;
   discardEditorDraft(path: string): void;
@@ -37,6 +47,7 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       openFilePaths: [],
+      codexEvents: {},
       composerDraft: "",
       composerMentions: [],
       mentionPopup: null,
@@ -71,6 +82,18 @@ export const useUiStore = create<UiState>()(
       setComposerMentions: (composerMentions) => set({ composerMentions }),
       setMentionPopup: (mentionPopup) => set({ mentionPopup }),
       clearComposer: () => set({ composerDraft: "", composerMentions: [], mentionPopup: null }),
+      appendCodexEvent: (sessionId, event) =>
+        set((state) => ({
+          codexEvents: {
+            ...state.codexEvents,
+            [sessionId]: [...(state.codexEvents[sessionId] ?? []), event].slice(-12),
+          },
+        })),
+      clearCodexEvents: (sessionId) =>
+        set((state) => {
+          const { [sessionId]: _discarded, ...codexEvents } = state.codexEvents;
+          return { codexEvents };
+        }),
       setEditorDraft: (path, content) =>
         set((state) => ({
           editorDrafts: { ...state.editorDrafts, [path]: content },
