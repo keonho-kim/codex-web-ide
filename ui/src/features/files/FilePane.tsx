@@ -14,7 +14,7 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
     enabled: Boolean(sessionId),
   });
   return (
-    <section className="min-w-0 overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
+    <section className="h-full min-w-0 overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
       <SectionTitle label="Files" />
       <div className="overflow-auto text-[13px]">
         {tree.data?.map((node) => <TreeNode key={node.id} node={node} onOpen={setActiveFilePath} />)}

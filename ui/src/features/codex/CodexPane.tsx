@@ -13,7 +13,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
+    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
       <SectionTitle label="Codex" />
       <div className="overflow-auto rounded-md border border-[#ececf0] p-2.5">
         {messages.data?.length ? (

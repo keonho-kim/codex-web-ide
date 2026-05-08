@@ -1,10 +1,8 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomPanel } from "./features/BottomPanel";
-import { CodexPane } from "./features/codex/CodexPane";
-import { EditorPane } from "./features/editor/EditorPane";
-import { FilePane } from "./features/files/FilePane";
 import { ProjectCreator, SessionCreator, Sidebar } from "./features/projects/ProjectControls";
+import { Workbench } from "./features/Workbench";
 import { api } from "./lib/api";
 import type { Project, Session } from "./lib/types";
 import { useUiStore } from "./store/uiStore";
@@ -51,11 +49,7 @@ export function App() {
         onSessionSelect={setActiveSessionId}
       />
 
-      <section className="grid min-h-0 grid-cols-[240px_minmax(360px,1fr)_minmax(280px,34%)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[160px_minmax(260px,1fr)_220px]">
-        <FilePane sessionId={activeSessionId} />
-        <EditorPane sessionId={activeSessionId} />
-        <CodexPane sessionId={activeSessionId} />
-      </section>
+      <Workbench sessionId={activeSessionId} />
 
       <BottomPanel sessionId={activeSessionId} />
     </main>
