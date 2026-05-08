@@ -45,9 +45,23 @@ export function parseStatus(stdout: string): GitFileStatus[] {
 
 function parseStatusLine(line: string): GitFileStatus[] {
   if (line.startsWith("? ")) return [{ path: line.slice(2), index: "?", worktree: "?", untracked: true }];
-  if (!(line.startsWith("1 ") || line.startsWith("2 ") || line.startsWith("u "))) return [];
-  const parts = line.split(" ");
-  const xy = parts[1] || "..";
-  const file = parts.at(-1);
+  const xy = line.slice(2, 4);
+  const file = trackedPath(line);
   return file ? [{ path: file, index: xy[0], worktree: xy[1], untracked: false }] : [];
+}
+
+function trackedPath(line: string) {
+  if (line.startsWith("1 ")) return fieldAfterSpaces(line, 8);
+  if (line.startsWith("2 ")) return fieldAfterSpaces(line, 9)?.split("\t")[0];
+  if (line.startsWith("u ")) return fieldAfterSpaces(line, 10);
+  return null;
+}
+
+function fieldAfterSpaces(line: string, count: number) {
+  let index = -1;
+  for (let seen = 0; seen < count; seen += 1) {
+    index = line.indexOf(" ", index + 1);
+    if (index === -1) return null;
+  }
+  return line.slice(index + 1);
 }

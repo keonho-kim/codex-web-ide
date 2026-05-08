@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { execa } from "execa";
 import express from "express";
 import fs from "node:fs/promises";
 import net from "node:net";
@@ -111,6 +112,26 @@ describe("product smoke coverage", () => {
     await expect(git.status(root)).resolves.toEqual([]);
     await expect(git.branch(root)).resolves.toEqual([]);
     await expect(git.diff(root)).resolves.toBe("");
+  });
+
+  test("parses Git status paths with spaces and renames", async () => {
+    const root = await tempDir();
+    await execa("git", ["init"], { cwd: root });
+    await execa("git", ["config", "user.email", "test@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "Test"], { cwd: root });
+    await fs.mkdir(path.join(root, "src"), { recursive: true });
+    await fs.writeFile(path.join(root, "src", "old.txt"), "old");
+    await execa("git", ["add", "."], { cwd: root });
+    await execa("git", ["commit", "-m", "init"], { cwd: root });
+
+    await execa("git", ["mv", "src/old.txt", "src/new name.txt"], { cwd: root });
+    await fs.writeFile(path.join(root, "src", "added space.txt"), "added");
+    await execa("git", ["add", "src/added space.txt"], { cwd: root });
+
+    const status = await new GitManager().status(root);
+
+    expect(status.map((file) => file.path)).toContain("src/added space.txt");
+    expect(status).toContainEqual(expect.objectContaining({ path: "src/new name.txt", index: "R" }));
   });
 
   test("runs managed jobs and captures output", async () => {
