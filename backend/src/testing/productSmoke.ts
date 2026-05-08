@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -115,4 +116,62 @@ export async function waitForPreview<T extends { status: string } | undefined>(r
 
 export async function* codexEventStream(events: unknown[]) {
   for (const event of events) yield event as never;
+}
+
+export function startCli(args: string[], env: NodeJS.ProcessEnv) {
+  return spawn(process.execPath, [path.resolve("bin/cw.ts"), ...args], {
+    cwd: path.resolve("."),
+    env: { ...process.env, ...env },
+    stdio: "pipe",
+  });
+}
+
+export function runCli(args: string[], env: NodeJS.ProcessEnv) {
+  return new Promise<{ exitCode: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+    const child = startCli(args, env);
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`CLI timed out: ${args.join(" ")}`));
+    }, 5000);
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("close", (exitCode) => {
+      clearTimeout(timer);
+      resolve({ exitCode, stdout, stderr });
+    });
+  });
+}
+
+export async function waitForHealth(url: string) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return;
+    } catch {
+      // Retry until the CLI-started server is ready or the deadline expires.
+    }
+    if (Date.now() > deadline) throw new Error(`Server did not become healthy: ${url}`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+export function waitForExit(child: ChildProcessWithoutNullStreams) {
+  return new Promise<number | null>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve(child.exitCode);
+      return;
+    }
+    child.once("close", resolve);
+  });
 }

@@ -36,8 +36,12 @@ import {
   freePort,
   listenOn,
   restoreEnv,
+  runCli,
+  startCli,
   tempDir,
   testSession,
+  waitForExit,
+  waitForHealth,
   waitForJob,
   waitForPreview,
   waitForService,
@@ -359,6 +363,28 @@ describe("product smoke coverage", () => {
     } finally {
       await server?.close();
       restoreEnv("CODEX_WEB_HOME", previousHome);
+    }
+  });
+
+  test("starts, reports, and stops through the CLI", async () => {
+    const home = await tempDir();
+    const port = await freePort();
+    const env = { CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0" };
+    const server = startCli(["start", "--host", "127.0.0.1", "--port", String(port), "--preview-port-start", "25000", "--preview-port-end", "25010"], env);
+    try {
+      await waitForHealth(`http://127.0.0.1:${port}/api/health`);
+
+      const status = await runCli(["status"], env);
+      expect(status.exitCode).toBe(0);
+      expect(status.stdout).toContain("running: yes");
+      expect(status.stdout).toContain(`url: http://127.0.0.1:${port}`);
+
+      const stop = await runCli(["stop"], env);
+      expect(stop.exitCode).toBe(0);
+      expect(stop.stdout).toContain("stopped");
+      await expect(waitForExit(server)).resolves.toBe(0);
+    } finally {
+      if (server.exitCode === null) server.kill("SIGTERM");
     }
   });
 
