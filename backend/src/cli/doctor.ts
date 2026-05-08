@@ -24,8 +24,10 @@ export async function runDoctor() {
     { name: "Codex", command: "codex", versionArgs: ["--version"], required: true },
     { name: "Git", command: "git", versionArgs: ["--version"], required: true },
     { name: "Python", command: "python3", versionArgs: ["--version"], required: false },
+    { name: "uv", command: "uv", versionArgs: ["--version"], required: false },
     { name: "Go", command: "go", versionArgs: ["version"], required: false },
     { name: "Rust", command: "rustc", versionArgs: ["--version"], required: false },
+    { name: "Cargo", command: "cargo", versionArgs: ["--version"], required: false },
   ]);
   const appPortAvailable = await isPortAvailable(appPort);
   const previewPorts = await checkPreviewPorts(previewStart, previewEnd);
