@@ -15,6 +15,8 @@ import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
 import { JobRunner } from "./managers/commands/jobRunner";
 import { resolveCommandCwd } from "./managers/commands/path";
+import { PortAllocator } from "./managers/commands/portAllocator";
+import { PreviewRunner } from "./managers/commands/previewRunner";
 import { ProcessRegistry } from "./managers/commands/processRegistry";
 import { preparePreviewLaunch } from "./managers/commands/runtimeAdapter";
 import { assertCommandAllowed } from "./managers/commands/safety";
@@ -94,6 +96,27 @@ describe("product smoke coverage", () => {
       expect(published.some((event) => event.type === "service.health.updated")).toBe(true);
     } finally {
       runner.stop(session.id, service.id);
+    }
+  });
+
+  test("starts managed previews on allocated local ports", async () => {
+    const root = await tempDir();
+    const port = await freePort();
+    const runner = new PreviewRunner(new EventBus(), new PortAllocator(port, port), new ProcessRegistry());
+    const session = testSession(root);
+    const preview = await runner.start(session, [
+      "bun",
+      "--eval",
+      "Bun.serve({ hostname: process.env.HOST, port: Number(process.env.PORT), fetch() { return new Response('preview ok'); } }); setInterval(() => {}, 1000);",
+    ]);
+    try {
+      const running = await waitForPreview(() => runner.list(session.id).find((item) => item.id === preview.id));
+
+      expect(running.status).toBe("running");
+      expect(running.port).toBe(port);
+      await expect(fetch(running.localUrl).then((res) => res.text())).resolves.toBe("preview ok");
+    } finally {
+      runner.stop(session.id, preview.id);
     }
   });
 
@@ -378,5 +401,15 @@ async function waitForService<T extends { status: string } | undefined>(read: ()
     if (service && service.status !== "starting") return service;
     if (Date.now() > deadline) throw new Error("Service health check did not finish");
     await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+async function waitForPreview<T extends { status: string } | undefined>(read: () => T) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const preview = read();
+    if (preview && preview.status !== "starting") return preview;
+    if (Date.now() > deadline) throw new Error("Preview health check did not finish");
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
 }
