@@ -1,4 +1,5 @@
 import { RefreshCw, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ServiceInstance } from "../../lib/types";
 
 export function ServiceList({
@@ -25,24 +26,19 @@ export function ServiceList({
             </span>
           </div>
           <div className="flex gap-1">
-            <button
-              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-              title="Restart service"
-              type="button"
-              disabled={restartPending}
-              onClick={() => onRestart(service.id)}
-            >
-              <RefreshCw size={14} />
-            </button>
-            <button
-              className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            <Button title="Restart service" type="button" disabled={restartPending} onClick={() => onRestart(service.id)} variant="outline" size="icon-xs">
+              <RefreshCw data-icon="inline-start" />
+            </Button>
+            <Button
               title="Stop service"
               type="button"
               disabled={service.status === "stopped" || stopPending}
               onClick={() => onStop(service.id)}
+              variant="outline"
+              size="icon-xs"
             >
-              <Square size={14} />
-            </button>
+              <Square data-icon="inline-start" />
+            </Button>
           </div>
         </article>
       ))}

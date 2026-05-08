@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { cn } from "../../lib/classes";
 import type { Job } from "../../lib/types";
 import { formatDuration } from "./useJobsPanel";
@@ -28,14 +29,9 @@ export function JobList({
             </span>
           </button>
           <div>
-            <button
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-control bg-canvas px-2.5 py-1 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
-              type="button"
-              disabled={!sessionId || startPending}
-              onClick={() => onRerun(job)}
-            >
+            <Button type="button" disabled={!sessionId || startPending} onClick={() => onRerun(job)} variant="outline" size="sm">
               Rerun
-            </button>
+            </Button>
           </div>
         </article>
       ))}

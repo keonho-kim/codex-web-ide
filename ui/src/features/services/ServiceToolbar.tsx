@@ -1,4 +1,5 @@
 import { Play, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function ServiceToolbar({
   command,
@@ -20,12 +21,12 @@ export function ServiceToolbar({
         value={command}
         onChange={(event) => onCommandChange(event.target.value)}
       />
-      <button className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={startDisabled} onClick={onStart}>
-        <Play size={15} />
-      </button>
-      <button className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50" type="button" onClick={onRefresh}>
-        <RefreshCw size={15} />
-      </button>
+      <Button type="button" disabled={startDisabled} onClick={onStart} variant="outline" size="icon-sm">
+        <Play data-icon="inline-start" />
+      </Button>
+      <Button type="button" onClick={onRefresh} variant="outline" size="icon-sm">
+        <RefreshCw data-icon="inline-start" />
+      </Button>
     </div>
   );
 }

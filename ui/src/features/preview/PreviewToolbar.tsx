@@ -1,4 +1,5 @@
 import { ExternalLink, Play, RefreshCw, RotateCw, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { PreviewInstance } from "../../lib/types";
 
 type PreviewToolbarProps = {
@@ -33,14 +34,9 @@ export function PreviewToolbar({
         value={command}
         onChange={(event) => onCommandChange(event.target.value)}
       />
-      <button
-        className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-        type="button"
-        disabled={startDisabled}
-        onClick={onStart}
-      >
-        <Play size={15} />
-      </button>
+      <Button type="button" disabled={startDisabled} onClick={onStart} variant="outline" size="icon-sm">
+        <Play data-icon="inline-start" />
+      </Button>
       {runningPreviews.length > 1 ? (
         <select
           className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
@@ -56,18 +52,20 @@ export function PreviewToolbar({
       ) : null}
       {activePreview ? (
         <>
-          <button className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink" title="Reload iframe" type="button" onClick={onReload}>
-            <RotateCw size={15} />
-          </button>
-          <button className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink" title="Restart preview" type="button" onClick={onRestart}>
-            <RefreshCw size={15} />
-          </button>
-          <button className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink" title="Stop preview" type="button" onClick={onStop}>
-            <Square size={15} />
-          </button>
-          <a className="inline-flex min-h-7 items-center rounded-md border border-control bg-canvas px-2 py-1 text-ink" href={activePreview.publicUrl} target="_blank" rel="noreferrer" title="Open preview">
-            <ExternalLink size={15} />
-          </a>
+          <Button title="Reload iframe" type="button" onClick={onReload} variant="outline" size="icon-sm">
+            <RotateCw data-icon="inline-start" />
+          </Button>
+          <Button title="Restart preview" type="button" onClick={onRestart} variant="outline" size="icon-sm">
+            <RefreshCw data-icon="inline-start" />
+          </Button>
+          <Button title="Stop preview" type="button" onClick={onStop} variant="outline" size="icon-sm">
+            <Square data-icon="inline-start" />
+          </Button>
+          <Button asChild title="Open preview" variant="outline" size="icon-sm">
+            <a href={activePreview.publicUrl} target="_blank" rel="noreferrer">
+              <ExternalLink data-icon="inline-start" />
+            </a>
+          </Button>
         </>
       ) : null}
     </div>
