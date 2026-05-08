@@ -13,31 +13,86 @@ export function WorkspaceSettingsPanel({
   pending?: boolean;
 }) {
   const [defaultProjectsDir, setDefaultProjectsDir] = useState("");
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState("");
+  const [previewPortStart, setPreviewPortStart] = useState("");
+  const [previewPortEnd, setPreviewPortEnd] = useState("");
 
   useEffect(() => {
     setDefaultProjectsDir(settings?.defaultProjectsDir ?? "");
-  }, [settings?.defaultProjectsDir]);
+    setHost(settings?.host ?? "");
+    setPort(settings ? String(settings.port) : "");
+    setPreviewPortStart(settings ? String(settings.previewPortStart) : "");
+    setPreviewPortEnd(settings ? String(settings.previewPortEnd) : "");
+  }, [settings]);
+
+  const parsedPort = parsePort(port);
+  const parsedPreviewPortStart = parsePort(previewPortStart);
+  const parsedPreviewPortEnd = parsePort(previewPortEnd);
+  const canSave = Boolean(settings && defaultProjectsDir.trim() && host.trim() && parsedPort && parsedPreviewPortStart && parsedPreviewPortEnd && parsedPreviewPortStart <= parsedPreviewPortEnd && !pending);
 
   return (
     <form
       className="grid gap-1.5"
       onSubmit={(event) => {
         event.preventDefault();
-        if (settings && defaultProjectsDir.trim()) onSave({ ...settings, defaultProjectsDir: defaultProjectsDir.trim() });
+        if (!settings || !canSave || !parsedPort || !parsedPreviewPortStart || !parsedPreviewPortEnd) return;
+        onSave({
+          ...settings,
+          host: host.trim(),
+          port: parsedPort,
+          previewPortStart: parsedPreviewPortStart,
+          previewPortEnd: parsedPreviewPortEnd,
+          defaultProjectsDir: defaultProjectsDir.trim(),
+        });
       }}
     >
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-1">
         <input
           className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
           value={defaultProjectsDir}
           onChange={(event) => setDefaultProjectsDir(event.target.value)}
           placeholder="Default project directory"
         />
-        <Button title="Save workspace settings" type="submit" disabled={!settings || !defaultProjectsDir.trim() || pending} variant="outline" size="icon-xs">
+        <Button className="row-span-3" title="Save workspace settings" type="submit" disabled={!canSave} variant="outline" size="icon-xs">
           <Save data-icon="inline-start" />
         </Button>
+        <input
+          className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+          value={host}
+          onChange={(event) => setHost(event.target.value)}
+          placeholder="Host"
+        />
+        <div className="grid grid-cols-3 gap-1">
+          <input
+            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            value={port}
+            onChange={(event) => setPort(event.target.value)}
+            inputMode="numeric"
+            placeholder="App port"
+          />
+          <input
+            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            value={previewPortStart}
+            onChange={(event) => setPreviewPortStart(event.target.value)}
+            inputMode="numeric"
+            placeholder="Preview from"
+          />
+          <input
+            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            value={previewPortEnd}
+            onChange={(event) => setPreviewPortEnd(event.target.value)}
+            inputMode="numeric"
+            placeholder="Preview to"
+          />
+        </div>
       </div>
       <p className="text-xs text-muted">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
     </form>
   );
+}
+
+function parsePort(value: string) {
+  const port = Number(value);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
 }
