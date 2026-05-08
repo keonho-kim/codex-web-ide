@@ -298,8 +298,19 @@ export async function startServer(options: ServerOptions = {}) {
   const host = options.host || process.env.CODEX_WEB_HOST || "127.0.0.1";
   const port = options.port || Number(process.env.CODEX_WEB_PORT || 17321);
   const app = await createApp();
+  let server: ReturnType<typeof app.listen>;
+  app.post("/api/shutdown", (req, res) => {
+    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress || "")) {
+      res.status(403).json({ error: "Shutdown is only allowed from localhost." });
+      return;
+    }
+    res.json({ ok: true });
+    setTimeout(() => {
+      server.close(() => process.exit(0));
+    }, 25);
+  });
   return new Promise<{ host: string; port: number; close(): Promise<void> }>((resolve) => {
-    const server = app.listen(port, host, () => {
+    server = app.listen(port, host, () => {
       resolve({
         host,
         port,

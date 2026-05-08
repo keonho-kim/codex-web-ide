@@ -1,9 +1,13 @@
 #!/usr/bin/env bun
 import path from "node:path";
 import net from "node:net";
+import fs from "node:fs/promises";
+import os from "node:os";
 import { execa } from "execa";
 import { startServer } from "../server";
 import { createPlatformAdapter } from "../platform/adapter";
+import { JsonStore } from "../managers/storage";
+import { WorkspaceManager } from "../managers/workspaceManager";
 import type { Job, PreviewInstance, ServiceInstance, Session } from "../shared/types";
 
 const args = process.argv.slice(2);
@@ -28,11 +32,18 @@ switch (command) {
     await status();
     break;
   case "stop":
+    await stop();
+    break;
   case "restart":
+    await stop();
+    await start(args.slice(1));
+    break;
   case "init":
+    await init(args.slice(1));
+    break;
   case "update":
-    console.error(`cw ${command} is not implemented yet.`);
-    process.exit(1);
+    await update();
+    break;
   default:
     printHelp();
     process.exit(command === "help" || command === "--help" || command === "-h" ? 0 : 1);
@@ -42,7 +53,11 @@ async function start(input: string[]) {
   const host = readFlag(input, "--host") || "127.0.0.1";
   const port = Number(readFlag(input, "--port") || 17321);
   const server = await startServer({ host, port });
+  await writePidFile(port);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
+  const removePid = () => void fs.rm(pidFile(), { force: true });
+  process.once("SIGINT", removePid);
+  process.once("SIGTERM", removePid);
   await new Promise(() => undefined);
 }
 
@@ -90,10 +105,38 @@ async function status() {
     const response = await fetch("http://127.0.0.1:17321/api/health");
     const body = await response.json();
     console.log(`running: ${body.ok ? "yes" : "unknown"}`);
+    const pid = await readPidFile();
+    if (pid) console.log(`pid: ${pid.pid}`);
   } catch {
     console.log("running: no");
     process.exitCode = 1;
   }
+}
+
+async function stop() {
+  try {
+    await api<{ ok: boolean }>("/api/shutdown", { method: "POST" });
+    await fs.rm(pidFile(), { force: true });
+    console.log("stopped");
+  } catch {
+    console.log("running: no");
+  }
+}
+
+async function init(input: string[]) {
+  const cwd = path.resolve(input[0] || process.cwd());
+  const store = new JsonStore();
+  await store.ensure();
+  const workspace = new WorkspaceManager(store);
+  const project = await workspace.addProject({ cwd });
+  await workspace.openProject(project.id);
+  console.log(`Initialized project: ${project.name}`);
+  console.log(project.cwd);
+}
+
+async function update() {
+  console.log("Use Bun to update the installed package:");
+  console.log("  bun update -g @local/codex-web");
 }
 
 async function runManagedCommand(kind: "job" | "preview" | "service", commandArgs: string[]) {
@@ -150,9 +193,13 @@ function readFlag(input: string[], name: string) {
 function printHelp() {
   console.log(`Usage:
   cw start [--host 127.0.0.1] [--port 17321]
+  cw stop
+  cw restart [--host 127.0.0.1] [--port 17321]
   cw doctor
   cw status
   cw open
+  cw init [project-path]
+  cw update
   cw job <command...>
   cw preview <command...>
   cw service <command...>`);
@@ -195,4 +242,21 @@ async function api<T>(pathName: string, options: { method?: string; body?: unkno
   }
   if (!response.ok) throw new Error(await response.text());
   return (await response.json()) as T;
+}
+
+function pidFile() {
+  return path.join(process.env.CODEX_WEB_HOME || path.join(os.homedir(), ".codex-web"), "codex-web.pid");
+}
+
+async function writePidFile(port: number) {
+  await fs.mkdir(path.dirname(pidFile()), { recursive: true });
+  await fs.writeFile(pidFile(), JSON.stringify({ pid: process.pid, port, startedAt: Date.now() }, null, 2));
+}
+
+async function readPidFile() {
+  try {
+    return JSON.parse(await fs.readFile(pidFile(), "utf8")) as { pid: number; port: number; startedAt: number };
+  } catch {
+    return null;
+  }
 }
