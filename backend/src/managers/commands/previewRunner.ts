@@ -35,7 +35,7 @@ export class PreviewRunner {
 
   async start(session: Session, command: string[], options: { cwd?: string } = {}) {
     const cwd = await resolveCommandCwd(session.cwd, options.cwd);
-    const port = this.ports.allocate();
+    const port = await this.ports.allocate();
     const id = nanoid();
     const preview: PreviewInstance = {
       id,
