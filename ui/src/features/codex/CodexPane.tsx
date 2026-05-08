@@ -13,13 +13,13 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-[#e0e0e0] bg-white p-2.5">
+    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-hairline bg-canvas p-2.5">
       <SectionTitle label="Codex" />
-      <div className="overflow-auto rounded-md border border-[#ececf0] p-2.5">
+      <div className="overflow-auto rounded-md border border-subtle p-2.5">
         {messages.data?.length ? (
           messages.data.map((message) => (
-            <article className="border-b border-[#ececf0] py-2 last:border-b-0" key={message.id}>
-              <strong className="mb-1 block text-xs text-[#0066cc] capitalize">{message.role}</strong>
+            <article className="border-b border-subtle py-2 last:border-b-0" key={message.id}>
+              <strong className="mb-1 block text-xs text-primary capitalize">{message.role}</strong>
               <p className="m-0 text-[13px] leading-[1.45] whitespace-pre-wrap">{message.text}</p>
             </article>
           ))

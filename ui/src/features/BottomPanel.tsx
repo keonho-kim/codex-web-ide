@@ -10,8 +10,8 @@ export function BottomPanel({ sessionId }: { sessionId?: string }) {
   const selectedPanel = useUiStore((state) => state.selectedPanel);
   const setSelectedPanel = useUiStore((state) => state.setSelectedPanel);
   return (
-    <section className="min-h-0 overflow-hidden border-t border-[#e0e0e0] bg-white">
-      <div className="flex h-[38px] items-center gap-2 border-b border-[#e0e0e0] px-2 py-1">
+    <section className="min-h-0 overflow-hidden border-t border-hairline bg-canvas">
+      <div className="flex h-[38px] items-center gap-2 border-b border-hairline px-2 py-1">
         <button className={`${buttonClass} ${selectedPanel === "git" ? selectedListButtonClass : ""}`} type="button" onClick={() => setSelectedPanel("git")}>
           <GitBranch size={15} />
           Git

@@ -129,11 +129,11 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
         {selectedFile ? (
           diff.data?.diff ? (
             <div
-              className="mt-2 max-h-[155px] overflow-auto rounded-md border border-[#ececf0] bg-[#fbfbfd] p-2 text-xs text-[#1d1d1f] [&_pre]:whitespace-pre-wrap"
+              className="mt-2 max-h-[155px] overflow-auto rounded-md border border-subtle bg-panel p-2 text-xs text-ink [&_pre]:whitespace-pre-wrap"
               dangerouslySetInnerHTML={{ __html: diffToHtml(diff.data.diff, { drawFileList: false, matching: "lines" }) }}
             />
           ) : (
-            <pre className="mt-2 max-h-[155px] overflow-auto rounded-md border border-[#ececf0] bg-[#fbfbfd] p-2 text-xs text-[#1d1d1f]">No diff.</pre>
+            <pre className="mt-2 max-h-[155px] overflow-auto rounded-md border border-subtle bg-panel p-2 text-xs text-ink">No diff.</pre>
           )
         ) : null}
       </div>

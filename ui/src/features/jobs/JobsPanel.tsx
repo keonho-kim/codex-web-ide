@@ -61,7 +61,7 @@ export function JobsPanel({ sessionId }: { sessionId?: string }) {
       <div className="grid min-h-0 grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5">
         <div className="min-h-0 overflow-auto">
           {orderedJobs.map((job) => (
-            <article className={`mb-1 grid gap-1 rounded-md border border-[#ececf0] p-2 text-xs ${job.id === selectedJob?.id ? selectedListButtonClass : "bg-white"}`} key={job.id}>
+            <article className={`mb-1 grid gap-1 rounded-md border border-subtle p-2 text-xs ${job.id === selectedJob?.id ? selectedListButtonClass : "bg-canvas"}`} key={job.id}>
               <button className="grid gap-1 text-left" type="button" onClick={() => setSelectedJobId(job.id)}>
                 <strong className="overflow-hidden text-ellipsis whitespace-nowrap">{job.command.join(" ")}</strong>
                 <span className={mutedClass}>

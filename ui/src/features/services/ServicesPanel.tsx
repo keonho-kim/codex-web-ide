@@ -56,10 +56,10 @@ export function ServicesPanel({ sessionId }: { sessionId?: string }) {
       <div className="mt-2.5 grid grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5">
         <div className="grid gap-1.5">
           {services.data?.map((service) => (
-            <article className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-[#ececf0] p-2" key={service.id}>
+            <article className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-subtle p-2" key={service.id}>
               <div className="min-w-0">
                 <strong className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap">{service.command.join(" ")}</strong>
-                <span className="mt-1 block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-[#7a7a7a]">
+                <span className="mt-1 block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">
                   {service.status} · pid {service.pid || "-"} · restarts {service.restartCount}
                 </span>
               </div>

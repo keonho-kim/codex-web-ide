@@ -19,7 +19,7 @@ export function Composer({ sessionId }: { sessionId?: string }) {
     editorProps: {
       attributes: {
         class:
-          "min-h-[92px] w-full rounded-md border border-[#d8d8df] bg-white px-2.5 py-1.5 pr-32 text-sm text-[#1d1d1f] outline-none [&_p]:m-0",
+          "min-h-[92px] w-full rounded-md border border-control bg-canvas px-2.5 py-1.5 pr-32 text-sm text-ink outline-none [&_p]:m-0",
       },
     },
     onUpdate: ({ editor }) => {
@@ -105,7 +105,7 @@ export function Composer({ sessionId }: { sessionId?: string }) {
       <div className="mb-1 flex flex-wrap gap-1">
         {selectedMentions.map((mention) => (
           <button
-            className="inline-flex min-h-6 items-center rounded-md border border-[#d8d8df] bg-white px-2 py-0.5 text-xs text-[#0066cc]"
+            className="inline-flex min-h-6 items-center rounded-md border border-control bg-canvas px-2 py-0.5 text-xs text-primary"
             key={mentionKey(mention)}
             type="button"
             onClick={() => setSelectedMentions((items) => items.filter((item) => mentionKey(item) !== mentionKey(mention)))}
@@ -115,7 +115,7 @@ export function Composer({ sessionId }: { sessionId?: string }) {
         ))}
       </div>
       <div className="relative">
-        {!draft ? <span className="pointer-events-none absolute top-2 left-2.5 text-sm text-[#7a7a7a]">Ask Codex. Use @ for files and $ for skills.</span> : null}
+        {!draft ? <span className="pointer-events-none absolute top-2 left-2.5 text-sm text-muted">Ask Codex. Use @ for files and $ for skills.</span> : null}
         <EditorContent editor={editor} />
         <button
           className={`${buttonClass} absolute right-2 bottom-2`}
@@ -133,7 +133,7 @@ export function Composer({ sessionId }: { sessionId?: string }) {
         ) : null}
       </div>
       {mentionSearch && suggestions.length > 0 ? (
-        <div className="absolute right-0 bottom-24 left-0 max-h-[180px] overflow-auto rounded-md bg-[#1d1d1f] p-2 text-[11px] text-white">
+        <div className="absolute right-0 bottom-24 left-0 max-h-[180px] overflow-auto rounded-md bg-ink p-2 text-[11px] text-white">
           {suggestions.map((mention, index) => (
             <button
               className={`${transparentListButtonClass} text-white ${index === mentionSearch.selectedIndex ? selectedListButtonClass : ""}`}

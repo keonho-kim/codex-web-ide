@@ -88,7 +88,7 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
         </p>
       ) : null}
       {activePreview ? (
-        <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full rounded-md border border-[#d8d8df]" title="Preview" src={activePreview.publicUrl} />
+        <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full rounded-md border border-control" title="Preview" src={activePreview.publicUrl} />
       ) : (
         <p className={mutedClass}>No preview selected.</p>
       )}

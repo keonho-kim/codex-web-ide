@@ -23,13 +23,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
     },
   });
 
-  if (status.isLoading) return <main className="h-screen bg-[#f5f5f7]" />;
+  if (status.isLoading) return <main className="h-screen bg-page" />;
   if (!status.data?.enabled || status.data.authenticated) return children;
 
   return (
-    <main className="flex h-screen items-center justify-center bg-[#f5f5f7] p-6 text-[#1d1d1f]">
+    <main className="flex h-screen items-center justify-center bg-page p-6 text-ink">
       <form
-        className="grid w-full max-w-sm gap-3 rounded-md border border-[#e0e0e0] bg-white p-5"
+        className="grid w-full max-w-sm gap-3 rounded-md border border-hairline bg-canvas p-5"
         onSubmit={(event) => {
           event.preventDefault();
           if (token.trim()) login.mutate();

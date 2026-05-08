@@ -27,8 +27,8 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   }, [file.data?.content]);
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_minmax(0,1fr)] overflow-hidden border-r border-[#e0e0e0] bg-white">
-      <div className="flex min-w-0 items-center justify-between border-b border-[#e0e0e0] px-2 py-1.5">
+    <section className="grid h-full min-w-0 grid-rows-[38px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
+      <div className="flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5">
         <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath || "No file open"}</span>
         <button className={iconButtonClass} title="Save file" type="button" disabled={!activeFilePath || save.isPending} onClick={() => save.mutate()}>
           <Save size={16} />
@@ -44,7 +44,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           onChange={(value) => setDraft(value ?? "")}
         />
       ) : (
-        <div className="flex items-center justify-center text-[13px] text-[#7a7a7a]">Open a file from the tree.</div>
+        <div className="flex items-center justify-center text-[13px] text-muted">Open a file from the tree.</div>
       )}
     </section>
   );

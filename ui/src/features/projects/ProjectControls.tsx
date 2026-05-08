@@ -66,7 +66,7 @@ export function Sidebar({
   onSessionSelect(id: string): void;
 }) {
   return (
-    <aside className="row-span-2 min-w-0 overflow-auto border-r border-[#e0e0e0] bg-[#fbfbfd] p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
+    <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <SectionTitle label="Projects" />
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
