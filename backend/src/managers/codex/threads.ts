@@ -1,0 +1,79 @@
+import { Codex, type Thread } from "@openai/codex-sdk";
+import type { CodexThreadRecord, Session } from "../../shared/types";
+import type { SessionManager } from "../sessionManager";
+import type { CodexHistoryStore } from "./historyStore";
+
+export class CodexThreadManager {
+  private codex = new Codex();
+  private threads = new Map<string, Thread>();
+
+  constructor(
+    private sessions: SessionManager,
+    private history: CodexHistoryStore,
+  ) {}
+
+  async list(session: Session) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const activeThread = this.activeThreadFrom(session, threads);
+    await this.syncActiveSessionThread(session, activeThread);
+    return { threads, activeThreadId: activeThread.id };
+  }
+
+  async create(session: Session, title?: string) {
+    const thread = await this.history.createThread(session.id, title);
+    await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: undefined });
+    return thread;
+  }
+
+  async select(session: Session, threadId: string) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const thread = threads.find((item) => item.id === threadId);
+    if (!thread) throw new Error("Codex thread not found");
+    await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: thread.codexThreadId });
+    return thread;
+  }
+
+  async active(session: Session) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const thread = this.activeThreadFrom(session, threads);
+    await this.syncActiveSessionThread(session, thread);
+    return thread;
+  }
+
+  sdkThreadFor(session: Session, threadRecord: CodexThreadRecord) {
+    const existing = this.threads.get(threadRecord.id);
+    if (existing) return existing;
+    const options = {
+      workingDirectory: session.cwd,
+      sandboxMode: "workspace-write" as const,
+      approvalPolicy: "on-request" as const,
+      skipGitRepoCheck: true,
+    };
+    const thread = threadRecord.codexThreadId ? this.codex.resumeThread(threadRecord.codexThreadId, options) : this.codex.startThread(options);
+    this.threads.set(threadRecord.id, thread);
+    return thread;
+  }
+
+  async updateCodexThreadId(session: Session, threadRecord: CodexThreadRecord, codexThreadId: string) {
+    threadRecord.codexThreadId = codexThreadId;
+    threadRecord.lastActiveAt = Date.now();
+    await this.history.updateThread(threadRecord);
+    await this.sessions.update(session.id, { activeCodexThreadId: threadRecord.id, codexThreadId });
+  }
+
+  async deleteSession(sessionId: string) {
+    for (const thread of await this.history.listThreads(sessionId)) {
+      this.threads.delete(thread.id);
+    }
+  }
+
+  private async syncActiveSessionThread(session: Session, thread: CodexThreadRecord) {
+    if (session.activeCodexThreadId !== thread.id || session.codexThreadId !== thread.codexThreadId) {
+      await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: thread.codexThreadId });
+    }
+  }
+
+  private activeThreadFrom(session: Session, threads: CodexThreadRecord[]) {
+    return threads.find((thread) => thread.id === session.activeCodexThreadId) ?? threads[0];
+  }
+}
