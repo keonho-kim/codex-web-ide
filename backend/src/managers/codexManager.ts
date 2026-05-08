@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../events/eventBus";
 import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
+import type { SkillManager } from "./skillManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
 import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
@@ -25,6 +26,7 @@ export class CodexManager {
     private events: EventBus,
     private git: GitManager,
     private sessions: SessionManager,
+    private skills: SkillManager,
     private history: CodexHistoryStore,
   ) {
     this.threadManager = new CodexThreadManager(sessions, history);
@@ -65,7 +67,7 @@ export class CodexManager {
     await validateCodexMentions(session.cwd, input.mentions);
     const activeThread = await this.threadManager.active(session);
 
-    const mentionContext = await buildCodexMentionContext(session.cwd, input.mentions);
+    const mentionContext = await buildCodexMentionContext(session.cwd, input.mentions, (id) => this.skills.read(session.cwd, id));
     const prompt = buildCodexPrompt(input.prompt, input.mentions, mentionContext);
     await this.append(session.id, activeThread.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
     const thread = this.threadManager.sdkThreadFor(session, activeThread);

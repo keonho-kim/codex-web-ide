@@ -1,19 +1,25 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ComposerMention } from "../../shared/types";
+import type { SkillDocument } from "../skillManager";
 import { safeFsPath } from "../files/path";
 
 const MAX_FILE_CHARS = 20_000;
+const MAX_SKILL_CHARS = 12_000;
 const MAX_DIRECTORY_ENTRIES = 120;
 
 export async function validateCodexMentions(sessionCwd: string, mentions: ComposerMention[]) {
   await Promise.all(mentions.map((mention) => (mention.type === "file" ? safeFsPath(sessionCwd, mention.path) : Promise.resolve())));
 }
 
-export async function buildCodexMentionContext(sessionCwd: string, mentions: ComposerMention[]) {
+export async function buildCodexMentionContext(
+  sessionCwd: string,
+  mentions: ComposerMention[],
+  readSkill?: (id: string) => Promise<SkillDocument | null>,
+) {
   const sections = await Promise.all(
     mentions.map(async (mention) => {
-      if (mention.type === "skill") return `## Skill: $${mention.name}\nSkill id: ${mention.id}`;
+      if (mention.type === "skill") return skillContext(mention, readSkill ? await readSkill(mention.id) : null);
       const absolute = await safeFsPath(sessionCwd, mention.path);
       const stat = await fs.stat(absolute);
       if (stat.isDirectory()) return directoryContext(sessionCwd, mention.path, absolute);
@@ -21,6 +27,13 @@ export async function buildCodexMentionContext(sessionCwd: string, mentions: Com
     }),
   );
   return sections.join("\n\n");
+}
+
+function skillContext(mention: Extract<ComposerMention, { type: "skill" }>, document: SkillDocument | null) {
+  if (!document) return `## Skill: $${mention.name}\nSkill id: ${mention.id}`;
+  const truncated = document.markdown.length > MAX_SKILL_CHARS;
+  const body = truncated ? document.markdown.slice(0, MAX_SKILL_CHARS) : document.markdown;
+  return [`## Skill: $${document.name}`, "```md", body, truncated ? "\n[truncated]" : "", "```"].join("\n");
 }
 
 async function fileContext(relativePath: string, absolutePath: string) {
