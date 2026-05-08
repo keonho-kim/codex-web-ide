@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, { type FSWatcher } from "chokidar";
-import type { FileTreeNode } from "../shared/types";
 import type { EventBus } from "../events/eventBus";
+import { ignoredPathPattern } from "./files/ignore";
 import { safeFsPath } from "./files/path";
+import { searchFiles } from "./files/search";
+import { readFileTree } from "./files/tree";
 export { safePath } from "./files/path";
-
-const ignored = /(^|[/\\])(\.git[/\\]objects|node_modules|dist|build|target|\.next|\.venv)([/\\]|$)/;
 
 export class FileManager {
   private watchers = new Map<string, FSWatcher>();
@@ -16,7 +16,7 @@ export class FileManager {
   watch(sessionId: string, cwd: string) {
     if (this.watchers.has(sessionId)) return;
     const watcher = chokidar.watch(cwd, {
-      ignored,
+      ignored: ignoredPathPattern,
       ignoreInitial: true,
       depth: 12,
       awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 },
@@ -34,27 +34,8 @@ export class FileManager {
     await watcher.close();
   }
 
-  async tree(root: string, input = ".", depth = 3): Promise<FileTreeNode[]> {
-    const base = await safeFsPath(root, input);
-    const entries = await fs.readdir(base, { withFileTypes: true });
-    const visible = entries
-      .filter((entry) => !entry.name.startsWith(".") || [".agents", ".github"].includes(entry.name))
-      .filter((entry) => !ignored.test(path.join(base, entry.name)))
-      .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
-    return Promise.all(
-      visible.slice(0, 500).map(async (entry) => {
-        const absolute = path.join(base, entry.name);
-        const relative = path.relative(root, absolute) || ".";
-        const node: FileTreeNode = {
-          id: relative,
-          name: entry.name,
-          path: relative,
-          isDirectory: entry.isDirectory(),
-        };
-        if (entry.isDirectory() && depth > 0) node.children = await this.tree(root, relative, depth - 1);
-        return node;
-      }),
-    );
+  tree(root: string, input = ".", depth = 3) {
+    return readFileTree(root, input, depth);
   }
 
   async read(root: string, input: string) {
@@ -88,23 +69,6 @@ export class FileManager {
   }
 
   async search(root: string, query: string) {
-    const results: Array<{ type: "file"; path: string; isDirectory: boolean }> = [];
-    const needle = query.toLowerCase();
-    async function walk(dir: string, depth: number) {
-      if (depth < 0 || results.length >= 50) return;
-      const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
-      for (const entry of entries) {
-        if (results.length >= 50) break;
-        const absolute = path.join(dir, entry.name);
-        if (ignored.test(absolute)) continue;
-        const relative = path.relative(root, absolute);
-        if (relative.toLowerCase().includes(needle)) {
-          results.push({ type: "file", path: relative, isDirectory: entry.isDirectory() });
-        }
-        if (entry.isDirectory() && !entry.name.startsWith(".")) await walk(absolute, depth - 1);
-      }
-    }
-    await walk(root, 5);
-    return results;
+    return searchFiles(root, query);
   }
 }
