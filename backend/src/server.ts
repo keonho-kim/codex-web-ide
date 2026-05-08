@@ -51,6 +51,7 @@ export async function createApp(options: ServerOptions = {}) {
   app.locals.auth = auth;
   app.locals.cleanup = async () => {
     const activeSessions = await sessions.list();
+    await codex.shutdown();
     commands.shutdown();
     await Promise.all(activeSessions.flatMap((session) => [files.unwatch(session.id), git.unwatch(session.id)]));
   };

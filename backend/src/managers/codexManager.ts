@@ -116,6 +116,12 @@ export class CodexManager {
     await this.history.delete(sessionId);
   }
 
+  async shutdown() {
+    const sessionIds = [...this.running.keys()];
+    for (const sessionId of sessionIds) this.cancel(sessionId);
+    await Promise.all(sessionIds.map((sessionId) => this.sessions.update(sessionId, { status: "idle" }).catch(() => undefined)));
+  }
+
   private async append(sessionId: string, threadId: string, message: CodexMessage) {
     if (this.deleted.has(sessionId)) return;
     const messages = this.messages.get(threadId) ?? [];
