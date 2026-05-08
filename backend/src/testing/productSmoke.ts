@@ -85,31 +85,31 @@ export function testSession(cwd: string): Session {
 }
 
 export async function waitForJob(read: () => ReturnType<JobRunner["get"]>) {
-  const deadline = Date.now() + 5000;
+  const deadline = performance.now() + 5000;
   for (;;) {
     const job = read();
     if (["succeeded", "failed", "cancelled"].includes(job.status)) return job;
-    if (Date.now() > deadline) throw new Error("Job did not finish");
+    if (performance.now() > deadline) throw new Error("Job did not finish");
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }
 
 export async function waitForService<T extends { status: string } | undefined>(read: () => T) {
-  const deadline = Date.now() + 3000;
+  const deadline = performance.now() + 3000;
   for (;;) {
     const service = read();
     if (service && service.status !== "starting") return service;
-    if (Date.now() > deadline) throw new Error("Service health check did not finish");
+    if (performance.now() > deadline) throw new Error("Service health check did not finish");
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }
 
 export async function waitForPreview<T extends { status: string } | undefined>(read: () => T) {
-  const deadline = Date.now() + 5000;
+  const deadline = performance.now() + 5000;
   for (;;) {
     const preview = read();
     if (preview && preview.status !== "starting") return preview;
-    if (Date.now() > deadline) throw new Error("Preview health check did not finish");
+    if (performance.now() > deadline) throw new Error("Preview health check did not finish");
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 }
@@ -153,7 +153,7 @@ export function runCli(args: string[], env: NodeJS.ProcessEnv) {
 }
 
 export async function waitForHealth(url: string) {
-  const deadline = Date.now() + 5000;
+  const deadline = performance.now() + 5000;
   for (;;) {
     try {
       const response = await fetch(url);
@@ -161,7 +161,7 @@ export async function waitForHealth(url: string) {
     } catch {
       // Retry until the CLI-started server is ready or the deadline expires.
     }
-    if (Date.now() > deadline) throw new Error(`Server did not become healthy: ${url}`);
+    if (performance.now() > deadline) throw new Error(`Server did not become healthy: ${url}`);
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 }

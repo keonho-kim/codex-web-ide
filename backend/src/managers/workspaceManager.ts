@@ -42,7 +42,7 @@ export class WorkspaceManager {
   }
 
   async addProject(input: { cwd: string; name?: string }) {
-    const cwd = path.resolve(input.cwd);
+    const cwd = await fs.realpath(path.resolve(input.cwd));
     const stat = await fs.stat(cwd);
     if (!stat.isDirectory()) throw new Error("Project path must be a directory");
     const projects = await this.listProjects();

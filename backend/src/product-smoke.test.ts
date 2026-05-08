@@ -26,6 +26,7 @@ import { ServiceRunner } from "./managers/commands/serviceRunner";
 import { FileManager } from "./managers/fileManager";
 import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
+import { SessionManager } from "./managers/sessionManager";
 import { SkillManager } from "./managers/skillManager";
 import { startBunFrontProxy } from "./proxy/bunFrontProxy";
 import { startServer } from "./server";
@@ -201,6 +202,24 @@ describe("product smoke coverage", () => {
     const settings = await workspace.getSettings();
     expect(settings.activeProjectId).toBeUndefined();
     expect(settings.recentProjectIds).not.toContain(project.id);
+  });
+
+  test("canonicalizes project and session working directories", async () => {
+    const storeRoot = await tempDir();
+    const projectRoot = await tempDir();
+    const linkedProject = path.join(await tempDir(), "linked");
+    await fs.symlink(projectRoot, linkedProject);
+    const workspace = new WorkspaceManager(new JsonStore(storeRoot));
+    const sessions = new SessionManager(new JsonStore(storeRoot), workspace);
+
+    const first = await workspace.addProject({ cwd: projectRoot });
+    const second = await workspace.addProject({ cwd: linkedProject });
+    const session = await sessions.create({ cwd: linkedProject });
+
+    expect(second.id).toBe(first.id);
+    expect(second.cwd).toBe(await fs.realpath(projectRoot));
+    expect(session.cwd).toBe(await fs.realpath(projectRoot));
+    expect(await workspace.listProjects()).toHaveLength(1);
   });
 
   test("initializes projects with runtime AGENTS policy", async () => {
