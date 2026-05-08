@@ -5,6 +5,7 @@ import { SectionTitle } from "../../components/SectionTitle";
 import { buttonClass, iconButtonClass, inputClass, mutedClass, selectedListButtonClass, transparentListButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
+import { SkillList } from "./SkillList";
 import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
 
 export function ProjectCreator({ onCreated }: { onCreated(project: Project): void }) {
@@ -80,6 +81,8 @@ export function Sidebar({
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
       <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
+      <SectionTitle label="Skills" />
+      <SkillList sessionId={activeSessionId} />
       <SectionTitle label="Settings" />
       <WorkspaceSettingsPanel settings={settings} onSave={onSettingsSave} pending={settingsPending} />
     </aside>
