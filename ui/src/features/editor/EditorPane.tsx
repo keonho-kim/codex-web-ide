@@ -12,23 +12,27 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   const openFilePaths = useUiStore((state) => state.openFilePaths);
   const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
   const closeFilePath = useUiStore((state) => state.closeFilePath);
-  const [draft, setDraft] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const file = useQuery({
     queryKey: ["file", sessionId, activeFilePath],
     queryFn: () => api<{ path: string; content: string }>(`/api/sessions/${sessionId}/files/read?path=${encodeURIComponent(activeFilePath || "")}`),
     enabled: Boolean(sessionId && activeFilePath),
   });
+  const draft = activeFilePath ? (drafts[activeFilePath] ?? file.data?.content ?? "") : "";
   const save = useMutation({
     mutationFn: () => api("/api/sessions/" + sessionId + "/files/write", { method: "PUT", body: { path: activeFilePath, content: draft } }),
     onSuccess: async () => {
+      if (activeFilePath) setDrafts((items) => ({ ...items, [activeFilePath]: draft }));
       await queryClient.invalidateQueries({ queryKey: ["file", sessionId, activeFilePath] });
     },
   });
   const dirty = Boolean(activeFilePath && file.data && draft !== file.data.content);
 
   useEffect(() => {
-    setDraft(file.data?.content ?? "");
-  }, [file.data?.content]);
+    const content = file.data?.content;
+    if (!activeFilePath || content === undefined) return;
+    setDrafts((items) => (activeFilePath in items ? items : { ...items, [activeFilePath]: content }));
+  }, [activeFilePath, file.data?.content]);
 
   return (
     <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
@@ -67,7 +71,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           value={draft}
           theme="vs-light"
           options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: "on", scrollBeyondLastLine: false }}
-          onChange={(value) => setDraft(value ?? "")}
+          onChange={(value) => {
+            if (activeFilePath) setDrafts((items) => ({ ...items, [activeFilePath]: value ?? "" }));
+          }}
         />
       ) : (
         <div className="flex items-center justify-center text-[13px] text-muted">Open a file from the tree.</div>
