@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerApiRoutes } from "./api";
+import type { AppServices } from "./api/context";
 import { AuthManager, authRequired, type AuthState } from "./auth/authManager";
 import { EventBus } from "./events/eventBus";
 import { CodexManager } from "./managers/codexManager";
@@ -14,6 +15,7 @@ import { SkillManager } from "./managers/skillManager";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
 import { createPlatformAdapter } from "./platform/adapter";
+import { canUseBunFrontProxy, startBunFrontProxy } from "./proxy/bunFrontProxy";
 
 export type ServerOptions = {
   host?: string;
@@ -37,20 +39,20 @@ export async function createApp(options: ServerOptions = {}) {
   await commands.hydrate();
   const codex = new CodexManager(events, git, sessions, new CodexHistoryStore(store));
   await codex.hydrate(await sessions.list());
-  const services = {
+  const services = buildServices({
     events,
     workspace,
     sessions,
     files,
     git,
-    skills: new SkillManager(),
     codex,
     commands,
-    adapter: createPlatformAdapter(),
     auth,
-  };
+    skills: new SkillManager(),
+  });
   const app = express();
   app.locals.auth = auth;
+  app.locals.services = services;
   app.locals.cleanup = async () => {
     const activeSessions = await sessions.list();
     await codex.shutdown();
@@ -80,19 +82,36 @@ export async function startServer(options: ServerOptions = {}) {
   const previewPortEnd = options.previewPortEnd || Number(process.env.CODEX_WEB_PREVIEW_PORT_END || persisted.previewPortEnd);
   const app = await createApp({ host, port, previewPortStart, previewPortEnd });
   const auth = app.locals.auth as AuthManager | undefined;
-  let server: ReturnType<typeof app.listen>;
+  let closeAndExit: () => void = () => process.exit(0);
   app.post("/api/shutdown", (req, res) => {
     if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress || "")) {
       res.status(403).json({ error: "Shutdown is only allowed from localhost." });
       return;
     }
     res.json({ ok: true });
-    setTimeout(() => {
-      void app.locals.cleanup?.().finally(() => server.close(() => process.exit(0)));
-    }, 25);
+    setTimeout(closeAndExit, 25);
   });
+  if (canUseBunFrontProxy()) {
+    const services = app.locals.services as AppServices;
+    const front = await startBunFrontProxy({ app, host, port, services });
+    closeAndExit = () => {
+      void app.locals.cleanup?.().finally(() => front.close().finally(() => process.exit(0)));
+    };
+    return {
+      host,
+      port,
+      auth: auth?.getStatus(),
+      close: async () => {
+        await app.locals.cleanup?.();
+        await front.close();
+      },
+    };
+  }
   return new Promise<{ host: string; port: number; auth?: AuthState; close(): Promise<void> }>((resolve) => {
-    server = app.listen(port, host, () => {
+    const server = app.listen(port, host, () => {
+      closeAndExit = () => {
+        void app.locals.cleanup?.().finally(() => server.close(() => process.exit(0)));
+      };
       resolve({
         host,
         port,
@@ -106,6 +125,41 @@ export async function startServer(options: ServerOptions = {}) {
       });
     });
   });
+}
+
+function buildServices({
+  auth,
+  codex,
+  commands,
+  events,
+  files,
+  git,
+  sessions,
+  skills,
+  workspace,
+}: {
+  auth: AuthManager;
+  codex: CodexManager;
+  commands: CommandManager;
+  events: EventBus;
+  files: FileManager;
+  git: GitManager;
+  sessions: SessionManager;
+  skills: SkillManager;
+  workspace: WorkspaceManager;
+}) {
+  return {
+    events,
+    workspace,
+    sessions,
+    files,
+    git,
+    skills,
+    codex,
+    commands,
+    adapter: createPlatformAdapter(),
+    auth,
+  };
 }
 
 function serveStaticUi(app: express.Express) {
