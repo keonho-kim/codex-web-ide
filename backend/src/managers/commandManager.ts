@@ -93,4 +93,8 @@ export class CommandManager {
   async deleteSession(sessionId: string) {
     await Promise.all([this.jobs.deleteSession(sessionId), this.previews.deleteSession(sessionId), this.services.deleteSession(sessionId)]);
   }
+
+  shutdown() {
+    this.processes.killAll();
+  }
 }

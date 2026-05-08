@@ -18,6 +18,10 @@ export class ProcessRegistry {
     this.processes.delete(id);
   }
 
+  killAll() {
+    for (const id of this.processes.keys()) this.kill(id);
+  }
+
   delete(id: string) {
     this.processes.delete(id);
   }
