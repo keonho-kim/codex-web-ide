@@ -102,6 +102,18 @@ describe("product smoke coverage", () => {
     expect((await workspace.getSettings()).auth.token).toBeTruthy();
   });
 
+  test("requires tokens for forwarded non-loopback API requests", async () => {
+    const workspace = new WorkspaceManager(new JsonStore(await tempDir()));
+    const auth = new AuthManager(workspace);
+    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { enabled: true, token: "secret-token" } });
+    await auth.applySettings(settings, true);
+
+    expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/projects"), "192.168.1.10")).toBe(false);
+    expect(auth.isAuthorizedHeaders(new Headers({ "x-codex-web-token": "secret-token" }), new URL("http://127.0.0.1/api/projects"), "192.168.1.10")).toBe(true);
+    expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/health"), "192.168.1.10")).toBe(true);
+    expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/projects"), "127.0.0.1")).toBe(true);
+  });
+
   test("includes selected file, directory, and skill context in Codex prompts", async () => {
     const root = await tempDir();
     await fs.mkdir(path.join(root, "src"), { recursive: true });
