@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
+import { registerGitRoutes } from "./api/gitRoutes";
 import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
@@ -132,6 +133,42 @@ describe("product smoke coverage", () => {
 
     expect(status.map((file) => file.path)).toContain("src/added space.txt");
     expect(status).toContainEqual(expect.objectContaining({ path: "src/new name.txt", index: "R" }));
+  });
+
+  test("publishes Git state after mutating Git API calls", async () => {
+    const root = await tempDir();
+    await execa("git", ["init"], { cwd: root });
+    await fs.writeFile(path.join(root, "app.ts"), "export {}\n");
+
+    const session = testSession(root);
+    const events = new EventBus();
+    const published: Array<{ type: string }> = [];
+    events.subscribe(session.id, (event) => published.push(event));
+    const app = express();
+    app.use(express.json());
+    registerGitRoutes(app, {
+      events,
+      git: new GitManager(),
+      sessions: { get: async () => session } as never,
+    } as unknown as AppServices);
+    const port = await freePort();
+    const server = await new Promise<net.Server>((resolve, reject) => {
+      const listener = app.listen(port, "127.0.0.1", () => resolve(listener));
+      listener.once("error", reject);
+    });
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/sessions/${session.id}/git/stage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: ["app.ts"] }),
+      });
+
+      expect(response.ok).toBe(true);
+      expect(await response.json()).toMatchObject({ stagedCount: 1, dirty: true });
+      expect(published).toContainEqual(expect.objectContaining({ type: "git.state.updated" }));
+    } finally {
+      await closeServer(server);
+    }
   });
 
   test("runs managed jobs and captures output", async () => {
