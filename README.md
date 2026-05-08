@@ -62,6 +62,8 @@ cw status
 cw stop
 ```
 
+`cw init` registers the project and creates an `AGENTS.md` runtime policy when one does not already exist.
+
 The web UI supports project/session selection, file tree browsing, Monaco editing, Codex chat, file and skill mentions, jobs, previews, services, and Git state/status/diff/stage/unstage/commit workflows.
 
 ## Termux Notes
