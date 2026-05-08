@@ -1,2 +1,2 @@
 #!/usr/bin/env bun
-import "../packages/cli/src/cw";
+import "../backend/src/cli/cw";

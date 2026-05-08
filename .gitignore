@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Bun
+bun.lockb
+
+# Build output
+ui/dist/
+backend/dist/
+dist/
+build/
+
+# Runtime state
+.codex-web/
+*.pid
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# TypeScript and tooling
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Editors and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local caches
+.cache/
+tmp/
+temp/

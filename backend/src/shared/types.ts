@@ -125,6 +125,8 @@ export type SessionEvent =
   | { type: "preview.started"; preview: PreviewInstance }
   | { type: "preview.stopped"; previewId: string }
   | { type: "service.started"; service: ServiceInstance }
+  | { type: "service.stdout"; serviceId: string; text: string }
+  | { type: "service.stderr"; serviceId: string; text: string }
   | { type: "service.stopped"; serviceId: string }
   | { type: "git.state.updated"; state: GitState }
   | { type: "file.changed"; path: string };

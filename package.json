@@ -7,24 +7,26 @@
     "cw": "./bin/cw.ts",
     "codex-web": "./bin/cw.ts"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "start": "bun run packages/cli/src/cw.ts start",
-    "dev:web": "bunx vite --host 127.0.0.1 --port 17322 apps/web",
+    "start": "bun run backend/src/cli/cw.ts start",
+    "dev:web": "bunx vite --host 127.0.0.1 --port 17322 ui",
     "build": "bun run build:web && bun run typecheck",
-    "build:web": "bunx vite build apps/web",
+    "build:web": "bunx vite build ui",
     "typecheck": "bunx tsc --noEmit",
-    "doctor": "bun run packages/cli/src/cw.ts doctor",
-    "cw": "bun run packages/cli/src/cw.ts"
+    "doctor": "bun run backend/src/cli/cw.ts doctor",
+    "cw": "bun run backend/src/cli/cw.ts"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@openai/codex-sdk": "^0.129.0",
+    "@tailwindcss/vite": "^4.2.4",
     "@tanstack/react-query": "^5.90.12",
+    "@tiptap/react": "^3.23.1",
+    "@tiptap/starter-kit": "^3.23.1",
     "@vitejs/plugin-react": "^5.1.1",
     "chokidar": "^4.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "diff2html": "^3.4.52",
     "execa": "^9.6.1",
     "express": "^4.22.1",
@@ -36,8 +38,10 @@
     "react-dom": "^19.2.1",
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^7.10.1",
-    "zustand": "^5.0.9",
-    "zod": "^3.25.76"
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.4",
+    "zod": "^3.25.76",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",

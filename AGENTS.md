@@ -29,8 +29,9 @@ Your job is to implement exactly what the user asked for with minimum necessary 
 ## Source Direction
 
 - Keep the implementation aligned with the product architecture in `PRODUCT.md`.
-- Keep the frontend as a React web UI.
-- Keep the backend as a local Bun/Express runtime.
+- Keep the frontend as a React web UI under `ui/`.
+- Keep the backend as a local Bun/Express runtime under `backend/`.
+- Keep shared TypeScript contracts that are used by both sides under `backend/src/shared/` until a separate shared package is explicitly introduced.
 - Keep command execution, previews, services, Git state, filesystem access, and Codex sessions managed by backend services rather than browser-only logic.
 - Keep project/session paths safe. Do not allow file or Git APIs to escape the session working directory.
 
@@ -49,6 +50,10 @@ Your job is to implement exactly what the user asked for with minimum necessary 
 - Do not add speculative abstractions, adapters, fallback paths, or legacy bridges unless they are required now.
 - Prefer explicit failure over hidden fallback behavior.
 - Do not silently degrade behavior.
+- Keep scripts and modules focused on one responsibility.
+- If a script takes on two or more responsibilities, promote it into a folder-backed module and split the responsibilities into separate files.
+- If three or more classes, objects, or functions that should be functionally separated accumulate in one file, create a dedicated folder/module boundary and split them into focused files.
+- Apply clean code rules: small cohesive modules, explicit names, clear ownership boundaries, minimal shared mutable state, and no unrelated behavior bundled together.
 
 ## Working Style
 
