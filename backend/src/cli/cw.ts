@@ -1,14 +1,13 @@
 #!/usr/bin/env bun
 import path from "node:path";
-import net from "node:net";
 import fs from "node:fs/promises";
 import os from "node:os";
-import { execa } from "execa";
 import { startServer } from "../server";
 import { createPlatformAdapter } from "../platform/adapter";
 import { JsonStore } from "../managers/storage";
 import { WorkspaceManager } from "../managers/workspaceManager";
 import type { Job, PreviewInstance, ServiceInstance, Session } from "../shared/types";
+import { runDoctor } from "./doctor";
 
 const args = process.argv.slice(2);
 const command = args[0] || "start";
@@ -18,7 +17,7 @@ switch (command) {
     await start(args.slice(1));
     break;
   case "doctor":
-    await doctor();
+    await runDoctor();
     break;
   case "open":
     await open();
@@ -62,41 +61,6 @@ async function start(input: string[]) {
   process.once("SIGINT", removePid);
   process.once("SIGTERM", removePid);
   await new Promise(() => undefined);
-}
-
-async function doctor() {
-  const adapter = createPlatformAdapter();
-  const appPort = Number(process.env.CODEX_WEB_PORT || 17321);
-  const previewStart = Number(process.env.CODEX_WEB_PREVIEW_PORT_START || 17330);
-  const previewEnd = Number(process.env.CODEX_WEB_PREVIEW_PORT_END || 17399);
-  const checks = [
-    ["Bun", (process.versions as Record<string, string | undefined>).bun || "unknown"],
-    ["Codex", await binaryVersion("codex", ["--version"])],
-    ["Git", await binaryVersion("git", ["--version"])],
-    ["Python", await binaryVersion("python3", ["--version"])],
-    ["Go", await binaryVersion("go", ["version"])],
-    ["Rust", await binaryVersion("rustc", ["--version"])],
-  ] as const;
-  const appPortAvailable = await isPortAvailable(appPort);
-  const previewPortsAvailable = await checkPreviewPorts(previewStart, previewEnd);
-
-  console.log("codex-web doctor");
-  console.log("");
-  console.log(`Platform: ${adapter.platform}`);
-  console.log(`Home:     ${adapter.getHomeDir()}`);
-  for (const [name, result] of checks) {
-    console.log(`${name.padEnd(8)} ${result || "missing"}`);
-  }
-  console.log(`Port:     ${appPort} ${appPortAvailable ? "available" : "in use"}`);
-  console.log(`Preview:  ${previewStart}-${previewEnd} ${previewPortsAvailable ? "available" : "partially in use"}`);
-
-  if (adapter.platform === "termux") {
-    console.log("");
-    console.log("Warnings:");
-    console.log("- Termux battery optimization may stop long-running sessions.");
-    console.log("- Run termux-wake-lock for long-running work.");
-    console.log("- Run termux-setup-storage if projects live in shared storage.");
-  }
 }
 
 async function open() {
@@ -163,32 +127,6 @@ async function runManagedCommand(kind: "job" | "preview" | "service", commandArg
   }
 
   console.log(JSON.stringify(result, null, 2));
-}
-
-async function binaryVersion(name: string, versionArgs: string[]) {
-  try {
-    const { stdout } = await execa(name, versionArgs);
-    return stdout.split("\n")[0];
-  } catch {
-    return null;
-  }
-}
-
-async function checkPreviewPorts(start: number, end: number) {
-  const sample = [start, Math.floor((start + end) / 2), end];
-  const checks = await Promise.all(sample.map((port) => isPortAvailable(port)));
-  return checks.every(Boolean);
-}
-
-function isPortAvailable(port: number) {
-  return new Promise<boolean>((resolve) => {
-    const server = net.createServer();
-    server.once("error", () => resolve(false));
-    server.once("listening", () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port, "127.0.0.1");
-  });
 }
 
 function readFlag(input: string[], name: string) {
