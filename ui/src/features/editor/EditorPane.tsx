@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { iconButtonClass } from "../../components/uiClasses";
 import { api } from "../../lib/api";
 import { useUiStore } from "../../store/uiStore";
@@ -9,6 +9,9 @@ import { useUiStore } from "../../store/uiStore";
 export function EditorPane({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const activeFilePath = useUiStore((state) => state.activeFilePath);
+  const openFilePaths = useUiStore((state) => state.openFilePaths);
+  const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
+  const closeFilePath = useUiStore((state) => state.closeFilePath);
   const [draft, setDraft] = useState("");
   const file = useQuery({
     queryKey: ["file", sessionId, activeFilePath],
@@ -21,18 +24,41 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
       await queryClient.invalidateQueries({ queryKey: ["file", sessionId, activeFilePath] });
     },
   });
+  const dirty = Boolean(activeFilePath && file.data && draft !== file.data.content);
 
   useEffect(() => {
     setDraft(file.data?.content ?? "");
   }, [file.data?.content]);
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
+    <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
       <div className="flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5">
-        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath || "No file open"}</span>
-        <button className={iconButtonClass} title="Save file" type="button" disabled={!activeFilePath || save.isPending} onClick={() => save.mutate()}>
+        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
+        <button className={iconButtonClass} title="Save file" type="button" disabled={!activeFilePath || !dirty || save.isPending} onClick={() => save.mutate()}>
           <Save size={16} />
         </button>
+      </div>
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1">
+        {openFilePaths.map((path) => (
+          <div
+            className={`inline-flex h-6 max-w-[200px] shrink-0 items-center overflow-hidden rounded-md border text-xs ${
+              path === activeFilePath ? "border-selected-border bg-selected text-primary" : "border-transparent bg-transparent text-ink hover:bg-page"
+            }`}
+            key={path}
+          >
+            <button className="min-w-0 flex-1 overflow-hidden px-2 text-left text-ellipsis whitespace-nowrap" type="button" onClick={() => setActiveFilePath(path)}>
+              {path}
+            </button>
+            <button
+              className="inline-flex h-full items-center px-1"
+              title="Close tab"
+              type="button"
+              onClick={() => closeFilePath(path)}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
       </div>
       {activeFilePath ? (
         <Editor
