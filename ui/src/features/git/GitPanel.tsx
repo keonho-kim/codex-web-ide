@@ -80,6 +80,10 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
         <p className={mutedClass}>
           staged {state.data?.stagedCount ?? 0} / unstaged {state.data?.unstagedCount ?? 0} / untracked {state.data?.untrackedCount ?? 0}
         </p>
+        <p className={mutedClass}>
+          {state.data?.dirty ? "dirty" : "clean"} · ahead {state.data?.ahead ?? 0} / behind {state.data?.behind ?? 0}
+          {state.data?.detached ? " · detached" : ""}
+        </p>
         <div className="grid gap-2">
           <select className={inputClass} value={state.data?.branch ?? ""} disabled={!sessionId} onChange={(event) => checkout.mutate(event.target.value)}>
             <option value="" disabled>
