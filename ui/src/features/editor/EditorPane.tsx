@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
+import { cn } from "../../lib/classes";
 import { useUiStore } from "../../store/uiStore";
 
 export function EditorPane({ sessionId }: { sessionId?: string }) {
@@ -37,26 +38,24 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   }, [activeFilePath, file.data?.content, hydrateEditorDraft]);
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
-      <div className="flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5">
+    <section className="workspace-pane grid-rows-[38px_34px_minmax(0,1fr)]">
+      <div className="pane-toolbar">
         <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
         <Button title="Save file" type="button" disabled={!activeFilePath || !dirty || save.isPending} onClick={() => save.mutate()} variant="outline" size="icon-sm">
           <Save data-icon="inline-start" />
         </Button>
       </div>
-      <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1">
+      <div className="editor-tabs">
         {openFilePaths.map((path) => (
           <div
-            className={`inline-flex h-6 max-w-[200px] shrink-0 items-center overflow-hidden rounded-md border text-xs ${
-              path === activeFilePath ? "border-selected-border bg-selected text-primary" : "border-transparent bg-transparent text-ink hover:bg-page"
-            }`}
+            className={cn("editor-tab", path === activeFilePath ? "panel-tab-selected" : "editor-tab-idle")}
             key={path}
           >
-            <button className="min-w-0 flex-1 overflow-hidden px-2 text-left text-ellipsis whitespace-nowrap" type="button" onClick={() => setActiveFilePath(path)}>
+            <button className="editor-tab-file" type="button" onClick={() => setActiveFilePath(path)}>
               {path}
             </button>
             <button
-              className="inline-flex h-full items-center px-1"
+              className="editor-tab-close"
               title="Close tab"
               type="button"
               onClick={() => closeFilePath(path)}

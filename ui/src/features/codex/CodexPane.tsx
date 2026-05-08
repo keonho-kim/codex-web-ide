@@ -18,9 +18,9 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-hairline bg-canvas p-2.5">
+    <section className="workspace-pane grid-rows-[auto_minmax(0,1fr)_112px] p-2.5">
       <SectionTitle label={status.data?.thread.title || "Codex"} />
-      <div className="overflow-auto rounded-md border border-subtle p-2.5">
+      <div className="bordered-panel">
         {messages.data?.length ? (
           messages.data.map((message) => (
             <article className="border-b border-subtle py-2 last:border-b-0" key={message.id}>
@@ -29,7 +29,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
             </article>
           ))
         ) : (
-          <p className="text-xs text-muted">Start a Codex run from the composer.</p>
+          <p className="empty-state">Start a Codex run from the composer.</p>
         )}
       </div>
       <Composer sessionId={sessionId} running={status.data?.running ?? false} />

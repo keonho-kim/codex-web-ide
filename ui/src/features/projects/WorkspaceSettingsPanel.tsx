@@ -49,7 +49,7 @@ export function WorkspaceSettingsPanel({
     >
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-1">
         <input
-          className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+          className="compact-input flex-1"
           value={defaultProjectsDir}
           onChange={(event) => setDefaultProjectsDir(event.target.value)}
           placeholder="Default project directory"
@@ -58,28 +58,28 @@ export function WorkspaceSettingsPanel({
           <Save data-icon="inline-start" />
         </Button>
         <input
-          className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+          className="compact-input"
           value={host}
           onChange={(event) => setHost(event.target.value)}
           placeholder="Host"
         />
         <div className="grid grid-cols-3 gap-1">
           <input
-            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            className="compact-input"
             value={port}
             onChange={(event) => setPort(event.target.value)}
             inputMode="numeric"
             placeholder="App port"
           />
           <input
-            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            className="compact-input"
             value={previewPortStart}
             onChange={(event) => setPreviewPortStart(event.target.value)}
             inputMode="numeric"
             placeholder="Preview from"
           />
           <input
-            className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+            className="compact-input"
             value={previewPortEnd}
             onChange={(event) => setPreviewPortEnd(event.target.value)}
             inputMode="numeric"
@@ -87,7 +87,7 @@ export function WorkspaceSettingsPanel({
           />
         </div>
       </div>
-      <p className="text-xs text-muted">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
+      <p className="empty-state">Recent projects: {settings?.recentProjectIds.length ?? 0}</p>
     </form>
   );
 }

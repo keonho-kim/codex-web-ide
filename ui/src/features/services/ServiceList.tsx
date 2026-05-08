@@ -18,7 +18,7 @@ export function ServiceList({
   return (
     <div className="grid gap-1.5">
       {services.map((service) => (
-        <article className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-subtle p-2" key={service.id}>
+        <article className="list-card grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2" key={service.id}>
           <div className="min-w-0">
             <strong className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap">{service.command.join(" ")}</strong>
             <span className="mt-1 block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">
@@ -42,7 +42,7 @@ export function ServiceList({
           </div>
         </article>
       ))}
-      {services.length === 0 ? <p className="text-xs text-muted">No services yet.</p> : null}
+      {services.length === 0 ? <p className="empty-state">No services yet.</p> : null}
     </div>
   );
 }

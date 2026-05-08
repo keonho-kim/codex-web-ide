@@ -37,7 +37,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       >
         <h1 className="text-base font-semibold">Codex Web IDE</h1>
         <input
-          className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
+          className="field-input"
           value={token}
           onChange={(event) => setToken(event.target.value)}
           placeholder="Auth token"
@@ -47,7 +47,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <Button type="submit" disabled={!token.trim() || login.isPending} variant="outline" size="sm">
           Unlock
         </Button>
-        {login.isError ? <p className="text-xs text-red-600">Invalid token.</p> : null}
+        {login.isError ? <p className="error-text">Invalid token.</p> : null}
       </form>
     </main>
   );

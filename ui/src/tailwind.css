@@ -39,3 +39,149 @@
     margin: 0;
   }
 }
+
+@layer components {
+  .app-shell {
+    @apply grid h-screen grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px];
+  }
+
+  .app-header {
+    @apply col-span-full flex items-center justify-between gap-4 border-b border-hairline bg-canvas px-3 max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2;
+  }
+
+  .shell-toolbar {
+    @apply flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch;
+  }
+
+  .sidebar-panel {
+    @apply row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b;
+  }
+
+  .sidebar-collapsed {
+    @apply row-span-2 flex min-w-0 justify-center overflow-hidden border-r border-hairline bg-panel p-2 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b;
+  }
+
+  .workspace-pane {
+    @apply grid h-full min-w-0 overflow-hidden border-r border-hairline bg-canvas;
+  }
+
+  .pane-toolbar {
+    @apply flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5;
+  }
+
+  .resize-handle {
+    @apply w-px bg-hairline transition-colors hover:bg-primary;
+  }
+
+  .bottom-panel {
+    @apply min-h-0 overflow-hidden border-t border-hairline bg-canvas;
+  }
+
+  .bottom-tabs {
+    @apply flex h-[38px] items-center gap-2 border-b border-hairline px-2 py-1;
+  }
+
+  .panel-body {
+    @apply h-[calc(100%-38px)] overflow-auto p-2.5;
+  }
+
+  .panel-grid {
+    @apply grid h-[calc(100%-38px)] gap-2.5 overflow-auto p-2.5;
+  }
+
+  .split-grid {
+    @apply grid min-h-0 grid-cols-[minmax(220px,34%)_minmax(0,1fr)] gap-2.5;
+  }
+
+  .field-input {
+    @apply min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink;
+  }
+
+  .compact-input {
+    @apply h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink;
+  }
+
+  .command-input {
+    @apply w-[min(520px,100%)] min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink;
+  }
+
+  .nav-list {
+    @apply grid gap-1;
+  }
+
+  .nav-item {
+    @apply inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink hover:bg-page;
+  }
+
+  .nav-item-selected {
+    @apply border-selected-border bg-selected text-primary;
+  }
+
+  .panel-tab-selected {
+    @apply border-selected-border bg-selected text-primary;
+  }
+
+  .list-card {
+    @apply rounded-md border border-subtle p-2 text-xs;
+  }
+
+  .list-card-selected {
+    @apply border-selected-border bg-selected text-primary;
+  }
+
+  .empty-state {
+    @apply text-xs text-muted;
+  }
+
+  .error-text {
+    @apply text-xs text-destructive;
+  }
+
+  .log-output {
+    @apply h-[150px] overflow-auto rounded-md bg-ink p-2.5 text-xs whitespace-pre-wrap text-white;
+  }
+
+  .diff-box {
+    @apply max-h-[155px] overflow-auto rounded-md border border-subtle bg-panel p-2 text-xs text-ink;
+  }
+
+  .bordered-panel {
+    @apply overflow-auto rounded-md border border-subtle p-2.5;
+  }
+
+  .editor-tabs {
+    @apply flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1;
+  }
+
+  .editor-tab {
+    @apply inline-flex h-6 max-w-[200px] shrink-0 items-center overflow-hidden rounded-md border text-xs;
+  }
+
+  .editor-tab-idle {
+    @apply border-transparent bg-transparent text-ink hover:bg-page;
+  }
+
+  .editor-tab-file {
+    @apply min-w-0 flex-1 overflow-hidden px-2 text-left text-ellipsis whitespace-nowrap;
+  }
+
+  .editor-tab-close {
+    @apply inline-flex h-full items-center px-1;
+  }
+
+  .composer-input {
+    @apply min-h-[92px] w-full rounded-md border border-control bg-canvas px-2.5 py-1.5 pr-32 text-sm text-ink outline-none [&_p]:m-0;
+  }
+
+  .mention-chip {
+    @apply inline-flex min-h-6 items-center rounded-md border border-control bg-canvas px-2 py-0.5 text-xs text-primary;
+  }
+
+  .mention-popover {
+    @apply absolute right-0 bottom-24 left-0 max-h-[180px] overflow-auto rounded-md bg-ink p-2 text-[11px] text-white;
+  }
+
+  .mention-option {
+    @apply inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-white;
+  }
+}

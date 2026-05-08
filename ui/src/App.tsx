@@ -20,16 +20,16 @@ export function App() {
   return (
     <main
       className={cn(
-        "grid h-screen grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]",
+        "app-shell",
         sidebarCollapsed ? "grid-cols-[44px_minmax(0,1fr)]" : "grid-cols-[230px_minmax(0,1fr)]",
       )}
     >
-      <header className="col-span-full flex items-center justify-between gap-4 border-b border-hairline bg-canvas px-3 max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2">
+      <header className="app-header">
         <div className="min-w-0">
           <strong className="block text-sm">Codex Web IDE</strong>
           <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">{app.activeSession?.cwd || "No session selected"}</span>
         </div>
-        <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch">
+        <div className="shell-toolbar">
           <ProjectCreator defaultProjectsDir={app.settings?.defaultProjectsDir} onCreated={(project) => app.selectProject(project.id)} />
           <SessionCreator projectId={app.activeProjectId} onCreated={(session) => app.setActiveSessionId(session.id)} />
         </div>

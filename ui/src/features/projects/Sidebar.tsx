@@ -37,7 +37,7 @@ export function Sidebar({
 }) {
   if (collapsed) {
     return (
-      <aside className="row-span-2 flex min-w-0 justify-center overflow-hidden border-r border-hairline bg-panel p-2 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
+      <aside className="sidebar-collapsed">
         <Button title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="outline" size="icon-sm">
           <PanelLeftOpen data-icon="inline-start" />
         </Button>
@@ -46,7 +46,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b">
+    <aside className="sidebar-panel">
       <div className="flex items-center justify-between gap-2">
         <SectionTitle label="Projects" />
         <Button title="Collapse sidebar" type="button" onClick={() => onCollapsedChange(true)} variant="outline" size="icon-sm">

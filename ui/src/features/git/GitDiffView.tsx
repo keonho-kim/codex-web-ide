@@ -4,7 +4,7 @@ import "diff2html/bundles/css/diff2html.min.css";
 export function GitDiffView({ selectedFile, stagedDiff, unstagedDiff }: { selectedFile?: string; stagedDiff?: string; unstagedDiff?: string }) {
   if (!selectedFile) return null;
   if (!stagedDiff && !unstagedDiff) {
-    return <pre className="mt-2 max-h-[155px] overflow-auto rounded-md border border-subtle bg-panel p-2 text-xs text-ink">No diff.</pre>;
+    return <pre className="diff-box mt-2">No diff.</pre>;
   }
   return (
     <div className="mt-2 grid gap-2">
@@ -18,9 +18,9 @@ function DiffBlock({ diff, label }: { diff?: string; label: string }) {
   if (!diff) return null;
   return (
     <section>
-      <strong className="mb-1 block text-xs text-muted">{label}</strong>
+      <strong className="empty-state mb-1 block">{label}</strong>
       <div
-        className="max-h-[155px] overflow-auto rounded-md border border-subtle bg-panel p-2 text-xs text-ink [&_pre]:whitespace-pre-wrap"
+        className="diff-box [&_pre]:whitespace-pre-wrap"
         dangerouslySetInnerHTML={{ __html: diffToHtml(diff, { drawFileList: false, matching: "lines" }) }}
       />
     </section>

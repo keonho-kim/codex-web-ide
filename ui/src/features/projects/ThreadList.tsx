@@ -33,7 +33,7 @@ export function ThreadList({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <nav className="grid gap-1">
+    <nav className="nav-list">
       <Button
         className="w-full justify-start overflow-hidden"
         variant="outline"
@@ -48,8 +48,8 @@ export function ThreadList({ sessionId }: { sessionId?: string }) {
       {threads.data?.threads.map((thread) => (
         <button
           className={cn(
-            "inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink",
-            thread.id === threads.data.activeThreadId && "border-selected-border bg-selected text-primary",
+            "nav-item",
+            thread.id === threads.data.activeThreadId && "nav-item-selected",
           )}
           key={thread.id}
           type="button"
@@ -59,7 +59,7 @@ export function ThreadList({ sessionId }: { sessionId?: string }) {
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">{thread.title}</span>
         </button>
       ))}
-      {!sessionId ? <p className="text-xs text-muted">Create a session to use threads.</p> : null}
+      {!sessionId ? <p className="empty-state">Create a session to use threads.</p> : null}
     </nav>
   );
 }
