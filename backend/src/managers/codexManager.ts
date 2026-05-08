@@ -5,6 +5,7 @@ import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
+import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
 import { validateCodexMentions } from "./codex/mentions";
 import { buildCodexPrompt } from "./codex/prompt";
 
@@ -60,7 +61,18 @@ export class CodexManager {
       await this.sessions.update(session.id, { status: "error" });
       throw error;
     }
-    void this.consumeEvents(session, thread, events);
+    void consumeCodexEvents({
+      events: this.events,
+      eventStream: events,
+      git: this.git,
+      isDeleted: () => this.deleted.has(session.id),
+      markNotRunning: () => this.running.delete(session.id),
+      markCancelled: () => this.cancelled.delete(session.id),
+      session,
+      sessions: this.sessions,
+      thread,
+      appendAssistantMessage: (text) => this.append(session.id, createAssistantMessage(text)),
+    });
 
     return { running: true, threadId: thread.id ?? session.codexThreadId };
   }
@@ -104,49 +116,5 @@ export class CodexManager {
     const thread = session.codexThreadId ? this.codex.resumeThread(session.codexThreadId, options) : this.codex.startThread(options);
     this.threads.set(session.id, thread);
     return thread;
-  }
-
-  private async consumeEvents(session: Session, thread: Thread, events: AsyncGenerator<ThreadEvent>) {
-    const agentMessages = new Map<string, string>();
-    let failure: string | undefined;
-    let cancelled = false;
-    try {
-      for await (const event of events) {
-        this.events.publish(session.id, { type: "codex.event", payload: event });
-        if (event.type === "thread.started") {
-          await this.sessions.update(session.id, { codexThreadId: event.thread_id });
-        }
-        if ((event.type === "item.updated" || event.type === "item.completed") && event.item.type === "agent_message") {
-          agentMessages.set(event.item.id, event.item.text);
-        }
-        if (event.type === "turn.failed") {
-          failure = event.error.message;
-        }
-        if (event.type === "error") {
-          failure = event.message;
-        }
-      }
-    } catch (error) {
-      cancelled = this.cancelled.delete(session.id);
-      if (!cancelled) failure = error instanceof Error ? error.message : "Codex run failed.";
-    } finally {
-      this.running.delete(session.id);
-      if (this.deleted.has(session.id)) return;
-      if (!cancelled) cancelled = this.cancelled.delete(session.id);
-      if (thread.id) await this.sessions.update(session.id, { codexThreadId: thread.id });
-      const text = [...agentMessages.values()].join("\n").trim();
-      await this.append(session.id, {
-        id: nanoid(),
-        role: "assistant",
-        text: text || failure || (cancelled ? "Codex run cancelled." : "Codex run finished without a response."),
-        createdAt: Date.now(),
-      });
-      await this.sessions.update(session.id, { status: failure ? "error" : "idle" });
-      try {
-        this.events.publish(session.id, { type: "git.state.updated", state: await this.git.state(session.cwd) });
-      } catch (error) {
-        this.events.publish(session.id, { type: "codex.event", payload: { type: "git.refresh.failed", message: error instanceof Error ? error.message : "Git refresh failed." } });
-      }
-    }
   }
 }
