@@ -66,8 +66,11 @@ export class JobRunner {
       stderr: (text) => this.events.publish(session.id, { type: "job.stderr", jobId: id, text }),
     });
     child.on("error", (error) => {
-      job.stderr.push(`${error.message}\n`);
+      const text = `${error.message}\n`;
+      job.stderr.push(text);
       job.status = "failed";
+      void this.persist();
+      this.events.publish(session.id, { type: "job.stderr", jobId: id, text });
     });
     child.on("close", async (exitCode) => {
       clearTimeout(timeout);

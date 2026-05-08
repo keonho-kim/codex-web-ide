@@ -62,10 +62,17 @@ export class ServiceRunner {
         this.events.publish(session.id, { type: "service.stderr", serviceId: id, text });
       },
     });
+    child.on("error", (error) => {
+      const text = `${error.message}\n`;
+      service.stderr.push(text);
+      if (service.status !== "stopped") service.status = "failed";
+      void this.persist();
+      this.events.publish(session.id, { type: "service.stderr", serviceId: id, text });
+    });
     child.on("close", () => {
       this.processes.delete(id);
       const current = this.services.get(id);
-      if (current && current.status !== "stopped") current.status = "failed";
+      if (current && current.status !== "stopped" && current.status !== "failed") current.status = "failed";
       void this.persist();
       this.events.publish(session.id, { type: "service.stopped", serviceId: id });
     });

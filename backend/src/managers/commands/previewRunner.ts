@@ -74,11 +74,18 @@ export class PreviewRunner {
         this.events.publish(session.id, { type: "preview.stderr", previewId: id, text });
       },
     });
+    child.on("error", (error) => {
+      const text = `${error.message}\n`;
+      preview.stderr.push(text);
+      if (preview.status !== "stopped") preview.status = "failed";
+      void this.persist();
+      this.events.publish(session.id, { type: "preview.stderr", previewId: id, text });
+    });
     child.on("close", () => {
       this.ports.release(port);
       this.processes.delete(id);
       const current = this.previews.get(id);
-      if (current && current.status !== "stopped") current.status = "failed";
+      if (current && current.status !== "stopped" && current.status !== "failed") current.status = "failed";
       void this.persist();
       this.events.publish(session.id, { type: "preview.stopped", previewId: id });
     });
