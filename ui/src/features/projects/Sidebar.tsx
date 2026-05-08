@@ -4,6 +4,7 @@ import type { Project, Session, WorkspaceSettings } from "../../lib/types";
 import { ProjectList } from "./ProjectList";
 import { SessionList } from "./SessionList";
 import { SkillList } from "./SkillList";
+import { ThreadList } from "./ThreadList";
 import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
 
 export function Sidebar({
@@ -64,6 +65,8 @@ export function Sidebar({
       <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
       <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
+      <SectionTitle label="Threads" />
+      <ThreadList sessionId={activeSessionId} />
       <SectionTitle label="Skills" />
       <SkillList sessionId={activeSessionId} />
       <SectionTitle label="Settings" />

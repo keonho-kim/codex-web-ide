@@ -1,5 +1,6 @@
 export type {
   CodexMessage,
+  CodexThreadRecord,
   ComposerMention,
   FileTreeNode,
   GitFileStatus,

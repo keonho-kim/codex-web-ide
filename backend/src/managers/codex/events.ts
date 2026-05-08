@@ -16,6 +16,7 @@ export async function consumeCodexEvents({
   sessions,
   thread,
   appendAssistantMessage,
+  updateThreadId,
 }: {
   events: EventBus;
   eventStream: AsyncGenerator<ThreadEvent>;
@@ -27,6 +28,7 @@ export async function consumeCodexEvents({
   sessions: SessionManager;
   thread: Thread;
   appendAssistantMessage(text: string): Promise<void>;
+  updateThreadId(codexThreadId: string): Promise<void>;
 }) {
   const agentMessages = new Map<string, string>();
   let failure: string | undefined;
@@ -35,7 +37,7 @@ export async function consumeCodexEvents({
     for await (const event of eventStream) {
       events.publish(session.id, { type: "codex.event", payload: event });
       if (event.type === "thread.started") {
-        await sessions.update(session.id, { codexThreadId: event.thread_id });
+        await updateThreadId(event.thread_id);
       }
       if ((event.type === "item.updated" || event.type === "item.completed") && event.item.type === "agent_message") {
         agentMessages.set(event.item.id, event.item.text);
@@ -54,7 +56,7 @@ export async function consumeCodexEvents({
     markNotRunning();
     if (isDeleted()) return;
     if (!cancelled) cancelled = markCancelled();
-    if (thread.id) await sessions.update(session.id, { codexThreadId: thread.id });
+    if (thread.id) await updateThreadId(thread.id);
     const text = [...agentMessages.values()].join("\n").trim();
     await appendAssistantMessage(text || failure || (cancelled ? "Codex run cancelled." : "Codex run finished without a response."));
     await sessions.update(session.id, { status: failure ? "error" : "idle" });

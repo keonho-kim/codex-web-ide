@@ -8,6 +8,7 @@ export type Session = {
   cwd: string;
   createdAt: number;
   lastActiveAt: number;
+  activeCodexThreadId?: string;
   codexThreadId?: string;
   status: SessionStatus;
 };
@@ -120,6 +121,15 @@ export type CodexMessage = {
   role: "user" | "assistant" | "system";
   text: string;
   createdAt: number;
+};
+
+export type CodexThreadRecord = {
+  id: string;
+  sessionId: string;
+  title: string;
+  codexThreadId?: string;
+  createdAt: number;
+  lastActiveAt: number;
 };
 
 export type SessionEvent =

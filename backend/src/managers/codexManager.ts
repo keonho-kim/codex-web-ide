@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../events/eventBus";
 import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
-import type { CodexMessage, ComposerMention, Session } from "../shared/types";
+import type { CodexMessage, CodexThreadRecord, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
 import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
 import { validateCodexMentions } from "./codex/mentions";
@@ -32,24 +32,49 @@ export class CodexManager {
     this.messages = await this.history.hydrate(sessions);
   }
 
-  listMessages(sessionId: string) {
-    return this.messages.get(sessionId) ?? [];
+  async listThreads(session: Session) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const activeThread = this.activeThreadFrom(session, threads);
+    if (session.activeCodexThreadId !== activeThread.id) await this.sessions.update(session.id, { activeCodexThreadId: activeThread.id });
+    return { threads, activeThreadId: activeThread.id };
   }
 
-  resume(sessionId: string) {
+  async createThread(session: Session, title?: string) {
+    const thread = await this.history.createThread(session.id, title);
+    await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: undefined });
+    return thread;
+  }
+
+  async selectThread(session: Session, threadId: string) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const thread = threads.find((item) => item.id === threadId);
+    if (!thread) throw new Error("Codex thread not found");
+    await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: thread.codexThreadId });
+    return thread;
+  }
+
+  async listMessages(session: Session) {
+    const thread = await this.activeThread(session);
+    return this.messages.get(thread.id) ?? [];
+  }
+
+  async resume(session: Session) {
+    const thread = await this.activeThread(session);
     return {
-      running: this.running.has(sessionId),
-      messages: this.listMessages(sessionId),
+      running: this.running.has(session.id),
+      messages: this.messages.get(thread.id) ?? [],
+      thread,
     };
   }
 
   async run(session: Session, input: { prompt: string; mentions: ComposerMention[] }) {
     if (this.running.has(session.id)) throw new Error("Codex is already running for this session");
     await validateCodexMentions(session.cwd, input.mentions);
+    const activeThread = await this.activeThread(session);
 
     const prompt = buildCodexPrompt(input.prompt, input.mentions);
-    await this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
-    const thread = this.threadFor(session);
+    await this.append(session.id, activeThread.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
+    const thread = this.threadFor(session, activeThread);
     const controller = new AbortController();
     this.running.set(session.id, { controller });
     await this.sessions.update(session.id, { status: "running" });
@@ -71,10 +96,16 @@ export class CodexManager {
       session,
       sessions: this.sessions,
       thread,
-      appendAssistantMessage: (text) => this.append(session.id, createAssistantMessage(text)),
+      appendAssistantMessage: (text) => this.append(session.id, activeThread.id, createAssistantMessage(text)),
+      updateThreadId: async (codexThreadId) => {
+        activeThread.codexThreadId = codexThreadId;
+        activeThread.lastActiveAt = Date.now();
+        await this.history.updateThread(activeThread);
+        await this.sessions.update(session.id, { activeCodexThreadId: activeThread.id, codexThreadId });
+      },
     });
 
-    return { running: true, threadId: thread.id ?? session.codexThreadId };
+    return { running: true, threadId: activeThread.id, codexThreadId: thread.id ?? activeThread.codexThreadId };
   }
 
   cancel(sessionId: string) {
@@ -89,23 +120,25 @@ export class CodexManager {
   async deleteSession(sessionId: string) {
     this.deleted.add(sessionId);
     this.cancel(sessionId);
-    this.messages.delete(sessionId);
-    this.threads.delete(sessionId);
+    for (const thread of await this.history.listThreads(sessionId)) {
+      this.messages.delete(thread.id);
+      this.threads.delete(thread.id);
+    }
     this.cancelled.delete(sessionId);
     await this.history.delete(sessionId);
   }
 
-  private async append(sessionId: string, message: CodexMessage) {
+  private async append(sessionId: string, threadId: string, message: CodexMessage) {
     if (this.deleted.has(sessionId)) return;
-    const messages = this.messages.get(sessionId) ?? [];
+    const messages = this.messages.get(threadId) ?? [];
     const next = [...messages, message].slice(-200);
-    this.messages.set(sessionId, next);
-    await this.history.save(sessionId, next);
+    this.messages.set(threadId, next);
+    await this.history.save(threadId, next);
     this.events.publish(sessionId, { type: "codex.event", payload: { message } });
   }
 
-  private threadFor(session: Session) {
-    const existing = this.threads.get(session.id);
+  private threadFor(session: Session, threadRecord: CodexThreadRecord) {
+    const existing = this.threads.get(threadRecord.id);
     if (existing) return existing;
     const options = {
       workingDirectory: session.cwd,
@@ -113,8 +146,19 @@ export class CodexManager {
       approvalPolicy: "on-request" as const,
       skipGitRepoCheck: true,
     };
-    const thread = session.codexThreadId ? this.codex.resumeThread(session.codexThreadId, options) : this.codex.startThread(options);
-    this.threads.set(session.id, thread);
+    const thread = threadRecord.codexThreadId ? this.codex.resumeThread(threadRecord.codexThreadId, options) : this.codex.startThread(options);
+    this.threads.set(threadRecord.id, thread);
     return thread;
+  }
+
+  private async activeThread(session: Session) {
+    const threads = await this.history.ensureDefaultThread(session);
+    const thread = this.activeThreadFrom(session, threads);
+    if (session.activeCodexThreadId !== thread.id) await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: thread.codexThreadId });
+    return thread;
+  }
+
+  private activeThreadFrom(session: Session, threads: CodexThreadRecord[]) {
+    return threads.find((thread) => thread.id === session.activeCodexThreadId) ?? threads[0];
   }
 }

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { SectionTitle } from "../../components/SectionTitle";
 import { api } from "../../lib/api";
-import type { CodexMessage } from "../../lib/types";
+import type { CodexMessage, CodexThreadRecord } from "../../lib/types";
 import { Composer } from "./Composer";
 
 export function CodexPane({ sessionId }: { sessionId?: string }) {
@@ -12,14 +12,14 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
   const status = useQuery({
     queryKey: ["codex", sessionId, "resume"],
-    queryFn: () => api<{ running: boolean; messages: CodexMessage[] }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
+    queryFn: () => api<{ running: boolean; messages: CodexMessage[]; thread: CodexThreadRecord }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
     enabled: Boolean(sessionId),
     refetchInterval: (query) => (query.state.data?.running ? 1000 : false),
   });
 
   return (
     <section className="grid h-full min-w-0 grid-rows-[auto_minmax(0,1fr)_112px] overflow-hidden border-r border-hairline bg-canvas p-2.5">
-      <SectionTitle label="Codex" />
+      <SectionTitle label={status.data?.thread.title || "Codex"} />
       <div className="overflow-auto rounded-md border border-subtle p-2.5">
         {messages.data?.length ? (
           messages.data.map((message) => (

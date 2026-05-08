@@ -53,6 +53,10 @@ export const codexRunSchema = z.object({
     .default([]),
 });
 
+export const createCodexThreadSchema = z.object({
+  title: z.string().min(1).optional(),
+});
+
 export const gitPathSchema = z.object({
   path: z.string().optional(),
 });
