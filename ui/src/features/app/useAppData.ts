@@ -35,6 +35,19 @@ export function useAppData() {
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
+  const deleteProject = useMutation({
+    mutationFn: (id: string) => api<Project>(`/api/projects/${id}`, { method: "DELETE" }),
+    onSuccess: async (_project, id) => {
+      if (activeProjectId === id) {
+        setActiveProjectId(undefined);
+        setActiveSessionId(undefined);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace-settings"] }),
+      ]);
+    },
+  });
 
   const updateSettings = useMutation({
     mutationFn: (next: WorkspaceSettings) => api<WorkspaceSettings>("/api/workspace/settings", { method: "PUT", body: next }),
@@ -74,6 +87,7 @@ export function useAppData() {
       setActiveProjectId(id);
       openProject.mutate(id);
     },
+    deleteProject: (id: string) => deleteProject.mutate(id),
     deleteSession: (id: string) => deleteSession.mutate(id),
     updateSettings: (next: WorkspaceSettings) => updateSettings.mutate(next),
   };

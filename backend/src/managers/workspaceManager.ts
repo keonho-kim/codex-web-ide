@@ -76,6 +76,23 @@ export class WorkspaceManager {
     return project;
   }
 
+  async removeProject(id: string) {
+    const projects = await this.listProjects();
+    const project = projects.find((item) => item.id === id);
+    if (!project) throw new Error("Project not found");
+    await this.store.write(
+      "projects.json",
+      projects.filter((item) => item.id !== id),
+    );
+    const settings = await this.getSettings();
+    await this.updateSettings({
+      ...settings,
+      activeProjectId: settings.activeProjectId === id ? undefined : settings.activeProjectId,
+      recentProjectIds: settings.recentProjectIds.filter((item) => item !== id),
+    });
+    return project;
+  }
+
   async findProject(id: string) {
     return (await this.listProjects()).find((item) => item.id === id) ?? null;
   }

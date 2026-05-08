@@ -36,6 +36,9 @@ export function App() {
         sessions={app.sessions}
         activeProjectId={app.activeProjectId}
         activeSessionId={app.activeSessionId}
+        onProjectDelete={(id) => {
+          if (confirm("Remove this project from the workspace?")) app.deleteProject(id);
+        }}
         onProjectSelect={app.selectProject}
         onSessionSelect={app.setActiveSessionId}
         onSessionDelete={(id) => {

@@ -13,6 +13,7 @@ export function Sidebar({
   sessions,
   activeProjectId,
   activeSessionId,
+  onProjectDelete,
   onProjectSelect,
   onSessionSelect,
   onSessionDelete,
@@ -26,6 +27,7 @@ export function Sidebar({
   sessions: Session[];
   activeProjectId?: string;
   activeSessionId?: string;
+  onProjectDelete(id: string): void;
   onProjectSelect(id: string): void;
   onSessionSelect(id: string): void;
   onSessionDelete(id: string): void;
@@ -53,7 +55,7 @@ export function Sidebar({
           <PanelLeftClose data-icon="inline-start" />
         </Button>
       </div>
-      <ProjectList projects={projects} activeId={activeProjectId} onSelect={onProjectSelect} />
+      <ProjectList projects={projects} activeId={activeProjectId} onDelete={onProjectDelete} onSelect={onProjectSelect} />
       <SectionTitle label="Sessions" />
       <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
       <SectionTitle label="Threads" />

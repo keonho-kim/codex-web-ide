@@ -21,4 +21,7 @@ export function registerWorkspaceRoutes(app: Express, { auth, workspace }: AppSe
   app.post("/api/projects/:id/open", asyncHandler(async (req, res) => {
     res.json(await workspace.openProject(req.params.id));
   }));
+  app.delete("/api/projects/:id", asyncHandler(async (req, res) => {
+    res.json(await workspace.removeProject(req.params.id));
+  }));
 }
