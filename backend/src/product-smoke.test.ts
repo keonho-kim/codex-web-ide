@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
+import { registerFileRoutes } from "./api/fileRoutes";
 import { registerGitRoutes } from "./api/gitRoutes";
 import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
@@ -434,6 +435,39 @@ describe("product smoke coverage", () => {
 
     expect(serialized).toContain("deep.ts");
     expect(serialized).not.toContain("hidden.ts");
+  });
+
+  test("publishes file changes after mutating File API calls", async () => {
+    const root = await tempDir();
+    const session = testSession(root);
+    const events = new EventBus();
+    const published: Array<{ type: string; path?: string }> = [];
+    events.subscribe(session.id, (event) => published.push(event));
+    const app = express();
+    app.use(express.json());
+    registerFileRoutes(app, {
+      events,
+      files: new FileManager(events),
+      sessions: { get: async () => session } as never,
+    } as unknown as AppServices);
+    const port = await freePort();
+    const server = await new Promise<net.Server>((resolve, reject) => {
+      const listener = app.listen(port, "127.0.0.1", () => resolve(listener));
+      listener.once("error", reject);
+    });
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/sessions/${session.id}/files/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: "src/app.ts", content: "export {}\n" }),
+      });
+
+      expect(response.status).toBe(201);
+      await expect(fs.readFile(path.join(root, "src", "app.ts"), "utf8")).resolves.toBe("export {}\n");
+      expect(published).toContainEqual(expect.objectContaining({ type: "file.changed", path: "src/app.ts" }));
+    } finally {
+      await closeServer(server);
+    }
   });
 
   test("proxies HTTP and preview WebSockets through Bun front proxy", async () => {
