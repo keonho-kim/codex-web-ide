@@ -15,6 +15,19 @@ export function safePath(root: string, input = ".") {
   return resolved;
 }
 
+async function safeFsPath(root: string, input = ".") {
+  const resolved = safePath(root, input);
+  const realRoot = await fs.realpath(root);
+  const existing = await realpathIfExists(resolved);
+  if (existing) {
+    assertInside(realRoot, existing);
+    return resolved;
+  }
+  const parent = await nearestExistingParent(resolved);
+  assertInside(realRoot, await fs.realpath(parent));
+  return resolved;
+}
+
 export class FileManager {
   private watchers = new Map<string, FSWatcher>();
 
@@ -42,7 +55,7 @@ export class FileManager {
   }
 
   async tree(root: string, input = ".", depth = 3): Promise<FileTreeNode[]> {
-    const base = safePath(root, input);
+    const base = await safeFsPath(root, input);
     const entries = await fs.readdir(base, { withFileTypes: true });
     const visible = entries
       .filter((entry) => !entry.name.startsWith(".") || [".agents", ".github"].includes(entry.name))
@@ -65,17 +78,17 @@ export class FileManager {
   }
 
   async read(root: string, input: string) {
-    return fs.readFile(safePath(root, input), "utf8");
+    return fs.readFile(await safeFsPath(root, input), "utf8");
   }
 
   async write(root: string, input: string, content: string) {
-    const file = safePath(root, input);
+    const file = await safeFsPath(root, input);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, content);
   }
 
   async create(root: string, input: string, isDirectory: boolean, content = "") {
-    const target = safePath(root, input);
+    const target = await safeFsPath(root, input);
     if (isDirectory) {
       await fs.mkdir(target, { recursive: true });
     } else {
@@ -85,11 +98,11 @@ export class FileManager {
   }
 
   async rename(root: string, from: string, to: string) {
-    await fs.rename(safePath(root, from), safePath(root, to));
+    await fs.rename(await safeFsPath(root, from), await safeFsPath(root, to));
   }
 
   async delete(root: string, input: string) {
-    const target = safePath(root, input);
+    const target = await safeFsPath(root, input);
     if (target === path.resolve(root)) throw new Error("Cannot delete session root");
     await fs.rm(target, { recursive: true, force: false });
   }
@@ -113,5 +126,35 @@ export class FileManager {
     }
     await walk(root, 5);
     return results;
+  }
+}
+
+async function realpathIfExists(input: string) {
+  try {
+    return await fs.realpath(input);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function nearestExistingParent(input: string) {
+  let current = path.dirname(input);
+  for (;;) {
+    try {
+      const stat = await fs.stat(current);
+      if (stat.isDirectory()) return current;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const next = path.dirname(current);
+    if (next === current) throw new Error("No existing parent directory");
+    current = next;
+  }
+}
+
+function assertInside(realRoot: string, realTarget: string) {
+  if (realTarget !== realRoot && !realTarget.startsWith(realRoot + path.sep)) {
+    throw new Error("Path escape blocked");
   }
 }
