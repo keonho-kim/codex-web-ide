@@ -448,14 +448,19 @@ describe("product smoke coverage", () => {
     const root = await tempDir();
     await fs.mkdir(path.join(root, "a", "b", "c", "d", "e"), { recursive: true });
     await fs.writeFile(path.join(root, "a", "b", "c", "d", "e", "deep.ts"), "export {}\n");
+    await fs.mkdir(path.join(root, "a", "b", "c", "d", "e", "f", "g"), { recursive: true });
+    await fs.writeFile(path.join(root, "a", "b", "c", "d", "e", "f", "g", "mention-target.ts"), "export {}\n");
     await fs.mkdir(path.join(root, "node_modules", "pkg"), { recursive: true });
     await fs.writeFile(path.join(root, "node_modules", "pkg", "hidden.ts"), "hidden\n");
 
-    const tree = await new FileManager(new EventBus()).tree(root);
+    const files = new FileManager(new EventBus());
+    const tree = await files.tree(root);
     const serialized = JSON.stringify(tree);
+    const mentions = await files.search(root, "mention-target");
 
     expect(serialized).toContain("deep.ts");
     expect(serialized).not.toContain("hidden.ts");
+    expect(mentions).toContainEqual(expect.objectContaining({ path: "a/b/c/d/e/f/g/mention-target.ts" }));
   });
 
   test("publishes file changes after mutating File API calls", async () => {
