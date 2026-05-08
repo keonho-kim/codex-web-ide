@@ -6,6 +6,7 @@ import type { SessionManager } from "./sessionManager";
 import { safePath } from "./fileManager";
 import type { CodexMessage, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
+import { buildCodexPrompt } from "./codex/prompt";
 
 type RunningTurn = {
   controller: AbortController;
@@ -47,7 +48,7 @@ export class CodexManager {
       if (mention.type === "file") safePath(session.cwd, mention.path);
     }
 
-    const prompt = buildPrompt(input.prompt, input.mentions);
+    const prompt = buildCodexPrompt(input.prompt, input.mentions);
     await this.append(session.id, { id: nanoid(), role: "user", text: input.prompt, createdAt: Date.now() });
     const thread = this.threadFor(session);
     const controller = new AbortController();
@@ -150,21 +151,4 @@ export class CodexManager {
       }
     }
   }
-}
-
-function buildPrompt(prompt: string, mentions: ComposerMention[]) {
-  const mentionText = mentions
-    .map((mention) => (mention.type === "file" ? `- @${mention.path}${mention.isDirectory ? " (directory)" : ""}` : `- $${mention.name}`))
-    .join("\n");
-  return [
-    "Command execution policy:",
-    "- Use `cw job <command...>` for commands expected to finish.",
-    "- Use `cw preview <command...>` for browser-viewable web apps.",
-    "- Use `cw service <command...>` for long-running background services.",
-    "- Do not run destructive Git commands without explicit user approval.",
-    mentionText ? `\nSelected context:\n${mentionText}` : "",
-    `\nUser request:\n${prompt}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
 }
