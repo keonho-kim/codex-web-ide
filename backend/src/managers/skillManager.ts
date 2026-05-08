@@ -2,16 +2,16 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { ComposerMention } from "../shared/types";
-import { safePath } from "./fileManager";
+import { safeFsPath } from "./files/path";
 
 type SkillCandidate = Extract<ComposerMention, { type: "skill" }>;
 
 export class SkillManager {
   async search(sessionCwd: string, query: string): Promise<SkillCandidate[]> {
     const roots = [
-      safePath(sessionCwd, ".agents/skills"),
+      await localSkillRoot(sessionCwd),
       path.join(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"), "skills"),
-    ];
+    ].filter((root): root is string => Boolean(root));
     const skills = (await Promise.all(roots.map((root) => this.readSkillRoot(root)))).flat();
     const needle = query.trim().toLowerCase();
     return skills
@@ -36,6 +36,14 @@ export class SkillManager {
         }),
     );
     return skills;
+  }
+}
+
+async function localSkillRoot(sessionCwd: string) {
+  try {
+    return await safeFsPath(sessionCwd, ".agents/skills");
+  } catch {
+    return null;
   }
 }
 
