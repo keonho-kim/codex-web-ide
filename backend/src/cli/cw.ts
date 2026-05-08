@@ -44,9 +44,9 @@ switch (command) {
 
 function printHelp() {
   console.log(`Usage:
-  cw start [--host 127.0.0.1] [--port 17321]
+  cw start [--host 127.0.0.1] [--port 17321] [--preview-port-start 17330] [--preview-port-end 17399]
   cw stop
-  cw restart [--host 127.0.0.1] [--port 17321]
+  cw restart [--host 127.0.0.1] [--port 17321] [--preview-port-start 17330] [--preview-port-end 17399]
   cw doctor
   cw status
   cw open

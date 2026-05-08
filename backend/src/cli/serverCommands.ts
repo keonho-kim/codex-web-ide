@@ -10,9 +10,14 @@ import { initProject } from "./projectInit";
 export async function start(input: string[]) {
   const host = readFlag(input, "--host") || undefined;
   const port = numberFlag(input, "--port");
-  await printStartupDoctorWarnings();
-  const server = await startServer({ host, port });
-  await persistRuntimeSettings(server.host, server.port);
+  const previewPortStart = numberFlag(input, "--preview-port-start");
+  const previewPortEnd = numberFlag(input, "--preview-port-end");
+  if (previewPortStart && previewPortEnd && previewPortStart > previewPortEnd) {
+    throw new Error("--preview-port-start must be less than or equal to --preview-port-end.");
+  }
+  await printStartupDoctorWarnings({ previewPortStart, previewPortEnd });
+  const server = await startServer({ host, port, previewPortStart, previewPortEnd });
+  await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
   await writePidFile(server.port, server.host);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
   if (server.auth?.enabled) {
@@ -62,13 +67,19 @@ export async function update() {
   console.log("  bun update -g @local/codex-web");
 }
 
-async function printStartupDoctorWarnings() {
+async function printStartupDoctorWarnings({
+  previewPortEnd,
+  previewPortStart,
+}: {
+  previewPortEnd?: number;
+  previewPortStart?: number;
+}) {
   const store = new JsonStore();
   await store.ensure();
   const settings = await new WorkspaceManager(store).getSettings();
   const warnings = await collectStartupDoctorWarnings({
-    previewStart: Number(process.env.CODEX_WEB_PREVIEW_PORT_START || settings.previewPortStart),
-    previewEnd: Number(process.env.CODEX_WEB_PREVIEW_PORT_END || settings.previewPortEnd),
+    previewStart: previewPortStart ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_START || settings.previewPortStart),
+    previewEnd: previewPortEnd ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_END || settings.previewPortEnd),
   });
   if (warnings.length === 0) return;
   console.log("Startup warnings:");
@@ -84,13 +95,22 @@ function readFlag(input: string[], name: string) {
 
 function numberFlag(input: string[], name: string) {
   const value = readFlag(input, name);
-  return value ? Number(value) : undefined;
+  if (!value) return undefined;
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 1 || number > 65535) throw new Error(`${name} must be a port between 1 and 65535.`);
+  return number;
 }
 
-async function persistRuntimeSettings(host: string, port: number) {
+async function persistRuntimeSettings(host: string, port: number, previewPortStart?: number, previewPortEnd?: number) {
   const store = new JsonStore();
   await store.ensure();
   const workspace = new WorkspaceManager(store);
   const settings = await workspace.getSettings();
-  await workspace.updateSettings({ ...settings, host, port });
+  await workspace.updateSettings({
+    ...settings,
+    host,
+    port,
+    previewPortStart: previewPortStart ?? settings.previewPortStart,
+    previewPortEnd: previewPortEnd ?? settings.previewPortEnd,
+  });
 }
