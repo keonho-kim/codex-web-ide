@@ -29,7 +29,7 @@ export class JsonStore {
   async write<T>(name: string, value: T): Promise<void> {
     await this.ensure();
     const file = path.join(this.root, name);
-    const temp = `${file}.tmp`;
+    const temp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
     await fs.writeFile(temp, JSON.stringify(value, null, 2));
     await fs.rename(temp, file);
   }

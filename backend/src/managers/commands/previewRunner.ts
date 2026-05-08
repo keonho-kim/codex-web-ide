@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../../events/eventBus";
 import type { PreviewInstance, Session } from "../../shared/types";
 import { waitForPreviewHealth } from "./health";
+import type { CommandHistoryStore } from "./historyStore";
 import { resolveCommandCwd } from "./path";
 import { PortAllocator } from "./portAllocator";
 import { preparePreviewLaunch } from "./runtimeAdapter";
@@ -15,7 +16,16 @@ export class PreviewRunner {
     private events: EventBus,
     private ports: PortAllocator,
     private processes: ProcessRegistry,
+    private history?: CommandHistoryStore,
   ) {}
+
+  async hydrate() {
+    const previews = (await this.history?.loadPreviews()) ?? [];
+    for (const preview of previews) {
+      this.previews.set(preview.id, ["running", "starting"].includes(preview.status) ? { ...preview, pid: 0, status: "stopped" } : preview);
+    }
+    await this.persist();
+  }
 
   list(sessionId: string) {
     return [...this.previews.values()].filter((preview) => preview.sessionId === sessionId);
@@ -40,6 +50,7 @@ export class PreviewRunner {
       stderr: [],
     };
     this.previews.set(id, preview);
+    void this.persist();
 
     const launch = preparePreviewLaunch(command, port);
     const child = spawn(launch.command[0], launch.command.slice(1), {
@@ -54,11 +65,13 @@ export class PreviewRunner {
     child.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       preview.stderr.push(text);
+      void this.persist();
       this.events.publish(session.id, { type: "preview.stderr", previewId: id, text });
     });
     child.stdout.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       preview.stdout.push(text);
+      void this.persist();
       this.events.publish(session.id, { type: "preview.stdout", previewId: id, text });
     });
     child.on("close", () => {
@@ -66,6 +79,7 @@ export class PreviewRunner {
       this.processes.delete(id);
       const current = this.previews.get(id);
       if (current && current.status !== "stopped") current.status = "failed";
+      void this.persist();
       this.events.publish(session.id, { type: "preview.stopped", previewId: id });
     });
 
@@ -79,6 +93,7 @@ export class PreviewRunner {
     preview.status = "stopped";
     this.ports.release(preview.port);
     this.processes.kill(id);
+    void this.persist();
     this.events.publish(sessionId, { type: "preview.stopped", previewId: id });
     return preview;
   }
@@ -102,6 +117,11 @@ export class PreviewRunner {
     preview.lastHealthCheckAt = Date.now();
     if (preview.status !== "starting") return;
     preview.status = healthy ? "running" : "failed";
+    void this.persist();
     this.events.publish(sessionId, { type: "preview.health.updated", preview });
+  }
+
+  private persist() {
+    return this.history?.savePreviews([...this.previews.values()]) ?? Promise.resolve();
   }
 }

@@ -30,6 +30,8 @@ export async function createApp(options: ServerOptions = {}) {
   await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1"));
   const files = new FileManager(events);
   const git = new GitManager();
+  const commands = new CommandManager(events, git, store);
+  await commands.hydrate();
   const services = {
     events,
     workspace,
@@ -38,7 +40,7 @@ export async function createApp(options: ServerOptions = {}) {
     git,
     skills: new SkillManager(),
     codex: new CodexManager(events, git),
-    commands: new CommandManager(events, git),
+    commands,
     adapter: createPlatformAdapter(),
     auth,
   };

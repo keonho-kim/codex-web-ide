@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import type { EventBus } from "../../events/eventBus";
 import type { Job, Session } from "../../shared/types";
 import type { GitManager } from "../gitManager";
+import type { CommandHistoryStore } from "./historyStore";
 import { resolveCommandCwd } from "./path";
 import { ProcessRegistry } from "./processRegistry";
 
@@ -15,7 +16,16 @@ export class JobRunner {
     private events: EventBus,
     private git: GitManager,
     private processes: ProcessRegistry,
+    private history?: CommandHistoryStore,
   ) {}
+
+  async hydrate() {
+    const jobs = (await this.history?.loadJobs()) ?? [];
+    for (const job of jobs) {
+      this.jobs.set(job.id, job.status === "running" ? { ...job, status: "failed", finishedAt: job.finishedAt ?? Date.now() } : job);
+    }
+    await this.persist();
+  }
 
   list(sessionId: string) {
     return [...this.jobs.values()].filter((job) => job.sessionId === sessionId);
@@ -41,6 +51,7 @@ export class JobRunner {
       stderr: [],
     };
     this.jobs.set(id, job);
+    void this.persist();
     this.events.publish(session.id, { type: "job.started", job });
 
     const child = spawn(command[0], command.slice(1), { cwd, env: process.env, shell: false });
@@ -70,6 +81,7 @@ export class JobRunner {
       if (job.status !== "cancelled") job.status = exitCode === 0 ? "succeeded" : "failed";
       job.exitCode = exitCode ?? undefined;
       job.finishedAt = Date.now();
+      void this.persist();
       this.events.publish(session.id, { type: "job.finished", jobId: id, exitCode: exitCode ?? -1 });
       this.events.publish(session.id, { type: "git.state.updated", state: await this.git.state(session.cwd) });
     });
@@ -82,6 +94,11 @@ export class JobRunner {
     job.status = "cancelled";
     job.finishedAt = Date.now();
     this.processes.kill(id);
+    void this.persist();
     return job;
+  }
+
+  private persist() {
+    return this.history?.saveJobs([...this.jobs.values()]) ?? Promise.resolve();
   }
 }

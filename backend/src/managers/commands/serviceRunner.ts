@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { nanoid } from "nanoid";
 import type { EventBus } from "../../events/eventBus";
 import type { ServiceInstance, Session } from "../../shared/types";
+import type { CommandHistoryStore } from "./historyStore";
 import { resolveCommandCwd } from "./path";
 import { ProcessRegistry } from "./processRegistry";
 
@@ -11,7 +12,16 @@ export class ServiceRunner {
   constructor(
     private events: EventBus,
     private processes: ProcessRegistry,
+    private history?: CommandHistoryStore,
   ) {}
+
+  async hydrate() {
+    const services = (await this.history?.loadServices()) ?? [];
+    for (const service of services) {
+      this.services.set(service.id, ["running", "starting"].includes(service.status) ? { ...service, pid: 0, status: "stopped" } : service);
+    }
+    await this.persist();
+  }
 
   list(sessionId: string) {
     return [...this.services.values()].filter((service) => service.sessionId === sessionId);
@@ -36,23 +46,27 @@ export class ServiceRunner {
     service.pid = child.pid ?? 0;
     service.status = "running";
     this.services.set(id, service);
+    void this.persist();
     this.processes.set(id, { process: child, command, cwd });
     this.events.publish(session.id, { type: "service.started", service });
 
     child.stdout.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       service.stdout.push(text);
+      void this.persist();
       this.events.publish(session.id, { type: "service.stdout", serviceId: id, text });
     });
     child.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       service.stderr.push(text);
+      void this.persist();
       this.events.publish(session.id, { type: "service.stderr", serviceId: id, text });
     });
     child.on("close", () => {
       this.processes.delete(id);
       const current = this.services.get(id);
       if (current && current.status !== "stopped") current.status = "failed";
+      void this.persist();
       this.events.publish(session.id, { type: "service.stopped", serviceId: id });
     });
     return service;
@@ -63,6 +77,7 @@ export class ServiceRunner {
     if (!service || service.sessionId !== sessionId) throw new Error("Service not found");
     service.status = "stopped";
     this.processes.kill(id);
+    void this.persist();
     this.events.publish(sessionId, { type: "service.stopped", serviceId: id });
     return service;
   }
@@ -74,5 +89,9 @@ export class ServiceRunner {
     const { command, cwd } = service;
     this.stop(session.id, id);
     return this.start(session, command, { cwd, restartCount });
+  }
+
+  private persist() {
+    return this.history?.saveServices([...this.services.values()]) ?? Promise.resolve();
   }
 }

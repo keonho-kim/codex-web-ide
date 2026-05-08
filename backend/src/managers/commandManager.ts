@@ -1,6 +1,8 @@
 import type { EventBus } from "../events/eventBus";
 import type { Session } from "../shared/types";
 import type { GitManager } from "./gitManager";
+import type { JsonStore } from "./storage";
+import { CommandHistoryStore } from "./commands/historyStore";
 import { JobRunner } from "./commands/jobRunner";
 import { PortAllocator } from "./commands/portAllocator";
 import { PreviewRunner } from "./commands/previewRunner";
@@ -18,13 +20,19 @@ export class CommandManager {
   constructor(
     events: EventBus,
     git: GitManager,
+    store?: JsonStore,
     previewPortStart = Number(process.env.CODEX_WEB_PREVIEW_PORT_START || 17330),
     previewPortEnd = Number(process.env.CODEX_WEB_PREVIEW_PORT_END || 17399),
   ) {
     const ports = new PortAllocator(previewPortStart, previewPortEnd);
-    this.jobs = new JobRunner(events, git, this.processes);
-    this.previews = new PreviewRunner(events, ports, this.processes);
-    this.services = new ServiceRunner(events, this.processes);
+    const history = store ? new CommandHistoryStore(store) : undefined;
+    this.jobs = new JobRunner(events, git, this.processes, history);
+    this.previews = new PreviewRunner(events, ports, this.processes, history);
+    this.services = new ServiceRunner(events, this.processes, history);
+  }
+
+  async hydrate() {
+    await Promise.all([this.jobs.hydrate(), this.previews.hydrate(), this.services.hydrate()]);
   }
 
   listJobs(sessionId: string) {
