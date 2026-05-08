@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { expandUserPath } from "../managers/files/path";
 import { JsonStore } from "../managers/storage";
 import { WorkspaceManager } from "../managers/workspaceManager";
 
@@ -52,13 +53,13 @@ Preview processes must be started through \`cw preview\` so the UI can track por
 `;
 
 export async function initProject(input: string[]) {
-  const cwd = path.resolve(input[0] || process.cwd());
+  const cwd = path.resolve(expandUserPath(input[0] || process.cwd()));
   const store = new JsonStore();
   await store.ensure();
   const workspace = new WorkspaceManager(store);
   const project = await workspace.addProject({ cwd });
   await workspace.openProject(project.id);
-  const agentsCreated = await ensureRuntimeAgentsFile(cwd);
+  const agentsCreated = await ensureRuntimeAgentsFile(project.cwd);
   console.log(`Initialized project: ${project.name}`);
   console.log(project.cwd);
   console.log(agentsCreated ? "Created AGENTS.md with Codex Web runtime policy." : "AGENTS.md already exists; left it unchanged.");

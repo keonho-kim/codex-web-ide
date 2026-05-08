@@ -325,6 +325,27 @@ describe("product smoke coverage", () => {
     expect(await workspace.listProjects()).toHaveLength(1);
   });
 
+  test("expands home-relative project and session paths", async () => {
+    const previousHome = process.env.HOME;
+    const storeRoot = await tempDir();
+    const home = await tempDir();
+    const projectRoot = path.join(home, "projects", "app");
+    await fs.mkdir(projectRoot, { recursive: true });
+    try {
+      process.env.HOME = home;
+      const workspace = new WorkspaceManager(new JsonStore(storeRoot));
+      const sessions = new SessionManager(new JsonStore(storeRoot), workspace);
+
+      const project = await workspace.addProject({ cwd: "~/projects/app" });
+      const session = await sessions.create({ cwd: "~/projects/app" });
+
+      expect(project.cwd).toBe(await fs.realpath(projectRoot));
+      expect(session.cwd).toBe(await fs.realpath(projectRoot));
+    } finally {
+      restoreEnv("HOME", previousHome);
+    }
+  });
+
   test("initializes projects with runtime AGENTS policy", async () => {
     const home = await tempDir();
     const projectRoot = await tempDir();

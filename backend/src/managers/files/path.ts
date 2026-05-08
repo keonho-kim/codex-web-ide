@@ -1,5 +1,13 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+
+export function expandUserPath(input: string) {
+  const home = process.env.HOME || os.homedir();
+  if (input === "~") return home;
+  if (input.startsWith("~/") || input.startsWith("~\\")) return path.join(home, input.slice(2));
+  return input;
+}
 
 export function safePath(root: string, input = ".") {
   const normalizedRoot = path.resolve(root);

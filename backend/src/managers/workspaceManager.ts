@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { workspaceSettingsSchema } from "../shared/schemas";
 import type { Project, WorkspaceSettings } from "../shared/types";
 import { createPlatformAdapter } from "../platform/adapter";
+import { expandUserPath } from "./files/path";
 import { JsonStore } from "./storage";
 
 export class WorkspaceManager {
@@ -42,7 +43,7 @@ export class WorkspaceManager {
   }
 
   async addProject(input: { cwd: string; name?: string }) {
-    const cwd = await fs.realpath(path.resolve(input.cwd));
+    const cwd = await fs.realpath(path.resolve(expandUserPath(input.cwd)));
     const stat = await fs.stat(cwd);
     if (!stat.isDirectory()) throw new Error("Project path must be a directory");
     const projects = await this.listProjects();
