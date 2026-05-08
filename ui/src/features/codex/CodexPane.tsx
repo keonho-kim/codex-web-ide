@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SectionTitle } from "../../components/SectionTitle";
 import { api } from "../../lib/api";
 import type { CodexMessage, CodexThreadRecord } from "../../lib/types";
+import { CommandSuggestion } from "./CommandSuggestion";
 import { Composer } from "./Composer";
 
 export function CodexPane({ sessionId }: { sessionId?: string }) {
@@ -26,6 +27,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
             <article className="border-b border-subtle py-2 last:border-b-0" key={message.id}>
               <strong className="mb-1 block text-xs text-primary capitalize">{message.role}</strong>
               <p className="m-0 text-[13px] leading-[1.45] whitespace-pre-wrap">{message.text}</p>
+              {message.role === "assistant" ? <CommandSuggestion sessionId={sessionId} text={message.text} /> : null}
             </article>
           ))
         ) : (
