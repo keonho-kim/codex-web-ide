@@ -44,7 +44,17 @@ export const useUiStore = create<UiState>()(
       sidebarCollapsed: false,
       workbenchLayout: [18, 52, 30],
       setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
-      setActiveSessionId: (activeSessionId) => set({ activeSessionId }),
+      setActiveSessionId: (activeSessionId) =>
+        set((state) =>
+          state.activeSessionId === activeSessionId
+            ? { activeSessionId }
+            : {
+                activeSessionId,
+                activeFilePath: undefined,
+                openFilePaths: [],
+                selectedPreviewId: undefined,
+              },
+        ),
       setActiveFilePath: (activeFilePath) =>
         set((state) => ({
           activeFilePath,
