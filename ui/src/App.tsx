@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomPanel } from "./features/BottomPanel";
 import { ProjectCreator, SessionCreator, Sidebar } from "./features/projects/ProjectControls";
 import { Workbench } from "./features/Workbench";
 import { api } from "./lib/api";
-import type { Project, Session } from "./lib/types";
+import type { Project, Session, WorkspaceSettings } from "./lib/types";
 import { useUiStore } from "./store/uiStore";
 
 export function App() {
@@ -15,11 +15,24 @@ export function App() {
   const setActiveSessionId = useUiStore((state) => state.setActiveSessionId);
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => api<Project[]>("/api/projects") });
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => api<Session[]>("/api/sessions") });
+  const settings = useQuery({ queryKey: ["workspace-settings"], queryFn: () => api<WorkspaceSettings>("/api/workspace/settings") });
   const activeSession = sessions.data?.find((session) => session.id === activeSessionId);
+  const openProject = useMutation({
+    mutationFn: (id: string) => api<Project>(`/api/projects/${id}/open`, { method: "POST" }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace-settings"] }),
+      ]);
+    },
+  });
 
   useEffect(() => {
-    if (!activeProjectId && projects.data?.[0]) setActiveProjectId(projects.data[0].id);
-  }, [activeProjectId, projects.data, setActiveProjectId]);
+    if (activeProjectId || !projects.data?.length) return;
+    const storedProjectId = settings.data?.activeProjectId;
+    const storedProject = storedProjectId ? projects.data.find((project) => project.id === storedProjectId) : undefined;
+    setActiveProjectId(storedProject?.id ?? projects.data[0].id);
+  }, [activeProjectId, projects.data, setActiveProjectId, settings.data?.activeProjectId]);
 
   useEffect(() => {
     if (!activeSessionId && sessions.data?.[0]) setActiveSessionId(sessions.data[0].id);
@@ -35,7 +48,7 @@ export function App() {
           <span className="block overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted">{activeSession?.cwd || "No session selected"}</span>
         </div>
         <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch">
-          <ProjectCreator onCreated={(project) => setActiveProjectId(project.id)} />
+          <ProjectCreator onCreated={(project) => selectProject(project.id, setActiveProjectId, openProject.mutate)} />
           <SessionCreator projectId={activeProjectId} onCreated={(session) => setActiveSessionId(session.id)} />
         </div>
       </header>
@@ -45,7 +58,7 @@ export function App() {
         sessions={sessions.data ?? []}
         activeProjectId={activeProjectId}
         activeSessionId={activeSessionId}
-        onProjectSelect={setActiveProjectId}
+        onProjectSelect={(id) => selectProject(id, setActiveProjectId, openProject.mutate)}
         onSessionSelect={setActiveSessionId}
       />
 
@@ -54,6 +67,11 @@ export function App() {
       <BottomPanel sessionId={activeSessionId} />
     </main>
   );
+}
+
+function selectProject(id: string, setActiveProjectId: (id: string) => void, openProject: (id: string) => void) {
+  setActiveProjectId(id);
+  openProject(id);
 }
 
 function useSessionEvents(activeSessionId: string | undefined, queryClient: ReturnType<typeof useQueryClient>) {
