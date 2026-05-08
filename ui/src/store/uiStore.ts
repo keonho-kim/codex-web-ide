@@ -1,10 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ComposerMention, MentionPopupState } from "../lib/types";
 
 export type UiState = {
   activeProjectId?: string;
   activeSessionId?: string;
   activeFilePath?: string;
+  composerDraft: string;
+  composerMentions: ComposerMention[];
+  mentionPopup: MentionPopupState | null;
   editorDrafts: Record<string, string>;
   openFilePaths: string[];
   selectedPanel: "preview" | "git" | "jobs" | "services";
@@ -14,6 +18,10 @@ export type UiState = {
   setActiveProjectId(id?: string): void;
   setActiveSessionId(id?: string): void;
   setActiveFilePath(path?: string): void;
+  setComposerDraft(draft: string): void;
+  setComposerMentions(mentions: ComposerMention[]): void;
+  setMentionPopup(popup: MentionPopupState | null): void;
+  clearComposer(): void;
   setEditorDraft(path: string, content: string): void;
   hydrateEditorDraft(path: string, content: string): void;
   discardEditorDraft(path: string): void;
@@ -28,6 +36,9 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       openFilePaths: [],
+      composerDraft: "",
+      composerMentions: [],
+      mentionPopup: null,
       editorDrafts: {},
       selectedPanel: "git",
       sidebarCollapsed: false,
@@ -39,6 +50,10 @@ export const useUiStore = create<UiState>()(
           activeFilePath,
           openFilePaths: activeFilePath && !state.openFilePaths.includes(activeFilePath) ? [...state.openFilePaths, activeFilePath] : state.openFilePaths,
         })),
+      setComposerDraft: (composerDraft) => set({ composerDraft }),
+      setComposerMentions: (composerMentions) => set({ composerMentions }),
+      setMentionPopup: (mentionPopup) => set({ mentionPopup }),
+      clearComposer: () => set({ composerDraft: "", composerMentions: [], mentionPopup: null }),
       setEditorDraft: (path, content) =>
         set((state) => ({
           editorDrafts: { ...state.editorDrafts, [path]: content },

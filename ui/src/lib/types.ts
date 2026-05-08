@@ -11,3 +11,9 @@ export type {
   Session,
   WorkspaceSettings,
 } from "../../../backend/src/shared/types";
+
+export type MentionPopupState = {
+  trigger: "@" | "$";
+  query: string;
+  selectedIndex: number;
+};

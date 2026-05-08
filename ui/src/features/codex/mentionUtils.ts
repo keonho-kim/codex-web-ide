@@ -1,12 +1,6 @@
-import type { ComposerMention } from "../../lib/types";
+import type { ComposerMention, MentionPopupState } from "../../lib/types";
 
-export type MentionSearch = {
-  trigger: "@" | "$";
-  query: string;
-  selectedIndex: number;
-};
-
-export function parseMentionSearch(value: string): MentionSearch | null {
+export function parseMentionSearch(value: string): MentionPopupState | null {
   const match = /(^|\s)([@$])([^\s@$]*)$/.exec(value);
   if (!match) return null;
   return { trigger: match[2] as "@" | "$", query: match[3] ?? "", selectedIndex: 0 };

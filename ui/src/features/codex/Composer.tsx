@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, type KeyboardEvent } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,16 +6,21 @@ import { Play } from "lucide-react";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/classes";
 import type { ComposerMention } from "../../lib/types";
-import { mentionKey, mentionLabel, parseMentionSearch, type MentionSearch } from "./mentionUtils";
+import { useUiStore } from "../../store/uiStore";
+import { mentionKey, mentionLabel, parseMentionSearch } from "./mentionUtils";
 
 export function Composer({ sessionId, running = false }: { sessionId?: string; running?: boolean }) {
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState("");
-  const [mentionSearch, setMentionSearch] = useState<MentionSearch | null>(null);
-  const [selectedMentions, setSelectedMentions] = useState<ComposerMention[]>([]);
+  const draft = useUiStore((state) => state.composerDraft);
+  const mentionSearch = useUiStore((state) => state.mentionPopup);
+  const selectedMentions = useUiStore((state) => state.composerMentions);
+  const setDraft = useUiStore((state) => state.setComposerDraft);
+  const setMentionSearch = useUiStore((state) => state.setMentionPopup);
+  const setSelectedMentions = useUiStore((state) => state.setComposerMentions);
+  const clearComposer = useUiStore((state) => state.clearComposer);
   const editor = useEditor({
     extensions: [StarterKit],
-    content: "",
+    content: draft,
     editorProps: {
       attributes: {
         class:
@@ -59,9 +64,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
       }),
     onSuccess: async () => {
       editor?.commands.clearContent();
-      setDraft("");
-      setSelectedMentions([]);
-      setMentionSearch(null);
+      clearComposer();
       await queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
     },
   });
@@ -73,7 +76,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
   });
 
   const addMention = (mention: ComposerMention) => {
-    setSelectedMentions((items) => (items.some((item) => mentionKey(item) === mentionKey(mention)) ? items : [...items, mention]));
+    setSelectedMentions(selectedMentions.some((item) => mentionKey(item) === mentionKey(mention)) ? selectedMentions : [...selectedMentions, mention]);
     const nextText = draft.replace(/(^|\s)([@$])([^\s@$]*)$/, "$1");
     editor?.commands.setContent(nextText ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: nextText }] }] } : "");
     setDraft(nextText);
@@ -86,9 +89,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       const direction = event.key === "ArrowDown" ? 1 : -1;
-      setMentionSearch((current) =>
-        current ? { ...current, selectedIndex: (current.selectedIndex + direction + suggestions.length) % suggestions.length } : current,
-      );
+      setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
     }
     if (event.key === "Enter" || event.key === "Tab") {
       event.preventDefault();
@@ -108,7 +109,7 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
             className="inline-flex min-h-6 items-center rounded-md border border-control bg-canvas px-2 py-0.5 text-xs text-primary"
             key={mentionKey(mention)}
             type="button"
-            onClick={() => setSelectedMentions((items) => items.filter((item) => mentionKey(item) !== mentionKey(mention)))}
+            onClick={() => setSelectedMentions(selectedMentions.filter((item) => mentionKey(item) !== mentionKey(mention)))}
           >
             {mentionLabel(mention)}
           </button>
