@@ -84,7 +84,7 @@ function useSessionEvents(activeSessionId: string | undefined, queryClient: Retu
         void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
       });
     }
-    for (const eventName of ["preview.started", "preview.stopped"]) {
+    for (const eventName of ["preview.started", "preview.stdout", "preview.stderr", "preview.health.updated", "preview.stopped"]) {
       source.addEventListener(eventName, () => {
         void queryClient.invalidateQueries({ queryKey: ["previews", activeSessionId] });
       });

@@ -74,6 +74,8 @@ export type PreviewInstance = {
   publicUrl: string;
   startedAt: number;
   lastHealthCheckAt?: number;
+  stdout: string[];
+  stderr: string[];
 };
 
 export type ServiceInstance = {
@@ -123,6 +125,9 @@ export type SessionEvent =
   | { type: "job.stderr"; jobId: string; text: string }
   | { type: "job.finished"; jobId: string; exitCode: number }
   | { type: "preview.started"; preview: PreviewInstance }
+  | { type: "preview.stdout"; previewId: string; text: string }
+  | { type: "preview.stderr"; previewId: string; text: string }
+  | { type: "preview.health.updated"; preview: PreviewInstance }
   | { type: "preview.stopped"; previewId: string }
   | { type: "service.started"; service: ServiceInstance }
   | { type: "service.stdout"; serviceId: string; text: string }
