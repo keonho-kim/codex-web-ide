@@ -19,7 +19,7 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[34px_auto_minmax(0,1fr)] gap-2 overflow-hidden border-r border-hairline bg-canvas p-2.5 max-[900px]:border-r-0">
+    <section className="grid h-full min-w-0 grid-rows-[38px_auto_minmax(0,1fr)] gap-3 overflow-hidden bg-canvas p-4 max-[700px]:p-3">
       <SectionTitle label="Files" />
       <FileActions sessionId={sessionId} />
       <div ref={treeHost} className="min-h-0 overflow-hidden text-[13px]">
@@ -27,8 +27,8 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
           data={tree.data ?? []}
           height={Math.max(size.height, 120)}
           width={Math.max(size.width, 180)}
-          rowHeight={28}
-          indent={14}
+          rowHeight={34}
+          indent={18}
           openByDefault={false}
           idAccessor="path"
           childrenAccessor="children"
@@ -47,7 +47,7 @@ function FileTreeRow({ node, style, onOpen }: NodeRendererProps<FileTreeNode> & 
   return (
     <div style={style} className="flex items-center">
       <button
-        className="inline-flex min-h-7 w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border border-transparent bg-transparent px-2.5 py-1 text-left text-sm text-ink hover:bg-page"
+        className="inline-flex min-h-8 w-full items-center justify-start gap-2 overflow-hidden rounded-md border border-transparent bg-transparent px-3 py-1.5 text-left text-sm text-ink hover:bg-page"
         type="button"
         onClick={() => (item.isDirectory ? node.toggle() : onOpen(item.path))}
       >

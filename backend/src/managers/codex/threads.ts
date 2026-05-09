@@ -13,10 +13,9 @@ export class CodexThreadManager {
   ) {}
 
   async list(session: Session) {
-    const threads = await this.history.ensureDefaultThread(session);
-    const activeThread = this.activeThreadFrom(session, threads);
-    await this.syncActiveSessionThread(session, activeThread);
-    return { threads, activeThreadId: activeThread.id };
+    const activeThread = await this.current(session);
+    const threads = await this.history.listThreads(session.id);
+    return { threads, activeThreadId: activeThread?.id ?? null };
   }
 
   async create(session: Session, title?: string) {
@@ -26,16 +25,33 @@ export class CodexThreadManager {
   }
 
   async select(session: Session, threadId: string) {
-    const threads = await this.history.ensureDefaultThread(session);
+    const threads = await this.history.listThreads(session.id);
     const thread = threads.find((item) => item.id === threadId);
     if (!thread) throw new Error("Codex thread not found");
     await this.sessions.update(session.id, { activeCodexThreadId: thread.id, codexThreadId: thread.codexThreadId });
     return thread;
   }
 
+  async delete(session: Session, threadId: string) {
+    const result = await this.history.deleteThread(session, threadId);
+    this.threads.delete(threadId);
+    await this.sessions.update(session.id, {
+      activeCodexThreadId: result.active?.id,
+      codexThreadId: result.active?.codexThreadId,
+    });
+    return { threads: result.threads, activeThreadId: result.active?.id ?? null };
+  }
+
+  async current(session: Session) {
+    const threads = await this.history.listThreads(session.id);
+    const activeThread = threads.length > 0 ? this.activeThreadFrom(session, threads) : null;
+    if (activeThread) await this.syncActiveSessionThread(session, activeThread);
+    else if (session.activeCodexThreadId || session.codexThreadId) await this.sessions.update(session.id, { activeCodexThreadId: undefined, codexThreadId: undefined });
+    return activeThread;
+  }
+
   async active(session: Session) {
-    const threads = await this.history.ensureDefaultThread(session);
-    const thread = this.activeThreadFrom(session, threads);
+    const thread = await this.history.ensureActiveThread(session);
     await this.syncActiveSessionThread(session, thread);
     return thread;
   }

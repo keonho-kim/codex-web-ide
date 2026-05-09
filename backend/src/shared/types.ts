@@ -43,6 +43,18 @@ export type FileTreeNode = {
   children?: FileTreeNode[];
 };
 
+export type LocalPathEntry = {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+};
+
+export type LocalPathListing = {
+  path: string;
+  parentPath?: string;
+  entries: LocalPathEntry[];
+};
+
 export type ComposerMention =
   | { type: "file"; path: string; isDirectory: boolean }
   | { type: "skill"; id: string; name: string };

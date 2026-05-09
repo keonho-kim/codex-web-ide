@@ -8,6 +8,15 @@ export const createProjectSchema = z.object({
   name: z.string().min(1).optional(),
 });
 
+export const browsePathSchema = z.string().min(1).optional();
+
+export const createBrowseFolderSchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1).max(120).refine((name) => !name.includes("/") && !name.includes("\\") && name !== "." && name !== "..", {
+    message: "Folder name must not contain path separators",
+  }),
+});
+
 export const createSessionSchema = z.object({
   projectId: z.string().optional(),
   cwd: z.string().min(1).optional(),

@@ -6,6 +6,7 @@ export type {
   GitFileStatus,
   GitState,
   Job,
+  LocalPathListing,
   PreviewInstance,
   Project,
   ServiceInstance,

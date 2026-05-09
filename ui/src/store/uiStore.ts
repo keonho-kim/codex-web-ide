@@ -13,6 +13,8 @@ export const DEFAULT_WORKBENCH_LAYOUT = [18, 52, 30];
 export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
 export type MainPanelKey = "files" | "editor" | "codex" | "bottom";
 export type CollapsedMainPanels = Record<MainPanelKey, boolean>;
+export type WorkbenchTab = "chat" | "editor" | "control";
+export type ControlTab = "git" | "jobs" | "services";
 export const DEFAULT_COLLAPSED_MAIN_PANELS: CollapsedMainPanels = {
   files: false,
   editor: false,
@@ -32,8 +34,12 @@ export type UiState = {
   editorSyncedContents: Record<string, string>;
   openFilePaths: string[];
   selectedPanel: "preview" | "git" | "jobs" | "services";
+  workbenchTab: WorkbenchTab;
+  controlTab: ControlTab;
   selectedPreviewId?: string;
+  previewOpen: boolean;
   sidebarCollapsed: boolean;
+  editorFilesCollapsed: boolean;
   collapsedMainPanels: CollapsedMainPanels;
   workbenchLayout: number[];
   setActiveProjectId(id?: string): void;
@@ -50,8 +56,12 @@ export type UiState = {
   discardEditorDraft(path: string): void;
   closeFilePath(path: string): void;
   setSelectedPanel(panel: UiState["selectedPanel"]): void;
+  setWorkbenchTab(tab: WorkbenchTab): void;
+  setControlTab(tab: ControlTab): void;
   setSelectedPreviewId(id?: string): void;
+  setPreviewOpen(open: boolean): void;
   setSidebarCollapsed(collapsed: boolean): void;
+  setEditorFilesCollapsed(collapsed: boolean): void;
   toggleMainPanel(panel: MainPanelKey): void;
   setWorkbenchLayout(layout: number[]): void;
 };
@@ -67,7 +77,11 @@ export const useUiStore = create<UiState>()(
       editorDrafts: {},
       editorSyncedContents: {},
       selectedPanel: "git",
+      workbenchTab: "chat",
+      controlTab: "git",
+      previewOpen: false,
       sidebarCollapsed: false,
+      editorFilesCollapsed: false,
       collapsedMainPanels: DEFAULT_COLLAPSED_MAIN_PANELS,
       workbenchLayout: DEFAULT_WORKBENCH_LAYOUT,
       setActiveProjectId: (activeProjectId) => {
@@ -158,13 +172,29 @@ export const useUiStore = create<UiState>()(
         if (get().selectedPanel === selectedPanel) return;
         set({ selectedPanel });
       },
+      setWorkbenchTab: (workbenchTab) => {
+        if (get().workbenchTab === workbenchTab) return;
+        set({ workbenchTab });
+      },
+      setControlTab: (controlTab) => {
+        if (get().controlTab === controlTab) return;
+        set({ controlTab });
+      },
       setSelectedPreviewId: (selectedPreviewId) => {
         if (get().selectedPreviewId === selectedPreviewId) return;
         set({ selectedPreviewId });
       },
+      setPreviewOpen: (previewOpen) => {
+        if (get().previewOpen === previewOpen) return;
+        set({ previewOpen });
+      },
       setSidebarCollapsed: (sidebarCollapsed) => {
         if (get().sidebarCollapsed === sidebarCollapsed) return;
         set({ sidebarCollapsed });
+      },
+      setEditorFilesCollapsed: (editorFilesCollapsed) => {
+        if (get().editorFilesCollapsed === editorFilesCollapsed) return;
+        set({ editorFilesCollapsed });
       },
       toggleMainPanel: (panel) => {
         const collapsedMainPanels = normalizeCollapsedMainPanels(get().collapsedMainPanels);
@@ -185,8 +215,12 @@ export const useUiStore = create<UiState>()(
         activeFilePath: state.activeFilePath,
         openFilePaths: state.openFilePaths,
         selectedPanel: state.selectedPanel,
+        workbenchTab: state.workbenchTab,
+        controlTab: state.controlTab,
         selectedPreviewId: state.selectedPreviewId,
+        previewOpen: state.previewOpen,
         sidebarCollapsed: state.sidebarCollapsed,
+        editorFilesCollapsed: state.editorFilesCollapsed,
         collapsedMainPanels: normalizeCollapsedMainPanels(state.collapsedMainPanels),
         workbenchLayout: state.workbenchLayout,
       }),
@@ -204,4 +238,12 @@ function sameLayout(current: number[], next: number[]) {
 
 export function normalizeCollapsedMainPanels(value?: Partial<CollapsedMainPanels>) {
   return { ...DEFAULT_COLLAPSED_MAIN_PANELS, ...value };
+}
+
+export function normalizeWorkbenchTab(value?: string): WorkbenchTab {
+  return value === "editor" || value === "control" ? value : "chat";
+}
+
+export function normalizeControlTab(value?: string): ControlTab {
+  return value === "jobs" || value === "services" ? value : "git";
 }

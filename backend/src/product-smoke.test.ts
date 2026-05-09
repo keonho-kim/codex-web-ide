@@ -16,8 +16,10 @@ import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
 import { consumeCodexEvents } from "./managers/codex/events";
+import { CodexHistoryStore } from "./managers/codex/historyStore";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
+import { CodexThreadManager } from "./managers/codex/threads";
 import { CommandManager } from "./managers/commandManager";
 import { JobRunner } from "./managers/commands/jobRunner";
 import { resolveCommandCwd } from "./managers/commands/path";
@@ -32,7 +34,7 @@ import { safeFsPath } from "./managers/files/path";
 import { GitManager } from "./managers/gitManager";
 import { SessionManager } from "./managers/sessionManager";
 import { SkillManager } from "./managers/skillManager";
-import { startBunFrontProxy } from "./proxy/bunFrontProxy";
+import { isLongLivedHttpRequest, startBunFrontProxy } from "./proxy/bunFrontProxy";
 import { startServer } from "./server";
 import {
   cleanupTempRoots,
@@ -368,6 +370,23 @@ describe("product smoke coverage", () => {
     expect(await workspace.listProjects()).toHaveLength(1);
   });
 
+  test("browses project folders with files visible and creates folders", async () => {
+    const storeRoot = await tempDir();
+    const projectRoot = await tempDir();
+    await fs.mkdir(path.join(projectRoot, "src"), { recursive: true });
+    await fs.writeFile(path.join(projectRoot, "README.md"), "hello\n");
+    const workspace = new WorkspaceManager(new JsonStore(storeRoot));
+
+    const listing = await workspace.browsePath(projectRoot);
+    expect(listing.path).toBe(projectRoot);
+    expect(listing.entries).toContainEqual(expect.objectContaining({ name: "src", isDirectory: true }));
+    expect(listing.entries).toContainEqual(expect.objectContaining({ name: "README.md", isDirectory: false }));
+
+    const next = await workspace.createBrowseFolder({ path: projectRoot, name: "new-folder" });
+    expect(next.path).toBe(path.join(projectRoot, "new-folder"));
+    expect((await fs.stat(path.join(projectRoot, "new-folder"))).isDirectory()).toBe(true);
+  });
+
   test("expands home-relative project and session paths", async () => {
     const previousHome = process.env.HOME;
     const storeRoot = await tempDir();
@@ -487,6 +506,32 @@ describe("product smoke coverage", () => {
     expect(published.some((event) => event.type === "git.state.updated")).toBe(true);
   });
 
+  test("deletes Codex threads and allows an empty thread list", async () => {
+    const storeRoot = await tempDir();
+    const projectRoot = await tempDir();
+    const store = new JsonStore(storeRoot);
+    const workspace = new WorkspaceManager(store);
+    const sessions = new SessionManager(store, workspace);
+    const history = new CodexHistoryStore(store);
+    const threads = new CodexThreadManager(sessions, history);
+    const project = await workspace.addProject({ cwd: projectRoot });
+    const createdSession = await sessions.create({ projectId: project.id });
+    const first = await threads.create(createdSession, "First");
+    const second = await threads.create(await sessions.get(createdSession.id), "Second");
+    await history.save(second.id, [{ id: "message", role: "user", text: "hello", createdAt: Date.now() }]);
+
+    const result = await threads.delete(await sessions.get(createdSession.id), second.id);
+    expect(result.activeThreadId).toBe(first.id);
+    await expect(history.list(second.id)).resolves.toEqual([]);
+
+    const empty = await threads.delete(await sessions.get(createdSession.id), first.id);
+    const updatedSession = await sessions.get(createdSession.id);
+    expect(empty).toMatchObject({ threads: [], activeThreadId: null });
+    expect(updatedSession.activeCodexThreadId).toBeUndefined();
+    expect(await threads.current(updatedSession)).toBeNull();
+    expect(await threads.list(updatedSession)).toMatchObject({ threads: [], activeThreadId: null });
+  });
+
   test("file tree includes nested project files and ignores generated folders", async () => {
     const root = await tempDir();
     await fs.mkdir(path.join(root, "a", "b", "c", "d", "e"), { recursive: true });
@@ -495,15 +540,26 @@ describe("product smoke coverage", () => {
     await fs.writeFile(path.join(root, "a", "b", "c", "d", "e", "f", "g", "mention-target.ts"), "export {}\n");
     await fs.mkdir(path.join(root, "node_modules", "pkg"), { recursive: true });
     await fs.writeFile(path.join(root, "node_modules", "pkg", "hidden.ts"), "hidden\n");
+    await fs.mkdir(path.join(root, ".git"), { recursive: true });
+    await fs.writeFile(path.join(root, ".git", "index.lock"), "lock\n");
 
     const files = new FileManager(new EventBus());
     const tree = await files.tree(root);
     const serialized = JSON.stringify(tree);
     const mentions = await files.search(root, "mention-target");
+    const gitMentions = await files.search(root, "index.lock");
 
     expect(serialized).toContain("deep.ts");
     expect(serialized).not.toContain("hidden.ts");
+    expect(serialized).not.toContain("index.lock");
     expect(mentions).toContainEqual(expect.objectContaining({ path: "a/b/c/d/e/f/g/mention-target.ts" }));
+    expect(gitMentions).toEqual([]);
+  });
+
+  test("recognizes long-lived session event routes for Bun timeout handling", () => {
+    expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/events"))).toBe(true);
+    expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/codex/events"))).toBe(true);
+    expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/git/state"))).toBe(false);
   });
 
   test("publishes file changes after mutating File API calls", async () => {

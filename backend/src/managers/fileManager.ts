@@ -26,6 +26,10 @@ export class FileManager {
     watcher.on("all", (_event, file) => {
       this.events.publish(sessionId, { type: "file.changed", path: path.relative(cwd, file) });
     });
+    watcher.on("error", (error) => {
+      if (isTransientWatchError(error)) return;
+      console.error(error);
+    });
     this.watchers.set(sessionId, watcher);
   }
 
@@ -73,4 +77,10 @@ export class FileManager {
   async search(root: string, query: string) {
     return searchFiles(root, query);
   }
+}
+
+function isTransientWatchError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  return code === "EINVAL" || code === "ENOENT";
 }

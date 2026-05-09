@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { workspaceSettingsSchema } from "../shared/schemas";
-import type { Project, WorkspaceSettings } from "../shared/types";
+import type { LocalPathListing, Project, WorkspaceSettings } from "../shared/types";
 import { createPlatformAdapter } from "../platform/adapter";
 import { expandUserPath } from "./files/path";
 import { JsonStore } from "./storage";
@@ -96,5 +96,35 @@ export class WorkspaceManager {
 
   async findProject(id: string) {
     return (await this.listProjects()).find((item) => item.id === id) ?? null;
+  }
+
+  async browsePath(input?: string): Promise<LocalPathListing> {
+    const requested = input?.trim() || (await this.getSettings()).defaultProjectsDir || this.adapter.getHomeDir();
+    const resolved = path.resolve(expandUserPath(requested));
+    const stat = await fs.stat(resolved).catch((error) => {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      return null;
+    });
+    const baseInput = stat ? (stat.isDirectory() ? resolved : path.dirname(resolved)) : this.adapter.getHomeDir();
+    const base = path.resolve(baseInput);
+    const entries = await fs.readdir(base, { withFileTypes: true });
+    const visible = entries
+      .map((entry) => ({
+        name: entry.name,
+        path: path.join(base, entry.name),
+        isDirectory: entry.isDirectory(),
+      }))
+      .sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name));
+    const parentPath = path.dirname(base) === base ? undefined : path.dirname(base);
+    return { path: base, parentPath, entries: visible.slice(0, 800) };
+  }
+
+  async createBrowseFolder(input: { path: string; name: string }) {
+    const base = path.resolve(expandUserPath(input.path));
+    const stat = await fs.stat(base);
+    if (!stat.isDirectory()) throw new Error("Browse path must be a directory");
+    const target = path.join(base, input.name);
+    await fs.mkdir(target, { recursive: false });
+    return this.browsePath(target);
   }
 }

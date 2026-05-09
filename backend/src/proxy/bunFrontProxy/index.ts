@@ -6,6 +6,8 @@ import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "./http";
 import { previewWebSocketTarget } from "./target";
 import type { BunServe } from "./types";
 
+const FRONT_PROXY_IDLE_TIMEOUT_SECONDS = 255;
+
 export function canUseBunFrontProxy() {
   return typeof (globalThis as typeof globalThis & { Bun?: { serve?: BunServe } }).Bun?.serve === "function";
 }
@@ -26,6 +28,7 @@ export async function startBunFrontProxy({
   const front = bun.serve({
     hostname: host,
     port,
+    idleTimeout: FRONT_PROXY_IDLE_TIMEOUT_SECONDS,
     fetch: (req, server) => {
       const url = new URL(req.url);
       if (isWebSocketRequest(req)) {
@@ -38,6 +41,7 @@ export async function startBunFrontProxy({
           ? undefined
           : new Response("WebSocket upgrade failed", { status: 502 });
       }
+      if (isLongLivedHttpRequest(url)) server.timeout?.(req, 0);
       return proxyHttpRequest(req, internal.port, server);
     },
     websocket: previewWebSocketHandlers,
@@ -69,4 +73,8 @@ function closeInternal(server: Server) {
   return new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
+}
+
+export function isLongLivedHttpRequest(url: URL) {
+  return /^\/api\/sessions\/[^/]+\/(?:codex\/)?events$/.test(url.pathname);
 }

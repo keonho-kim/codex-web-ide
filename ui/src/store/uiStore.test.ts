@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { normalizeCollapsedMainPanels, selectCodexEvents, useUiStore } from "./uiStore";
+import { normalizeCollapsedMainPanels, normalizeControlTab, normalizeWorkbenchTab, selectCodexEvents, useUiStore } from "./uiStore";
 
 test("returns stable empty Codex event snapshots", () => {
   const state = useUiStore.getState();
@@ -18,8 +18,12 @@ test("does not notify subscribers for unchanged UI store values", () => {
   state.setActiveProjectId(state.activeProjectId);
   state.setActiveSessionId(state.activeSessionId);
   state.setSelectedPanel(state.selectedPanel);
+  state.setWorkbenchTab(state.workbenchTab);
+  state.setControlTab(state.controlTab);
   state.setSelectedPreviewId(state.selectedPreviewId);
+  state.setPreviewOpen(state.previewOpen);
   state.setSidebarCollapsed(state.sidebarCollapsed);
+  state.setEditorFilesCollapsed(state.editorFilesCollapsed);
   state.setWorkbenchLayout([...state.workbenchLayout]);
 
   unsubscribe();
@@ -33,4 +37,11 @@ test("normalizes collapsed main panel state", () => {
     codex: false,
     bottom: false,
   });
+});
+
+test("normalizes persisted workspace tab state", () => {
+  expect(normalizeWorkbenchTab("editor")).toBe("editor");
+  expect(normalizeWorkbenchTab("preview")).toBe("chat");
+  expect(normalizeControlTab("services")).toBe("services");
+  expect(normalizeControlTab("preview")).toBe("git");
 });

@@ -47,6 +47,12 @@ export class CodexHistoryStore {
     return [thread];
   }
 
+  async ensureActiveThread(session: Session) {
+    const threads = await this.listThreads(session.id);
+    if (threads.length > 0) return threads.find((thread) => thread.id === session.activeCodexThreadId) ?? threads[0];
+    return this.createThread(session.id, "Thread 1");
+  }
+
   async createThread(sessionId: string, title?: string) {
     const now = Date.now();
     const threads = await this.listThreads(sessionId);
@@ -59,6 +65,21 @@ export class CodexHistoryStore {
     };
     await this.saveThreads(sessionId, [thread, ...threads]);
     return thread;
+  }
+
+  async deleteThread(session: Session, threadId: string) {
+    const threads = await this.listThreads(session.id);
+    const target = threads.find((thread) => thread.id === threadId);
+    if (!target) throw new Error("Codex thread not found");
+    const remaining = threads.filter((thread) => thread.id !== threadId);
+    await this.store.delete(this.messageFileName(threadId));
+    await this.saveThreads(session.id, remaining);
+    const active = remaining.length === 0 ? null : session.activeCodexThreadId === threadId ? remaining[0] : (remaining.find((thread) => thread.id === session.activeCodexThreadId) ?? remaining[0]);
+    return {
+      deleted: target,
+      active,
+      threads: remaining,
+    };
   }
 
   async updateThread(thread: CodexThreadRecord) {

@@ -14,21 +14,21 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
   });
   const status = useQuery({
     queryKey: ["codex", sessionId, "resume"],
-    queryFn: () => api<{ running: boolean; messages: CodexMessage[]; thread: CodexThreadRecord }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
+    queryFn: () => api<{ running: boolean; messages: CodexMessage[]; thread: CodexThreadRecord | null }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
     enabled: Boolean(sessionId),
     refetchInterval: (query) => (query.state.data?.running ? 1000 : false),
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[40px_minmax(0,1fr)_68px_112px] gap-2 overflow-hidden border-r border-hairline bg-canvas p-2.5 max-[900px]:grid-rows-[38px_minmax(0,1fr)_104px] max-[900px]:border-r-0">
-      <div className="flex items-center justify-between rounded-md border border-codex-soft bg-codex-soft px-2">
-        <SectionTitle label={status.data?.thread.title || "Codex"} />
+    <section className="grid h-full min-w-0 grid-rows-[44px_minmax(0,1fr)_74px_124px] gap-4 overflow-hidden bg-canvas p-4 max-[900px]:grid-rows-[44px_minmax(0,1fr)_116px] max-[700px]:gap-3 max-[700px]:p-3">
+      <div className="flex items-center justify-between rounded-md border border-codex-soft bg-codex-soft px-3">
+        <SectionTitle label={status.data?.thread?.title || "Codex"} />
         <span className="text-[11px] text-codex">{status.data?.running ? "running" : "ready"}</span>
       </div>
-      <div className="overflow-auto rounded-md border border-subtle bg-panel/60 p-2.5">
+      <div className="overflow-auto rounded-md border border-subtle bg-panel/60 p-4">
         {messages.data?.length ? (
           messages.data.map((message) => (
-            <article className="mb-2 rounded-md border border-hairline bg-canvas px-3 py-2 last:mb-0" key={message.id}>
+            <article className="mb-3 rounded-md border border-hairline bg-canvas px-4 py-3 last:mb-0" key={message.id}>
               <strong className="mb-1 block text-xs text-primary capitalize">{message.role}</strong>
               <p className="m-0 text-[13px] leading-[1.5] whitespace-pre-wrap">{message.text}</p>
               {message.role === "assistant" ? <CommandSuggestion sessionId={sessionId} text={message.text} /> : null}

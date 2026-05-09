@@ -6,7 +6,7 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
   const git = useGitPanel(sessionId);
 
   return (
-    <div className="grid h-[calc(100%-38px)] grid-cols-[240px_minmax(0,1fr)] gap-4 overflow-auto p-2.5">
+    <div className="grid h-full grid-cols-[260px_minmax(0,1fr)] gap-5 overflow-auto p-4 max-[900px]:grid-cols-1">
       {git.actions.error ? <p className="col-span-full m-0 text-xs text-destructive">{git.actions.error}</p> : null}
       <GitControls
         branchName={git.branchName}

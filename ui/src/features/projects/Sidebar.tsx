@@ -1,12 +1,11 @@
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ListFilter, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionTitle } from "../../components/SectionTitle";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
-import { ProjectList } from "./ProjectList";
-import { SessionList } from "./SessionList";
-import { SkillList } from "./SkillList";
-import { ThreadList } from "./ThreadList";
-import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
+import { api } from "../../lib/api";
+import { AddProjectDialog } from "./AddProjectDialog";
+import { ProjectThreadTree } from "./ProjectThreadTree";
 
 export function Sidebar({
   projects,
@@ -37,45 +36,76 @@ export function Sidebar({
   collapsed: boolean;
   onCollapsedChange(collapsed: boolean): void;
 }) {
+  const queryClient = useQueryClient();
+  const ensureProjectSession = async (project: Project) => {
+    const session = findProjectSession(project, sessions) ?? (await api<Session>("/api/sessions", { method: "POST", body: { projectId: project.id } }));
+    onProjectSelect(project.id);
+    onSessionSelect(session.id);
+    await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+  };
+
   if (collapsed) {
     return (
-      <aside className="row-span-2 flex min-w-0 justify-center overflow-hidden border-r border-hairline bg-panel p-2 max-[900px]:row-auto max-[900px]:border-r-0 max-[900px]:border-b max-[700px]:hidden">
-        <Button title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="outline" size="icon-sm">
+      <aside className="flex min-w-0 flex-col items-center gap-2 overflow-hidden rounded-lg border border-hairline bg-panel p-2 max-[900px]:flex-row">
+        <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
           <PanelLeftOpen data-icon="inline-start" />
         </Button>
+        <AddProjectDialog
+          compact
+          defaultProjectsDir={settings?.defaultProjectsDir}
+          onProjectSelect={onProjectSelect}
+          onSessionSelect={onSessionSelect}
+          sessions={sessions}
+        />
+        <div className="grid gap-1 max-[900px]:grid-flow-col">
+          {projects.map((project) => (
+            <button
+              className="flex size-8 items-center justify-center rounded-md text-xs font-semibold text-muted hover:bg-canvas hover:text-ink"
+              key={project.id}
+              title={project.name}
+              type="button"
+              onClick={() => void ensureProjectSession(project)}
+            >
+              {projectInitial(project.name)}
+            </button>
+          ))}
+        </div>
       </aside>
     );
   }
 
   return (
-    <aside className="row-span-2 min-w-0 overflow-auto border-r border-hairline bg-panel p-3 max-[900px]:row-auto max-[900px]:overflow-x-auto max-[900px]:border-r-0 max-[900px]:border-b max-[900px]:p-2 max-[700px]:hidden">
-      <div className="grid gap-3 max-[900px]:grid-flow-col max-[900px]:grid-cols-[190px_190px_210px_210px_260px] max-[900px]:items-start">
-        <section className="min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <SectionTitle label="Projects" />
-            <Button title="Collapse sidebar" type="button" onClick={() => onCollapsedChange(true)} variant="outline" size="icon-sm">
-              <PanelLeftClose data-icon="inline-start" />
-            </Button>
-          </div>
-          <ProjectList projects={projects} activeId={activeProjectId} onDelete={onProjectDelete} onSelect={onProjectSelect} />
-        </section>
-        <section className="min-w-0">
-          <SectionTitle label="Sessions" />
-          <SessionList sessions={sessions} activeId={activeSessionId} onSelect={onSessionSelect} onDelete={onSessionDelete} />
-        </section>
-        <section className="min-w-0">
+    <aside className="min-w-0 overflow-auto rounded-lg border border-hairline bg-panel p-3 max-[900px]:p-3">
+      <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1">
           <SectionTitle label="Threads" />
-          <ThreadList sessionId={activeSessionId} />
-        </section>
-        <section className="min-w-0">
-          <SectionTitle label="Skills" />
-          <SkillList sessionId={activeSessionId} />
-        </section>
-        <section className="min-w-0">
-          <SectionTitle label="Settings" />
-          <WorkspaceSettingsPanel settings={settings} onSave={onSettingsSave} pending={settingsPending} />
-        </section>
+          <Button aria-label="Filter threads" title="Filter threads" type="button" variant="ghost" size="icon-sm">
+            <ListFilter data-icon="inline-start" />
+          </Button>
+          <Button aria-label="Collapse sidebar" title="Collapse sidebar" type="button" onClick={() => onCollapsedChange(true)} variant="ghost" size="icon-sm">
+            <PanelLeftClose data-icon="inline-start" />
+          </Button>
+        </div>
+        <ProjectThreadTree
+          projects={projects}
+          sessions={sessions}
+          activeProjectId={activeProjectId}
+          activeSessionId={activeSessionId}
+          onProjectSelect={onProjectSelect}
+          onSessionSelect={onSessionSelect}
+        />
+        <AddProjectDialog defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} onSessionSelect={onSessionSelect} sessions={sessions} />
       </div>
     </aside>
   );
+}
+
+function findProjectSession(project: Project, sessions: Session[]) {
+  return sessions
+    .filter((session) => session.projectId === project.id || session.cwd === project.cwd || session.cwd.startsWith(`${project.cwd.replace(/\/+$/, "")}/`))
+    .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0];
+}
+
+function projectInitial(name: string) {
+  return (name.trim()[0] || "?").toUpperCase();
 }

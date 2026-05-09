@@ -5,6 +5,7 @@ export type BunServer = {
 export type BunServe = (options: {
   hostname: string;
   port: number;
+  idleTimeout?: number;
   fetch(req: Request, server: BunUpgradeServer): Response | Promise<Response> | undefined;
   websocket: {
     data: PreviewSocketData;
@@ -17,6 +18,7 @@ export type BunServe = (options: {
 export type BunUpgradeServer = {
   upgrade(req: Request, options: { data: PreviewSocketData }): boolean;
   requestIP(req: Request): { address: string; port: number } | null;
+  timeout?(req: Request, seconds: number): void;
 };
 
 export type ServerSocket = {

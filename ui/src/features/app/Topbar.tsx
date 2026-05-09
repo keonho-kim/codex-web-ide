@@ -1,35 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, GitBranch, Play, Server, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProjectCreator } from "../projects/ProjectCreator";
-import { SessionCreator } from "../projects/SessionCreator";
 import { api } from "../../lib/api";
-import type { GitState, Job, PreviewInstance, Project, ServiceInstance, Session, WorkspaceSettings } from "../../lib/types";
+import type { GitState, Job, PreviewInstance, ServiceInstance, Session } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 
 export function Topbar({
-  activeProjectId,
   activeSession,
-  defaultProjectsDir,
-  onProjectCreated,
-  onSessionCreated,
 }: {
-  activeProjectId?: string;
   activeSession?: Session;
-  defaultProjectsDir?: WorkspaceSettings["defaultProjectsDir"];
-  onProjectCreated(project: Project): void;
-  onSessionCreated(session: Session): void;
 }) {
   return (
-    <header className="col-span-full flex items-center justify-between gap-4 border-b border-hairline bg-canvas/95 px-3 backdrop-blur max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:gap-2 max-[900px]:p-2">
+    <header className="col-span-full flex items-center justify-between gap-4 rounded-lg border border-hairline bg-canvas px-4 py-3 max-[900px]:items-start max-[700px]:flex-col max-[700px]:gap-3">
       <div className="min-w-0">
-        <strong className="block text-[13px] font-semibold tracking-normal">Codex Web IDE</strong>
-        <span className="block overflow-hidden font-mono text-[11px] text-ellipsis whitespace-nowrap text-muted">{activeSession?.cwd || "No session selected"}</span>
+        <strong className="block text-sm font-semibold tracking-normal">Codex Web IDE</strong>
+        <span className="block truncate font-mono text-xs text-muted">{activeSession?.cwd || "No project selected"}</span>
       </div>
-      <div className="flex items-center gap-2 max-[900px]:flex-wrap max-[900px]:items-stretch max-[700px]:overflow-x-auto">
+      <div className="flex min-w-0 items-center gap-2 max-[900px]:flex-wrap max-[700px]:w-full max-[700px]:overflow-x-auto">
         <TopbarStatus session={activeSession} />
-        <ProjectCreator defaultProjectsDir={defaultProjectsDir} onCreated={onProjectCreated} />
-        <SessionCreator projectId={activeProjectId} onCreated={onSessionCreated} />
       </div>
     </header>
   );
@@ -37,8 +25,8 @@ export function Topbar({
 
 function TopbarStatus({ session }: { session?: Session }) {
   const queryClient = useQueryClient();
-  const setSelectedPanel = useUiStore((state) => state.setSelectedPanel);
   const setSelectedPreviewId = useUiStore((state) => state.setSelectedPreviewId);
+  const setPreviewOpen = useUiStore((state) => state.setPreviewOpen);
   const sessionId = session?.id;
   const git = useQuery({
     queryKey: ["git", sessionId, "state"],
@@ -69,7 +57,7 @@ function TopbarStatus({ session }: { session?: Session }) {
       }),
     onSuccess: async (preview) => {
       setSelectedPreviewId(preview.id);
-      setSelectedPanel("preview");
+      setPreviewOpen(true);
       await queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
     },
   });
@@ -81,20 +69,20 @@ function TopbarStatus({ session }: { session?: Session }) {
   const dirtyLabel = git.data?.dirty ? `${git.data.stagedCount}/${git.data.unstagedCount}/${git.data.untrackedCount}` : "clean";
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden max-[900px]:flex-wrap max-[700px]:flex-nowrap">
-      <span className="inline-flex h-7 max-w-[180px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-selected-border bg-selected px-2 text-xs text-primary" title="Git branch">
+    <div className="flex min-w-0 items-center gap-2 overflow-hidden max-[900px]:flex-wrap max-[700px]:flex-nowrap">
+      <span className="inline-flex h-8 max-w-[190px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-selected-border bg-selected px-2.5 text-xs text-primary" title="Git branch">
         <GitBranch size={14} />
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{sessionId ? branchLabel : "no session"}</span>
+        <span className="truncate">{sessionId ? branchLabel : "no session"}</span>
       </span>
-      <span className="inline-flex h-7 max-w-[180px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2 text-xs text-muted" title="Session and Git status">
+      <span className="inline-flex h-8 max-w-[190px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-subtle bg-panel px-2.5 text-xs text-muted" title="Session and Git status">
         <Activity size={14} />
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{session ? `${session.status} · ${dirtyLabel}` : "idle"}</span>
+        <span className="truncate">{session ? `${session.status} · ${dirtyLabel}` : "idle"}</span>
       </span>
-      <span className="inline-flex h-7 max-w-[180px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-warning-soft bg-warning-soft px-2 text-xs text-warning" title="Running jobs">
+      <span className="inline-flex h-8 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-warning-soft bg-warning-soft px-2.5 text-xs text-warning" title="Running jobs">
         <Terminal size={14} />
         <span>{runningJobs}</span>
       </span>
-      <span className="inline-flex h-7 max-w-[180px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-success-soft bg-success-soft px-2 text-xs text-success" title="Running services">
+      <span className="inline-flex h-8 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-success-soft bg-success-soft px-2.5 text-xs text-success" title="Running services">
         <Server size={14} />
         <span>{runningServices}</span>
       </span>
@@ -106,7 +94,7 @@ function TopbarStatus({ session }: { session?: Session }) {
         onClick={() => {
           if (activePreview) {
             setSelectedPreviewId(activePreview.id);
-            setSelectedPanel("preview");
+            setPreviewOpen(true);
             return;
           }
           startPreview.mutate();

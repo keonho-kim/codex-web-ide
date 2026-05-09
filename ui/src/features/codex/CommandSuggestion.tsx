@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { api, splitCommand } from "../../lib/api";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import { getErrorMessage } from "../../lib/errors";
-import { useUiStore, type UiState } from "../../store/uiStore";
+import { useUiStore, type ControlTab } from "../../store/uiStore";
 
 type ManagedKind = "job" | "preview" | "service";
 
@@ -15,9 +15,8 @@ type ManagedSuggestion = {
   source: string;
 };
 
-const panelByKind: Record<ManagedKind, UiState["selectedPanel"]> = {
+const controlTabByKind: Partial<Record<ManagedKind, ControlTab>> = {
   job: "jobs",
-  preview: "preview",
   service: "services",
 };
 
@@ -25,7 +24,9 @@ export function CommandSuggestion({ sessionId, text }: { sessionId?: string; tex
   const suggestion = parseManagedSuggestion(text);
   const [dismissed, setDismissed] = useState(false);
   const queryClient = useQueryClient();
-  const setSelectedPanel = useUiStore((state) => state.setSelectedPanel);
+  const setWorkbenchTab = useUiStore((state) => state.setWorkbenchTab);
+  const setControlTab = useUiStore((state) => state.setControlTab);
+  const setPreviewOpen = useUiStore((state) => state.setPreviewOpen);
   const run = useMutation({
     mutationFn: async () => {
       if (!sessionId || !suggestion) throw new Error("No active session.");
@@ -39,7 +40,12 @@ export function CommandSuggestion({ sessionId, text }: { sessionId?: string; tex
     },
     onSuccess: async () => {
       if (!sessionId || !suggestion) return;
-      setSelectedPanel(panelByKind[suggestion.kind]);
+      if (suggestion.kind === "preview") {
+        setPreviewOpen(true);
+      } else {
+        setWorkbenchTab("control");
+        setControlTab(controlTabByKind[suggestion.kind] ?? "jobs");
+      }
       await queryClient.invalidateQueries({ queryKey: [`${suggestion.kind}s`, sessionId] });
     },
   });

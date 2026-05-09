@@ -16,6 +16,9 @@ export function registerCodexRoutes(app: Express, { codex, sessions }: AppServic
   app.post("/api/sessions/:id/codex/threads/:threadId/select", withSession(sessions, async (req, res, session) => {
     res.json(await codex.selectThread(session, req.params.threadId));
   }));
+  app.delete("/api/sessions/:id/codex/threads/:threadId", withSession(sessions, async (req, res, session) => {
+    res.json(await codex.deleteThread(session, req.params.threadId));
+  }));
   app.post("/api/sessions/:id/codex/run", withSession(sessions, async (req, res, session) => {
     res.status(202).json(await codex.run(session, codexRunSchema.parse(req.body)));
   }));

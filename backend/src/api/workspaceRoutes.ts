@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createProjectSchema, workspaceSettingsSchema } from "../shared/schemas";
+import { browsePathSchema, createBrowseFolderSchema, createProjectSchema, workspaceSettingsSchema } from "../shared/schemas";
 import { authRequired } from "../auth/authManager";
 import { asyncHandler, type AppServices } from "./context";
 
@@ -14,6 +14,12 @@ export function registerWorkspaceRoutes(app: Express, { auth, workspace }: AppSe
   }));
   app.get("/api/projects", asyncHandler(async (_req, res) => {
     res.json(await workspace.listProjects());
+  }));
+  app.get("/api/projects/browse", asyncHandler(async (req, res) => {
+    res.json(await workspace.browsePath(browsePathSchema.parse(req.query.path)));
+  }));
+  app.post("/api/projects/browse/folder", asyncHandler(async (req, res) => {
+    res.status(201).json(await workspace.createBrowseFolder(createBrowseFolderSchema.parse(req.body)));
   }));
   app.post("/api/projects", asyncHandler(async (req, res) => {
     res.status(201).json(await workspace.addProject(createProjectSchema.parse(req.body)));

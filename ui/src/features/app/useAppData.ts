@@ -83,6 +83,7 @@ export function useAppData() {
     activeSessionId,
     activeSession,
     orderedProjects,
+    allSessions: sessions.data ?? [],
     sessions: projectSessions,
     settings: settings.data,
     settingsPending: updateSettings.isPending,

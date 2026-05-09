@@ -6,7 +6,7 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
   const preview = usePreviewPanel(sessionId);
 
   return (
-    <div className="grid h-[calc(100%-38px)] grid-rows-[auto_auto_minmax(0,1fr)_80px] gap-2.5 overflow-auto p-2.5">
+    <div className="grid h-full grid-rows-[auto_auto_minmax(0,1fr)_140px] gap-4 overflow-auto p-4">
       <PreviewToolbar
         activePreview={preview.activePreview}
         command={preview.command}
@@ -26,7 +26,7 @@ export function PreviewPanel({ sessionId }: { sessionId?: string }) {
         </p>
       ) : null}
       <PreviewFrame iframeVersion={preview.iframeVersion} preview={preview.activePreview} />
-      <pre className="h-[150px] overflow-auto rounded-md bg-ink p-2.5 text-xs whitespace-pre-wrap text-white">
+      <pre className="overflow-auto rounded-md bg-ink p-4 text-xs whitespace-pre-wrap text-white">
         {preview.activePreview ? preview.activeLogs || preview.activePreview.status : "No preview logs yet."}
       </pre>
     </div>

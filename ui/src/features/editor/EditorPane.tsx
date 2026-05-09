@@ -48,9 +48,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   }, [activeFilePath]);
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[40px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas max-[900px]:border-r-0">
-      <div className="flex min-w-0 items-center justify-between border-b border-hairline bg-panel px-2 py-1.5">
-        <span className="overflow-hidden font-mono text-xs text-ellipsis whitespace-nowrap text-muted">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
+    <section className="grid h-full min-w-0 grid-rows-[48px_40px_minmax(0,1fr)] overflow-hidden bg-canvas">
+      <div className="flex min-w-0 items-center justify-between border-b border-hairline bg-panel px-4 py-2">
+        <span className="truncate font-mono text-xs text-muted">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
         <div className="flex items-center gap-1">
           {previewable ? (
             <div className="inline-flex h-8 overflow-hidden rounded-md border border-control bg-canvas">
@@ -77,16 +77,16 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           </Button>
         </div>
       </div>
-      <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-hairline px-3 py-1.5">
         {openFilePaths.map((path) => (
           <div
             className={cn(
-              "inline-flex h-6 max-w-[200px] shrink-0 items-center overflow-hidden rounded-md border text-xs",
+              "inline-flex h-7 max-w-[220px] shrink-0 items-center overflow-hidden rounded-md border text-xs",
               path === activeFilePath ? "border-selected-border bg-selected text-primary" : "border-transparent bg-transparent text-ink hover:bg-page",
             )}
             key={path}
           >
-            <button className="min-w-0 flex-1 overflow-hidden px-2 text-left text-ellipsis whitespace-nowrap" type="button" onClick={() => setActiveFilePath(path)}>
+            <button className="min-w-0 flex-1 truncate px-2 text-left" type="button" onClick={() => setActiveFilePath(path)}>
               {path}
             </button>
             <button
@@ -110,7 +110,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           path={activeFilePath}
           value={draft}
           theme="vs-light"
-          options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 12, bottom: 12 } }}
+          options={{ minimap: { enabled: false }, fontSize: 14, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 18, bottom: 18 } }}
           onChange={(value) => {
             if (activeFilePath) setEditorDraft(activeFilePath, value ?? "");
           }}

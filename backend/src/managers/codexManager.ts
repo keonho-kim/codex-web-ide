@@ -48,16 +48,24 @@ export class CodexManager {
     return this.threadManager.select(session, threadId);
   }
 
+  async deleteThread(session: Session, threadId: string) {
+    if (this.running.has(session.id)) throw new Error("Cannot delete a thread while Codex is running");
+    const result = await this.threadManager.delete(session, threadId);
+    this.messages.delete(threadId);
+    return result;
+  }
+
   async listMessages(session: Session) {
-    const thread = await this.threadManager.active(session);
+    const thread = await this.threadManager.current(session);
+    if (!thread) return [];
     return this.messages.get(thread.id) ?? [];
   }
 
   async resume(session: Session) {
-    const thread = await this.threadManager.active(session);
+    const thread = await this.threadManager.current(session);
     return {
       running: this.running.has(session.id),
-      messages: this.messages.get(thread.id) ?? [],
+      messages: thread ? (this.messages.get(thread.id) ?? []) : [],
       thread,
     };
   }
