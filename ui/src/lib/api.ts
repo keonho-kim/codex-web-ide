@@ -1,7 +1,18 @@
+let csrfToken: string | undefined;
+
+export function setCsrfToken(token?: string) {
+  csrfToken = token;
+}
+
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+  const method = options.method || "GET";
   const response = await fetch(path, {
-    method: options.method || "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    method,
+    credentials: "same-origin",
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(csrfToken && !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase()) ? { "X-CSRF-Token": csrfToken } : {}),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   if (!response.ok) {

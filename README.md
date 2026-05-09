@@ -33,7 +33,12 @@ To listen on another host or port:
 cw start --host 0.0.0.0 --port 17321
 ```
 
-When binding to a non-loopback host, token authentication is enabled unless `CODEX_WEB_AUTH=0` is set.
+When binding to a non-loopback host, Telegram approval authentication is enabled unless `CODEX_WEB_AUTH=0` is set. Configure it before exposing the app:
+
+```bash
+cw config telegram
+cw start --host 0.0.0.0 --auth enable
+```
 
 ## Managed Commands
 
@@ -89,7 +94,10 @@ CODEX_WEB_HOME                 Data directory, default ~/.codex-web
 CODEX_WEB_HOST                 App host, default 127.0.0.1
 CODEX_WEB_PORT                 App port, default 17321
 CODEX_WEB_AUTH                 1 to force auth, 0 to disable auth
-CODEX_WEB_TOKEN                Token for CLI/API requests when auth is enabled
+CW_TELEGRAM_BOT_TOKEN          Telegram bot token override for auth
+CW_TELEGRAM_API_BASE           Telegram Bot API base URL, mainly for tests
+CW_SESSION_SECRET              Session secret override
+CW_CSRF_SECRET                 CSRF secret override
 CODEX_WEB_PREVIEW_PORT_START   Preview port range start, default 17330
 CODEX_WEB_PREVIEW_PORT_END     Preview port range end, default 17399
 ```

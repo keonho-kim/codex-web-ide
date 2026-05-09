@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { AuthGate } from "./features/auth/AuthGate";
 import { Sidebar } from "./features/projects/Sidebar";
 import { Topbar } from "./features/app/Topbar";
 import { Workbench } from "./features/Workbench";
@@ -26,7 +27,8 @@ export function App() {
   useSessionEvents(app.activeSessionId, queryClient);
 
   return (
-    <main
+    <AuthGate>
+      <main
       className={cn(
         "grid h-screen gap-3 overflow-hidden bg-page p-3 text-ink max-[700px]:gap-2 max-[700px]:p-2",
         "grid-rows-[64px_minmax(0,1fr)] max-[900px]:grid-rows-[auto_minmax(0,1fr)]",
@@ -63,7 +65,8 @@ export function App() {
           <Workbench sessionId={app.activeSessionId} />
         </Panel>
       </PanelGroup>
-    </main>
+      </main>
+    </AuthGate>
   );
 }
 

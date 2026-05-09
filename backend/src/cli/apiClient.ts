@@ -6,12 +6,10 @@ import { readPidFile } from "./pidFile";
 export async function api<T>(pathName: string, options: { method?: string; body?: unknown } = {}) {
   let response: Response;
   try {
-    const token = await authToken();
     response = await fetch(`${await serverBaseUrl()}${pathName}`, {
       method: options.method || "GET",
       headers: {
         ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { "x-codex-web-token": token } : {}),
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
@@ -32,19 +30,9 @@ export async function serverBaseUrl() {
   return `http://${host}:${port}`;
 }
 
-async function authToken() {
-  if (process.env.CODEX_WEB_TOKEN) return process.env.CODEX_WEB_TOKEN;
-  try {
-    const config = await readConfig();
-    return config.auth?.token || null;
-  } catch {
-    return null;
-  }
-}
-
 async function readConfig() {
   try {
-    return JSON.parse(await fs.readFile(path.join(codexWebHome(), "config.json"), "utf8")) as { host?: string; port?: number; auth?: { token?: string } };
+    return JSON.parse(await fs.readFile(path.join(codexWebHome(), "config.json"), "utf8")) as { host?: string; port?: number };
   } catch {
     return {};
   }

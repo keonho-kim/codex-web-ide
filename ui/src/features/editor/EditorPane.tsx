@@ -238,7 +238,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
       </div>
       <div className="relative min-h-0 overflow-hidden">
         {activePreview ? (
-          <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full border-0 bg-white" title="Preview" src={activePreview.publicUrl} />
+          <iframe key={`${activePreview.id}:${iframeVersion}`} className="h-full w-full border-0 bg-white" title="Preview" src={activePreview.publicUrl} sandbox="allow-forms allow-modals allow-popups allow-presentation allow-scripts" />
         ) : activeFilePath && previewable && mode === "preview" ? (
           <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted">Rendering preview.</div>}>
             <DocumentPreview content={draft} path={activeFilePath} />

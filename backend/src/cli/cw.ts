@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { runDoctor } from "./doctor";
 import { runManagedCommand, type ManagedCommandKind } from "./managedCommands";
+import { configureTelegram } from "./telegramConfig";
 import { init, open, start, status, stop, update } from "./serverCommands";
 
 const args = process.argv.slice(2);
@@ -37,6 +38,10 @@ switch (command) {
   case "update":
     await update();
     break;
+  case "config":
+    if (args[1] === "telegram") await configureTelegram();
+    else printHelp();
+    break;
   default:
     printHelp();
     process.exit(command === "help" || command === "--help" || command === "-h" ? 0 : 1);
@@ -44,7 +49,7 @@ switch (command) {
 
 function printHelp() {
   console.log(`Usage:
-  cw start [--host 127.0.0.1] [--port 17321] [--preview-port-start 17330] [--preview-port-end 17399]
+  cw start [--host 127.0.0.1] [--port 17321] [--preview-port-start 17330] [--preview-port-end 17399] [--auth enable|disable]
   cw stop
   cw restart [--host 127.0.0.1] [--port 17321] [--preview-port-start 17330] [--preview-port-end 17399]
   cw doctor
@@ -52,6 +57,7 @@ function printHelp() {
   cw open
   cw init [project-path]
   cw update
+  cw config telegram
   cw job [--approve-dangerous] <command...>
   cw preview [--approve-dangerous] <command...>
   cw service [--approve-dangerous] <command...>`);
