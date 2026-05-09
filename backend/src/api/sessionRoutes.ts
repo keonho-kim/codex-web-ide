@@ -33,17 +33,41 @@ export function registerSessionRoutes(app: Express, { codex, commands, events, f
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     });
+    res.flushHeaders?.();
     res.write("retry: 1000\n\n");
-    const unsubscribe = events.subscribe(
+    res.write(": connected\n\n");
+    let closed = false;
+    let unsubscribe = () => {};
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      if (heartbeat) clearInterval(heartbeat);
+      unsubscribe();
+    };
+    const writeEventChunk = (chunk: string) => {
+      if (closed || res.destroyed || res.writableEnded) return false;
+      try {
+        return res.write(chunk);
+      } catch {
+        cleanup();
+        return false;
+      }
+    };
+    heartbeat = setInterval(() => {
+      writeEventChunk(": keepalive\n\n");
+    }, 15000);
+    unsubscribe = events.subscribe(
       req.params.id,
       (event) => {
-        res.write(`id: ${event.id}\n`);
-        res.write(`event: ${event.type}\n`);
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        writeEventChunk(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
       },
       req.header("last-event-id"),
     );
-    req.on("close", unsubscribe);
+    req.on("close", cleanup);
+    res.on("close", cleanup);
+    res.on("error", cleanup);
   }));
 }

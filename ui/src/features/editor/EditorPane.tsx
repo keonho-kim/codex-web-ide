@@ -1,14 +1,19 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, X } from "lucide-react";
+import { Eye, FileText, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/classes";
 import { useUiStore } from "../../store/uiStore";
+import { isPreviewablePath } from "./documentTypes";
+
+type EditorMode = "raw" | "preview";
+const DocumentPreview = lazy(() => import("./DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
 
 export function EditorPane({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
+  const [mode, setMode] = useState<EditorMode>("raw");
   const activeFilePath = useUiStore((state) => state.activeFilePath);
   const editorDrafts = useUiStore((state) => state.editorDrafts);
   const openFilePaths = useUiStore((state) => state.openFilePaths);
@@ -22,6 +27,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
     enabled: Boolean(sessionId && activeFilePath),
   });
   const draft = activeFilePath ? (editorDrafts[activeFilePath] ?? file.data?.content ?? "") : "";
+  const previewable = isPreviewablePath(activeFilePath);
   const save = useMutation({
     mutationFn: () => api("/api/sessions/" + sessionId + "/files/write", { method: "PUT", body: { path: activeFilePath, content: draft } }),
     onSuccess: async () => {
@@ -37,13 +43,39 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
     hydrateEditorDraft(activeFilePath, content);
   }, [activeFilePath, file.data?.content, hydrateEditorDraft]);
 
+  useEffect(() => {
+    setMode("raw");
+  }, [activeFilePath]);
+
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas">
-      <div className="flex min-w-0 items-center justify-between border-b border-hairline px-2 py-1.5">
-        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
-        <Button title="Save file" type="button" disabled={!activeFilePath || !dirty || save.isPending} onClick={() => save.mutate()} variant="outline" size="icon-sm">
-          <Save data-icon="inline-start" />
-        </Button>
+    <section className="grid h-full min-w-0 grid-rows-[40px_34px_minmax(0,1fr)] overflow-hidden border-r border-hairline bg-canvas max-[900px]:border-r-0">
+      <div className="flex min-w-0 items-center justify-between border-b border-hairline bg-panel px-2 py-1.5">
+        <span className="overflow-hidden font-mono text-xs text-ellipsis whitespace-nowrap text-muted">{activeFilePath ? `${dirty ? "* " : ""}${activeFilePath}` : "No file open"}</span>
+        <div className="flex items-center gap-1">
+          {previewable ? (
+            <div className="inline-flex h-8 overflow-hidden rounded-md border border-control bg-canvas">
+              <button
+                className={cn("inline-flex items-center gap-1 px-2 text-xs", mode === "raw" ? "bg-selected text-primary" : "text-muted hover:bg-page")}
+                type="button"
+                onClick={() => setMode("raw")}
+              >
+                <FileText size={13} />
+                Raw
+              </button>
+              <button
+                className={cn("inline-flex items-center gap-1 border-l border-control px-2 text-xs", mode === "preview" ? "bg-selected text-primary" : "text-muted hover:bg-page")}
+                type="button"
+                onClick={() => setMode("preview")}
+              >
+                <Eye size={13} />
+                Preview
+              </button>
+            </div>
+          ) : null}
+          <Button title="Save file" type="button" disabled={!activeFilePath || !dirty || save.isPending} onClick={() => save.mutate()} variant="outline" size="icon-sm">
+            <Save data-icon="inline-start" />
+          </Button>
+        </div>
       </div>
       <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-hairline px-1.5 py-1">
         {openFilePaths.map((path) => (
@@ -68,13 +100,17 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
           </div>
         ))}
       </div>
-      {activeFilePath ? (
+      {activeFilePath && previewable && mode === "preview" ? (
+        <Suspense fallback={<div className="flex items-center justify-center text-xs text-muted">Rendering preview.</div>}>
+          <DocumentPreview content={draft} path={activeFilePath} />
+        </Suspense>
+      ) : activeFilePath ? (
         <Editor
           height="100%"
           path={activeFilePath}
           value={draft}
           theme="vs-light"
-          options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: "on", scrollBeyondLastLine: false }}
+          options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 12, bottom: 12 } }}
           onChange={(value) => {
             if (activeFilePath) setEditorDraft(activeFilePath, value ?? "");
           }}

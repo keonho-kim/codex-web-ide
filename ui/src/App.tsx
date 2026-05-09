@@ -12,6 +12,7 @@ export function App() {
   const queryClient = useQueryClient();
   const app = useAppData();
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
+  const bottomCollapsed = useUiStore((state) => state.collapsedMainPanels.bottom);
   const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
 
   useSessionEvents(app.activeSessionId, queryClient);
@@ -19,8 +20,11 @@ export function App() {
   return (
     <main
       className={cn(
-        "grid h-screen grid-rows-[48px_minmax(0,1fr)_230px] bg-page text-ink max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_150px_minmax(0,1fr)_220px]",
-        sidebarCollapsed ? "grid-cols-[44px_minmax(0,1fr)]" : "grid-cols-[230px_minmax(0,1fr)]",
+        "grid h-screen gap-0 overflow-hidden bg-page text-ink",
+        bottomCollapsed
+          ? "grid-rows-[52px_minmax(0,1fr)_38px] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_118px_minmax(0,1fr)_38px] max-[700px]:grid-rows-[auto_minmax(0,1fr)_38px]"
+          : "grid-rows-[52px_minmax(0,1fr)_238px] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[auto_118px_minmax(0,1fr)_174px] max-[700px]:grid-rows-[auto_minmax(0,1fr)_156px]",
+        sidebarCollapsed ? "grid-cols-[48px_minmax(0,1fr)]" : "grid-cols-[260px_minmax(0,1fr)]",
       )}
     >
       <Topbar

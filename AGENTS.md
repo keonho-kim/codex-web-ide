@@ -26,6 +26,16 @@ Your job is to implement exactly what the user asked for with minimum necessary 
 - Follow the CLI/runtime direction in `PRODUCT.md`, including `cw start`, `cw job`, `cw preview`, and `cw service`.
 - Do not run long-running commands directly when the managed `cw` command path is available.
 
+## Testing Guide
+
+- Run `bun test` for backend and frontend unit/smoke coverage.
+- Run `bun run build` before considering UI or TypeScript work complete.
+- Run `bun run setup:e2e` once on a fresh Linux, WSL, or Termux-like environment before browser tests. This installs Playwright Chromium and extracts local shared libraries when system packages are unavailable.
+- Run `bun run test:e2e` for browser UI validation. The Playwright suite must focus on the three supported UI targets: desktop, iPad mini, and Pixel 7.
+- Keep Playwright UI tests concentrated on real usability risks: visible panel separation, responsive layout, primary chat access on small screens, and collapse/expand behavior for Files, Editor, Chat, and the bottom panel.
+- Do not replace UI validation with only unit tests when changing layout, responsive breakpoints, visual hierarchy, or panel behavior.
+- Treat screenshots from Playwright as review artifacts for UI changes. They are generated under `test-results/` and should not be committed.
+
 ## Source Direction
 
 - Keep the implementation aligned with the product architecture in `PRODUCT.md`.

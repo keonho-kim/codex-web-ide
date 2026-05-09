@@ -7,6 +7,7 @@ import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
 import { registerFileRoutes } from "./api/fileRoutes";
 import { registerGitRoutes } from "./api/gitRoutes";
+import { registerSessionRoutes } from "./api/sessionRoutes";
 import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
@@ -168,6 +169,48 @@ describe("product smoke coverage", () => {
       expect(await response.json()).toMatchObject({ stagedCount: 1, dirty: true });
       expect(published).toContainEqual(expect.objectContaining({ type: "git.state.updated" }));
     } finally {
+      await closeServer(server);
+    }
+  });
+
+  test("keeps session event streams alive and publishes chunks", async () => {
+    const root = await tempDir();
+    const session = testSession(root);
+    const events = new EventBus();
+    const app = express();
+    app.use(express.json());
+    registerSessionRoutes(app, {
+      codex: {},
+      commands: {},
+      events,
+      files: {},
+      git: {},
+      sessions: { get: async () => session, list: async () => [session] },
+    } as unknown as AppServices);
+    const port = await freePort();
+    const server = await new Promise<net.Server>((resolve, reject) => {
+      const listener = app.listen(port, "127.0.0.1", () => resolve(listener));
+      listener.once("error", reject);
+    });
+    const controller = new AbortController();
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/sessions/${session.id}/events`, { signal: controller.signal });
+      expect(response.ok).toBe(true);
+      expect(response.headers.get("content-type")).toContain("text/event-stream");
+      const reader = response.body?.getReader();
+      expect(reader).toBeTruthy();
+      const first = await reader!.read();
+      expect(new TextDecoder().decode(first.value)).toContain(": connected");
+
+      events.publish(session.id, {
+        type: "git.state.updated",
+        state: { branch: null, commit: null, detached: false, dirty: false, stagedCount: 0, unstagedCount: 0, untrackedCount: 0 },
+      });
+      const next = await reader!.read();
+      expect(new TextDecoder().decode(next.value)).toContain("event: git.state.updated");
+      await reader!.cancel();
+    } finally {
+      controller.abort();
       await closeServer(server);
     }
   });

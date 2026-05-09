@@ -7,14 +7,20 @@
   --color-primary-foreground: #ffffff;
   --color-ink: #1d1d1f;
   --color-muted: #7a7a7a;
-  --color-page: #f5f5f7;
+  --color-page: #f3f5f8;
   --color-canvas: #ffffff;
-  --color-panel: #fbfbfd;
-  --color-hairline: #e0e0e0;
-  --color-control: #d8d8df;
-  --color-subtle: #ececf0;
-  --color-selected: #e8f1ff;
-  --color-selected-border: #b9d7ff;
+  --color-panel: #f9fbff;
+  --color-hairline: #d8dee8;
+  --color-control: #cfd7e3;
+  --color-subtle: #edf2f8;
+  --color-selected: #e6f1ff;
+  --color-selected-border: #94c6ff;
+  --color-success: #1f8a5b;
+  --color-success-soft: #e7f6ef;
+  --color-warning: #a86600;
+  --color-warning-soft: #fff3d8;
+  --color-codex: #5b5ce2;
+  --color-codex-soft: #efefff;
 
   --color-background: #ffffff;
   --color-foreground: #1d1d1f;
@@ -37,5 +43,8 @@
 
   body {
     margin: 0;
+    overflow: hidden;
+    background: var(--color-page);
+    text-rendering: geometricPrecision;
   }
 }

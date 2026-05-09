@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { selectCodexEvents, useUiStore } from "./uiStore";
+import { normalizeCollapsedMainPanels, selectCodexEvents, useUiStore } from "./uiStore";
 
 test("returns stable empty Codex event snapshots", () => {
   const state = useUiStore.getState();
@@ -24,4 +24,13 @@ test("does not notify subscribers for unchanged UI store values", () => {
 
   unsubscribe();
   expect(notifications).toBe(0);
+});
+
+test("normalizes collapsed main panel state", () => {
+  expect(normalizeCollapsedMainPanels({ editor: true })).toEqual({
+    files: false,
+    editor: true,
+    codex: false,
+    bottom: false,
+  });
 });

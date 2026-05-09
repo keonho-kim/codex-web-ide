@@ -11,6 +11,14 @@ export type CodexEventSummary = {
 
 export const DEFAULT_WORKBENCH_LAYOUT = [18, 52, 30];
 export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
+export type MainPanelKey = "files" | "editor" | "codex" | "bottom";
+export type CollapsedMainPanels = Record<MainPanelKey, boolean>;
+export const DEFAULT_COLLAPSED_MAIN_PANELS: CollapsedMainPanels = {
+  files: false,
+  editor: false,
+  codex: false,
+  bottom: false,
+};
 
 export type UiState = {
   activeProjectId?: string;
@@ -26,6 +34,7 @@ export type UiState = {
   selectedPanel: "preview" | "git" | "jobs" | "services";
   selectedPreviewId?: string;
   sidebarCollapsed: boolean;
+  collapsedMainPanels: CollapsedMainPanels;
   workbenchLayout: number[];
   setActiveProjectId(id?: string): void;
   setActiveSessionId(id?: string): void;
@@ -43,6 +52,7 @@ export type UiState = {
   setSelectedPanel(panel: UiState["selectedPanel"]): void;
   setSelectedPreviewId(id?: string): void;
   setSidebarCollapsed(collapsed: boolean): void;
+  toggleMainPanel(panel: MainPanelKey): void;
   setWorkbenchLayout(layout: number[]): void;
 };
 
@@ -58,6 +68,7 @@ export const useUiStore = create<UiState>()(
       editorSyncedContents: {},
       selectedPanel: "git",
       sidebarCollapsed: false,
+      collapsedMainPanels: DEFAULT_COLLAPSED_MAIN_PANELS,
       workbenchLayout: DEFAULT_WORKBENCH_LAYOUT,
       setActiveProjectId: (activeProjectId) => {
         if (get().activeProjectId === activeProjectId) return;
@@ -155,6 +166,12 @@ export const useUiStore = create<UiState>()(
         if (get().sidebarCollapsed === sidebarCollapsed) return;
         set({ sidebarCollapsed });
       },
+      toggleMainPanel: (panel) => {
+        const collapsedMainPanels = normalizeCollapsedMainPanels(get().collapsedMainPanels);
+        const next = { ...collapsedMainPanels, [panel]: !collapsedMainPanels[panel] };
+        if (panel !== "bottom" && next.files && next.editor && next.codex) next.codex = false;
+        set({ collapsedMainPanels: next });
+      },
       setWorkbenchLayout: (workbenchLayout) => {
         if (sameLayout(get().workbenchLayout, workbenchLayout)) return;
         set({ workbenchLayout });
@@ -170,6 +187,7 @@ export const useUiStore = create<UiState>()(
         selectedPanel: state.selectedPanel,
         selectedPreviewId: state.selectedPreviewId,
         sidebarCollapsed: state.sidebarCollapsed,
+        collapsedMainPanels: normalizeCollapsedMainPanels(state.collapsedMainPanels),
         workbenchLayout: state.workbenchLayout,
       }),
     },
@@ -182,4 +200,8 @@ export function selectCodexEvents(state: UiState, sessionId?: string) {
 
 function sameLayout(current: number[], next: number[]) {
   return current.length === next.length && current.every((value, index) => value === next[index]);
+}
+
+export function normalizeCollapsedMainPanels(value?: Partial<CollapsedMainPanels>) {
+  return { ...DEFAULT_COLLAPSED_MAIN_PANELS, ...value };
 }

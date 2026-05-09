@@ -24,6 +24,8 @@ build/
 *.tsbuildinfo
 .vite/
 coverage/
+playwright-report/
+test-results/
 
 # Editors and OS files
 .DS_Store
