@@ -8,8 +8,12 @@ export function registerWorkspaceRoutes(app: Express, { auth, workspace }: AppSe
     res.json(await workspace.getSettings());
   }));
   app.put("/api/workspace/settings", asyncHandler(async (req, res) => {
-    const settings = await workspace.updateSettings(workspaceSettingsSchema.parse(req.body));
-    await auth.applySettings(settings, authRequired(settings.host));
+    const parsed = workspaceSettingsSchema.parse(req.body);
+    const next = authRequired(parsed.host)
+      ? { ...parsed, auth: { ...parsed.auth, enabled: true } }
+      : parsed;
+    await auth.applySettings(next, false);
+    await workspace.updateSettings(next);
     res.json(await workspace.getSettings());
   }));
   app.get("/api/projects", asyncHandler(async (_req, res) => {

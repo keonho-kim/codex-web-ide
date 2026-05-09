@@ -23,6 +23,7 @@ export type ServerOptions = {
   port?: number;
   previewPortStart?: number;
   previewPortEnd?: number;
+  auth?: "enable" | "disable";
 };
 
 export async function createApp(options: ServerOptions = {}) {
@@ -32,8 +33,8 @@ export async function createApp(options: ServerOptions = {}) {
   const events = new EventBus();
   const workspace = new WorkspaceManager(store);
   const sessions = new SessionManager(store, workspace);
-  const auth = new AuthManager(workspace);
-  await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1"));
+  const auth = new AuthManager(workspace, store);
+  await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1", options.auth), options.auth);
   const files = new FileManager(events);
   const git = new GitManager();
   const skills = new SkillManager();
@@ -60,6 +61,7 @@ export async function createApp(options: ServerOptions = {}) {
   app.locals.cleanup = async () => {
     const activeSessions = await sessions.list();
     await codex.shutdown();
+    auth.shutdown();
     terminals.shutdown();
     commands.shutdown();
     await Promise.all(activeSessions.flatMap((session) => [files.unwatch(session.id), git.unwatch(session.id)]));
@@ -71,6 +73,7 @@ export async function createApp(options: ServerOptions = {}) {
   }
 
   app.use(express.json({ limit: "5mb" }));
+  app.use(auth.securityHeaders());
   app.use(auth.middleware());
   registerApiRoutes(app, services);
   serveStaticUi(app);
@@ -85,7 +88,7 @@ export async function startServer(options: ServerOptions = {}) {
   const port = options.port || Number(process.env.CODEX_WEB_PORT || persisted.port);
   const previewPortStart = options.previewPortStart || Number(process.env.CODEX_WEB_PREVIEW_PORT_START || persisted.previewPortStart);
   const previewPortEnd = options.previewPortEnd || Number(process.env.CODEX_WEB_PREVIEW_PORT_END || persisted.previewPortEnd);
-  const app = await createApp({ host, port, previewPortStart, previewPortEnd });
+  const app = await createApp({ host, port, previewPortStart, previewPortEnd, auth: options.auth });
   const auth = app.locals.auth as AuthManager | undefined;
   let closeAndExit: () => void = () => process.exit(0);
   app.post("/api/shutdown", (req, res) => {

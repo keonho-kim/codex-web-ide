@@ -1136,11 +1136,12 @@ cw start --host 0.0.0.0
 
 ### 20.3 인증
 
-LAN 공개 시 token 기반 인증을 추가한다.
+LAN 공개 시 인증을 추가한다. 초기 placeholder였던 token 기반 인증은 보안 설계 확장에 따라 Telegram 승인 기반 browser session 인증으로 대체한다.
 
-* first run token 생성
-* UI 접속 시 token 요구
-* optional password 설정
+* `cw config telegram`으로 owner pairing
+* `cw start --auth enable`로 Telegram approval 활성화
+* UI 접속 시 Telegram 승인 요구
+* HttpOnly session cookie와 CSRF token 사용
 
 ### 20.4 path escape 방지
 
@@ -1558,7 +1559,7 @@ Preview processes must be started through `cw preview` so the UI can track ports
 
 * Tailscale integration guide
 * Cloudflare Tunnel guide
-* token auth
+* Telegram approval auth
 
 ---
 
@@ -1624,7 +1625,7 @@ Preview processes must be started through `cw preview` so the UI can track ports
 
 ### Phase 7: Hardening
 
-1. auth token
+1. Telegram approval auth baseline
 2. command approval
 3. destructive action confirm
 4. config persistence

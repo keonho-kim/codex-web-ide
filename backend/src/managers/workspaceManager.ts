@@ -13,6 +13,16 @@ export class WorkspaceManager {
   constructor(private store: JsonStore) {}
 
   async getSettings(): Promise<WorkspaceSettings> {
+    const defaultAuth = {
+      enabled: false,
+      provider: "telegram" as const,
+      singleSession: true,
+      loginRequestTtlMs: 120000,
+      heartbeatIntervalMs: 15000,
+      sessionStaleMs: 90000,
+      sessionIdleTimeoutMs: 1800000,
+      sessionAbsoluteTtlMs: 43200000,
+    };
     const fallback: WorkspaceSettings = {
       host: "127.0.0.1",
       port: 17321,
@@ -21,14 +31,16 @@ export class WorkspaceManager {
       defaultProjectsDir: "~",
       activeProjectId: undefined,
       recentProjectIds: [],
-      auth: { enabled: false },
+      auth: defaultAuth,
+      telegram: { remoteControlEnabled: false },
     };
     const settings = await this.store.read<Partial<WorkspaceSettings>>("config.json", fallback);
     return workspaceSettingsSchema.parse({
       ...fallback,
       ...settings,
       recentProjectIds: settings.recentProjectIds ?? fallback.recentProjectIds,
-      auth: { ...fallback.auth, ...settings.auth },
+      auth: { ...defaultAuth, ...settings.auth },
+      telegram: { ...fallback.telegram, ...settings.telegram },
     });
   }
 

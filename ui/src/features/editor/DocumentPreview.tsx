@@ -1,6 +1,5 @@
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { isHtmlPath } from "./documentTypes";
@@ -10,7 +9,7 @@ export function DocumentPreview({ content, path }: { content: string; path: stri
     return (
       <iframe
         className="h-full w-full border-0 bg-white"
-        sandbox="allow-forms allow-modals allow-popups allow-same-origin"
+        sandbox="allow-forms allow-modals allow-popups"
         srcDoc={content}
         title={`${path} preview`}
       />
@@ -21,7 +20,7 @@ export function DocumentPreview({ content, path }: { content: string; path: stri
     <article className="h-full overflow-auto bg-canvas px-6 py-5 text-[14px] leading-[1.6] text-ink max-[700px]:px-4 max-[700px]:py-3">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeRaw, rehypeKatex]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           h1: ({ ...props }) => <h1 className="mt-0 mb-4 text-2xl font-semibold tracking-normal text-ink" {...props} />,
           h2: ({ ...props }) => <h2 className="mt-6 mb-3 border-b border-hairline pb-2 text-xl font-semibold tracking-normal text-ink" {...props} />,

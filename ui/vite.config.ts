@@ -20,7 +20,7 @@ export default defineConfig({
           diff: ["diff2html"],
           editor: ["@monaco-editor/react"],
           interaction: ["react-arborist", "react-resizable-panels", "lucide-react"],
-          markdown: ["react-markdown", "remark-gfm", "remark-math", "rehype-katex", "rehype-raw", "katex"],
+          markdown: ["react-markdown", "remark-gfm", "remark-math", "rehype-katex", "katex"],
           tiptap: ["@tiptap/react", "@tiptap/starter-kit"],
           vendor: ["react", "react-dom", "react-router-dom", "@tanstack/react-query", "zustand"],
         },

@@ -102,10 +102,32 @@ export const workspaceSettingsSchema = z.object({
   auth: z
     .object({
       enabled: z.boolean().default(false),
-      token: z.string().optional(),
+      provider: z.literal("telegram").default("telegram"),
+      singleSession: z.boolean().default(true),
+      loginRequestTtlMs: z.number().int().positive().default(120000),
+      heartbeatIntervalMs: z.number().int().positive().default(15000),
+      sessionStaleMs: z.number().int().positive().default(90000),
+      sessionIdleTimeoutMs: z.number().int().positive().default(1800000),
+      sessionAbsoluteTtlMs: z.number().int().positive().default(43200000),
     })
-    .default({ enabled: false }),
+    .default({ enabled: false, provider: "telegram", singleSession: true, loginRequestTtlMs: 120000, heartbeatIntervalMs: 15000, sessionStaleMs: 90000, sessionIdleTimeoutMs: 1800000, sessionAbsoluteTtlMs: 43200000 }),
+  telegram: z
+    .object({
+      allowedTelegramUserId: z.number().int().optional(),
+      allowedChatId: z.number().int().optional(),
+      ownerDisplayName: z.string().optional(),
+      botUsername: z.string().optional(),
+      remoteControlEnabled: z.boolean().default(false),
+    })
+    .optional(),
 }).refine((settings) => settings.previewPortStart <= settings.previewPortEnd, {
   message: "Preview port start must be less than or equal to preview port end",
   path: ["previewPortEnd"],
+});
+
+export const telegramPairingSchema = z.object({
+  allowedTelegramUserId: z.number().int(),
+  allowedChatId: z.number().int(),
+  ownerDisplayName: z.string().optional(),
+  botUsername: z.string().optional(),
 });

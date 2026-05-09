@@ -6,6 +6,8 @@ export function proxyHttpRequest(req: Request, internalPort: number, server: Bun
   url.hostname = "127.0.0.1";
   url.port = String(internalPort);
   const headers = new Headers(req.headers);
+  headers.set("x-forwarded-host", headers.get("host") || url.host);
+  headers.set("x-forwarded-proto", new URL(req.url).protocol.replace(":", ""));
   headers.set("host", `127.0.0.1:${internalPort}`);
   setClientAddressHeaders(headers, req, server);
   const hasBody = req.method !== "GET" && req.method !== "HEAD";

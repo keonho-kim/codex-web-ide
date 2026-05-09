@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { AuthManager, authRequired } from "./auth/authManager";
+import { SecretsStore } from "./auth/secretsStore";
 import { registerFileRoutes } from "./api/fileRoutes";
 import { registerGitRoutes } from "./api/gitRoutes";
 import { registerSessionRoutes } from "./api/sessionRoutes";
@@ -60,6 +61,17 @@ import {
 afterEach(async () => {
   await cleanupTempRoots();
 });
+
+async function waitForLoginApproval(port: number, requestId: string) {
+  const deadline = Date.now() + 6000;
+  for (;;) {
+    const status = await fetch(`http://127.0.0.1:${port}/api/auth/login/${requestId}/status`).then((res) => res.json() as Promise<{ status: string; completeToken?: string }>);
+    if (status.status === "approved") return status;
+    if (status.status === "denied" || status.status === "expired") throw new Error(`Login request ${status.status}`);
+    if (Date.now() > deadline) throw new Error("Login request was not approved");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
 
 describe("product smoke coverage", () => {
   test("uses Tailwind as the only UI stylesheet entrypoint", async () => {
@@ -482,27 +494,125 @@ describe("product smoke coverage", () => {
     }
   });
 
-  test("generates and applies workspace auth token settings", async () => {
-    const workspace = new WorkspaceManager(new JsonStore(await tempDir()));
-    const auth = new AuthManager(workspace);
-    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { enabled: true } });
+  test("requires Telegram configuration before enabling auth", async () => {
+    const store = new JsonStore(await tempDir());
+    const workspace = new WorkspaceManager(store);
+    const auth = new AuthManager(workspace, store);
+    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { ...(await workspace.getSettings()).auth, enabled: true } });
 
+    await expect(auth.applySettings(settings, true)).rejects.toThrow("Telegram auth is not configured");
+  });
+
+  test("applies Telegram auth settings without issuing legacy auth tokens", async () => {
+    const store = new JsonStore(await tempDir());
+    const workspace = new WorkspaceManager(store);
+    const auth = new AuthManager(workspace, store);
+    await auth.configureTelegram({ botToken: "test-token", allowedTelegramUserId: 123, allowedChatId: 456, ownerDisplayName: "Owner", botUsername: "bot" });
+    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { ...(await workspace.getSettings()).auth, enabled: true } });
     await auth.applySettings(settings, authRequired(settings.host));
 
     expect(auth.getStatus().enabled).toBe(true);
-    expect((await workspace.getSettings()).auth.token).toBeTruthy();
+    expect(auth.getStatus().configured).toBe(true);
+    expect("token" in (await workspace.getSettings()).auth).toBe(false);
   });
 
-  test("requires tokens for forwarded non-loopback API requests", async () => {
-    const workspace = new WorkspaceManager(new JsonStore(await tempDir()));
-    const auth = new AuthManager(workspace);
-    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { enabled: true, token: "secret-token" } });
+  test("rejects forwarded non-loopback API requests without a browser session", async () => {
+    const store = new JsonStore(await tempDir());
+    const workspace = new WorkspaceManager(store);
+    const auth = new AuthManager(workspace, store);
+    await auth.configureTelegram({ botToken: "test-token", allowedTelegramUserId: 123, allowedChatId: 456, ownerDisplayName: "Owner", botUsername: "bot" });
+    const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { ...(await workspace.getSettings()).auth, enabled: true } });
     await auth.applySettings(settings, true);
 
     expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/projects"), "192.168.1.10")).toBe(false);
-    expect(auth.isAuthorizedHeaders(new Headers({ "x-codex-web-token": "secret-token" }), new URL("http://127.0.0.1/api/projects"), "192.168.1.10")).toBe(true);
     expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/health"), "192.168.1.10")).toBe(true);
-    expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/projects"), "127.0.0.1")).toBe(true);
+    expect(auth.isAuthorizedHeaders(new Headers(), new URL("http://127.0.0.1/api/projects"), "127.0.0.1")).toBe(false);
+  });
+
+  test("approves browser login through Telegram and enforces CSRF", async () => {
+    const home = await tempDir();
+    const previousHome = process.env.CODEX_WEB_HOME;
+    const previousTelegramBase = process.env.CW_TELEGRAM_API_BASE;
+    const telegramPort = await freePort();
+    const appPort = await freePort();
+    const updates: unknown[] = [];
+    let callbackData = "";
+    const telegram = Bun.serve({
+      hostname: "127.0.0.1",
+      port: telegramPort,
+      async fetch(req) {
+        const url = new URL(req.url);
+        const body = req.method === "POST" ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {};
+        if (url.pathname.endsWith("/getMe")) return Response.json({ ok: true, result: { id: 1, username: "codex_test_bot" } });
+        if (url.pathname.endsWith("/sendMessage")) {
+          const markup = body.reply_markup as { inline_keyboard?: Array<Array<{ callback_data?: string }>> } | undefined;
+          callbackData = markup?.inline_keyboard?.[0]?.[0]?.callback_data ?? "";
+          return Response.json({ ok: true, result: { message_id: 1 } });
+        }
+        if (url.pathname.endsWith("/getUpdates")) return Response.json({ ok: true, result: updates.splice(0) });
+        if (url.pathname.endsWith("/answerCallbackQuery")) return Response.json({ ok: true, result: true });
+        return Response.json({ ok: false, description: "unknown method" }, { status: 404 });
+      },
+    });
+    let server: Awaited<ReturnType<typeof startServer>> | undefined;
+    try {
+      process.env.CODEX_WEB_HOME = home;
+      process.env.CW_TELEGRAM_API_BASE = `http://127.0.0.1:${telegramPort}`;
+      const store = new JsonStore(home);
+      await store.ensure();
+      const workspace = new WorkspaceManager(store);
+      const settings = await workspace.getSettings();
+      await workspace.updateSettings({
+        ...settings,
+        auth: { ...settings.auth, enabled: true },
+        telegram: { allowedTelegramUserId: 123, allowedChatId: 456, ownerDisplayName: "Owner", botUsername: "codex_test_bot", remoteControlEnabled: false },
+      });
+      await new SecretsStore(store).write({ telegram: { botToken: "telegram-token" }, auth: { sessionSecret: "session-secret", csrfSecret: "csrf-secret" } });
+      server = await startServer({ host: "127.0.0.1", port: appPort, auth: "enable", previewPortStart: 24200, previewPortEnd: 24210 });
+
+      const loginRequest = await fetch(`http://127.0.0.1:${appPort}/api/auth/login/request`, {
+        method: "POST",
+        headers: { Origin: `http://127.0.0.1:${appPort}` },
+      }).then((res) => res.json() as Promise<{ requestId: string; code: string }>);
+      expect(loginRequest.requestId.startsWith("lr_")).toBe(true);
+      expect(callbackData).toContain(loginRequest.requestId);
+      updates.push({
+        update_id: 1,
+        callback_query: {
+          id: "callback-1",
+          data: callbackData,
+          from: { id: 123, first_name: "Owner" },
+          message: { chat: { id: 456 }, message_id: 1 },
+        },
+      });
+      const approved = await waitForLoginApproval(appPort, loginRequest.requestId);
+      expect(approved.completeToken).toBeTruthy();
+      const complete = await fetch(`http://127.0.0.1:${appPort}/api/auth/login/${loginRequest.requestId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: `http://127.0.0.1:${appPort}` },
+        body: JSON.stringify({ completeToken: approved.completeToken }),
+      });
+      expect(complete.ok).toBe(true);
+      const cookie = complete.headers.get("set-cookie")?.split(";")[0] ?? "";
+      const completed = (await complete.json()) as { csrfToken: string };
+      expect(cookie.startsWith("cw_session=")).toBe(true);
+      expect(completed.csrfToken).toBeTruthy();
+      const rejected = await fetch(`http://127.0.0.1:${appPort}/api/auth/heartbeat`, {
+        method: "POST",
+        headers: { Cookie: cookie, Origin: `http://127.0.0.1:${appPort}` },
+      });
+      expect(rejected.status).toBe(403);
+      const accepted = await fetch(`http://127.0.0.1:${appPort}/api/auth/heartbeat`, {
+        method: "POST",
+        headers: { Cookie: cookie, Origin: `http://127.0.0.1:${appPort}`, "X-CSRF-Token": completed.csrfToken },
+      });
+      expect(accepted.ok).toBe(true);
+    } finally {
+      await server?.close();
+      telegram.stop(true);
+      restoreEnv("CODEX_WEB_HOME", previousHome);
+      restoreEnv("CW_TELEGRAM_API_BASE", previousTelegramBase);
+    }
   });
 
   test("includes selected file, directory, and skill context in Codex prompts", async () => {

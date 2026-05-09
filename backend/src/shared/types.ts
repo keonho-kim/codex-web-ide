@@ -31,7 +31,20 @@ export type WorkspaceSettings = {
   recentProjectIds: string[];
   auth: {
     enabled: boolean;
-    token?: string;
+    provider: "telegram";
+    singleSession: boolean;
+    loginRequestTtlMs: number;
+    heartbeatIntervalMs: number;
+    sessionStaleMs: number;
+    sessionIdleTimeoutMs: number;
+    sessionAbsoluteTtlMs: number;
+  };
+  telegram?: {
+    allowedTelegramUserId?: number;
+    allowedChatId?: number;
+    ownerDisplayName?: string;
+    botUsername?: string;
+    remoteControlEnabled: boolean;
   };
 };
 

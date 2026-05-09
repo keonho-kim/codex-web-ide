@@ -12,16 +12,17 @@ export async function start(input: string[]) {
   const port = numberFlag(input, "--port");
   const previewPortStart = numberFlag(input, "--preview-port-start");
   const previewPortEnd = numberFlag(input, "--preview-port-end");
+  const auth = authFlag(input);
   if (previewPortStart && previewPortEnd && previewPortStart > previewPortEnd) {
     throw new Error("--preview-port-start must be less than or equal to --preview-port-end.");
   }
   await printStartupDoctorWarnings({ previewPortStart, previewPortEnd });
-  const server = await startServer({ host, port, previewPortStart, previewPortEnd });
+  const server = await startServer({ host, port, previewPortStart, previewPortEnd, auth });
   await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
   await writePidFile(server.port, server.host);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
   if (server.auth?.enabled) {
-    console.log(`Auth token: ${server.auth.token}`);
+    console.log("Auth: Telegram approval enabled");
   }
   const shutdown = createSignalShutdown(server.close);
   process.on("SIGINT", shutdown);
@@ -99,6 +100,13 @@ function numberFlag(input: string[], name: string) {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 1 || number > 65535) throw new Error(`${name} must be a port between 1 and 65535.`);
   return number;
+}
+
+function authFlag(input: string[]) {
+  const value = readFlag(input, "--auth");
+  if (!value) return undefined;
+  if (value === "enable" || value === "disable") return value;
+  throw new Error("--auth must be either enable or disable.");
 }
 
 async function persistRuntimeSettings(host: string, port: number, previewPortStart?: number, previewPortEnd?: number) {
