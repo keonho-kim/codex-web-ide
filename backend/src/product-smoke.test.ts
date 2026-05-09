@@ -17,10 +17,12 @@ import { createSignalShutdown } from "./cli/serverCommands";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
+import { CodexManager } from "./managers/codexManager";
 import { consumeCodexEvents } from "./managers/codex/events";
 import { CodexHistoryStore } from "./managers/codex/historyStore";
 import { buildCodexMentionContext } from "./managers/codex/mentions";
 import { buildCodexPrompt } from "./managers/codex/prompt";
+import { CODEX_SLASH_COMMANDS } from "./managers/codex/slashCommands";
 import { CodexThreadManager } from "./managers/codex/threads";
 import { CommandManager } from "./managers/commandManager";
 import { JobRunner } from "./managers/commands/jobRunner";
@@ -637,6 +639,38 @@ describe("product smoke coverage", () => {
     expect(prompt).toContain("Use careful review.");
   });
 
+  test("codex slash command registry covers current native command surfaces", async () => {
+    const commands = CODEX_SLASH_COMMANDS.map((command) => command.command);
+    expect(new Set(commands).size).toBe(commands.length);
+    expect(commands).toContain("status");
+    expect(commands).toContain("statusline");
+    expect(commands).toContain("experimental");
+    expect(commands).toContain("model");
+    expect(commands).toContain("permissions");
+    expect(commands).toContain("review");
+    expect(commands).toContain("subagents");
+    expect(CODEX_SLASH_COMMANDS.length).toBeGreaterThanOrEqual(50);
+  });
+
+  test("codex slash status and settings commands expose native results", async () => {
+    const root = await tempDir();
+    await execa("git", ["init"], { cwd: root });
+    const store = new JsonStore(path.join(root, ".store"));
+    await store.ensure();
+    const workspace = new WorkspaceManager(store);
+    const sessions = new SessionManager(store, workspace);
+    const session = await sessions.create({ cwd: root, name: "slash" });
+    const codex = new CodexManager(new EventBus(), new GitManager(), sessions, new SkillManager(), new CodexHistoryStore(store));
+
+    const status = await codex.runSlashCommand(session, { command: "status" });
+    expect(status.status?.session.name).toBe("slash");
+    expect(status.status?.commands.supported).toBe(CODEX_SLASH_COMMANDS.length);
+
+    const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model", "tokens"] } });
+    expect(applied.message).toContain("/statusline");
+    expect((await codex.listMessages(session)).at(-1)?.text).toContain("statuslineItems: model, tokens");
+  });
+
   test("codex completion publishes refreshed Git state", async () => {
     const events = new EventBus();
     const session = testSession(await tempDir());
@@ -656,6 +690,7 @@ describe("product smoke coverage", () => {
       isDeleted: () => false,
       markCancelled: () => false,
       markNotRunning: () => undefined,
+      recordUsage: () => undefined,
       session,
       sessions: { update: async () => session } as never,
       thread: { id: "codex-thread" } as never,

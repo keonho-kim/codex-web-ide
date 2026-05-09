@@ -13,7 +13,7 @@ export const DEFAULT_WORKBENCH_LAYOUT = [18, 52, 30];
 export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
 export type MainPanelKey = "files" | "editor" | "codex" | "bottom";
 export type CollapsedMainPanels = Record<MainPanelKey, boolean>;
-export type WorkbenchTab = "chat" | "editor" | "control";
+export type WorkbenchTab = "chat" | "editor" | "control" | "usage";
 export type ControlTab = "git" | "jobs" | "previews" | "services";
 export const DEFAULT_COLLAPSED_MAIN_PANELS: CollapsedMainPanels = {
   files: false,
@@ -43,6 +43,18 @@ export type UiState = {
   editorFilesCollapsed: boolean;
   collapsedMainPanels: CollapsedMainPanels;
   workbenchLayout: number[];
+  codexCommandSettings: {
+    statuslineItems: string[];
+    titleItems: string[];
+    experimentalFeatures: Record<string, boolean>;
+    model: string;
+    reasoningEffort: string;
+    sandbox: string;
+    approvals: string;
+    vimMode: boolean;
+    rawMode: boolean;
+    theme: string;
+  };
   setActiveProjectId(id?: string): void;
   setActiveSessionId(id?: string): void;
   setActiveFilePath(path?: string): void;
@@ -66,6 +78,7 @@ export type UiState = {
   setEditorFilesCollapsed(collapsed: boolean): void;
   toggleMainPanel(panel: MainPanelKey): void;
   setWorkbenchLayout(layout: number[]): void;
+  updateCodexCommandSettings(settings: Partial<UiState["codexCommandSettings"]>): void;
 };
 
 export const useUiStore = create<UiState>()(
@@ -87,6 +100,18 @@ export const useUiStore = create<UiState>()(
       editorFilesCollapsed: false,
       collapsedMainPanels: DEFAULT_COLLAPSED_MAIN_PANELS,
       workbenchLayout: DEFAULT_WORKBENCH_LAYOUT,
+      codexCommandSettings: {
+        statuslineItems: ["model", "branch", "tokens"],
+        titleItems: ["project", "thread"],
+        experimentalFeatures: {},
+        model: "Codex SDK default",
+        reasoningEffort: "medium",
+        sandbox: "workspace-write",
+        approvals: "on-request",
+        vimMode: false,
+        rawMode: false,
+        theme: "system",
+      },
       setActiveProjectId: (activeProjectId) => {
         if (get().activeProjectId === activeProjectId) return;
         set({ activeProjectId });
@@ -213,6 +238,13 @@ export const useUiStore = create<UiState>()(
         if (sameLayout(get().workbenchLayout, workbenchLayout)) return;
         set({ workbenchLayout });
       },
+      updateCodexCommandSettings: (settings) =>
+        set((state) => ({
+          codexCommandSettings: {
+            ...state.codexCommandSettings,
+            ...settings,
+          },
+        })),
     }),
     {
       name: "codex-web-ui",
@@ -231,6 +263,7 @@ export const useUiStore = create<UiState>()(
         editorFilesCollapsed: state.editorFilesCollapsed,
         collapsedMainPanels: normalizeCollapsedMainPanels(state.collapsedMainPanels),
         workbenchLayout: state.workbenchLayout,
+        codexCommandSettings: state.codexCommandSettings,
       }),
     },
   ),
@@ -249,7 +282,7 @@ export function normalizeCollapsedMainPanels(value?: Partial<CollapsedMainPanels
 }
 
 export function normalizeWorkbenchTab(value?: string): WorkbenchTab {
-  return value === "editor" || value === "control" ? value : "chat";
+  return value === "editor" || value === "control" || value === "usage" ? value : "chat";
 }
 
 export function normalizeControlTab(value?: string): ControlTab {

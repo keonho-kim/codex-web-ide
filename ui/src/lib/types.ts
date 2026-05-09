@@ -1,5 +1,8 @@
 export type {
   CodexMessage,
+  CodexSlashCommandDefinition,
+  CodexSlashCommandResult,
+  CodexStatusSnapshot,
   CodexThreadRecord,
   ComposerMention,
   FileTreeNode,

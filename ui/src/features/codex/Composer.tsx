@@ -3,6 +3,8 @@ import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ComposerMentions } from "./ComposerMentions";
 import { MentionSuggestions } from "./MentionSuggestions";
+import { SlashCommandDialog } from "./SlashCommandDialog";
+import { SlashCommandSuggestions } from "./SlashCommandSuggestions";
 import { useComposer } from "./useComposer";
 
 export function Composer({ sessionId, running = false }: { sessionId?: string; running?: boolean }) {
@@ -33,6 +35,8 @@ export function Composer({ sessionId, running = false }: { sessionId?: string; r
       </div>
       {composer.error ? <p className="mt-1 text-xs text-destructive">{composer.error}</p> : null}
       <MentionSuggestions mentionSearch={composer.mentionSearch} suggestions={composer.suggestions} onSelect={composer.addMention} />
+      <SlashCommandSuggestions commands={composer.slashSuggestions} selectedIndex={composer.selectedSlashIndex} onSelect={composer.selectSlashCommand} />
+      <SlashCommandDialog command={composer.activeSlashCommand} open={composer.slashDialogOpen} onOpenChange={composer.setSlashDialogOpen} onApply={composer.applySlashCommand} />
     </div>
   );
 }

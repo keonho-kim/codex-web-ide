@@ -73,6 +73,12 @@ export const codexRunSchema = z.object({
     .default([]),
 });
 
+export const codexSlashCommandSchema = z.object({
+  command: z.string().min(1),
+  args: z.string().default(""),
+  options: z.record(z.unknown()).default({}),
+});
+
 export const createCodexThreadSchema = z.object({
   title: z.string().min(1).optional(),
 });
