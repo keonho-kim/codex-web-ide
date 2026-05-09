@@ -1,8 +1,8 @@
 import { Activity } from "lucide-react";
-import { useUiStore } from "../../store/uiStore";
+import { selectCodexEvents, useUiStore } from "../../store/uiStore";
 
 export function CodexEventStream({ running, sessionId }: { running: boolean; sessionId?: string }) {
-  const events = useUiStore((state) => (sessionId ? state.codexEvents[sessionId] ?? [] : []));
+  const events = useUiStore((state) => selectCodexEvents(state, sessionId));
 
   return (
     <div className="min-h-0 overflow-hidden rounded-md border border-subtle bg-panel p-2">

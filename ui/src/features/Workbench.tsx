@@ -2,10 +2,10 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { CodexPane } from "./codex/CodexPane";
 import { EditorPane } from "./editor/EditorPane";
 import { FilePane } from "./files/FilePane";
-import { useUiStore } from "../store/uiStore";
+import { DEFAULT_WORKBENCH_LAYOUT, useUiStore } from "../store/uiStore";
 
 export function Workbench({ sessionId }: { sessionId?: string }) {
-  const workbenchLayout = useUiStore((state) => state.workbenchLayout);
+  const workbenchLayout = normalizeWorkbenchLayout(useUiStore((state) => state.workbenchLayout));
   const setWorkbenchLayout = useUiStore((state) => state.setWorkbenchLayout);
 
   return (
@@ -23,4 +23,11 @@ export function Workbench({ sessionId }: { sessionId?: string }) {
       </Panel>
     </PanelGroup>
   );
+}
+
+function normalizeWorkbenchLayout(layout: number[]) {
+  if (layout.length !== DEFAULT_WORKBENCH_LAYOUT.length || layout.some((value) => !Number.isFinite(value) || value <= 0)) {
+    return DEFAULT_WORKBENCH_LAYOUT;
+  }
+  return layout;
 }

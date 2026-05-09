@@ -9,6 +9,9 @@ export type CodexEventSummary = {
   timestamp: number;
 };
 
+export const DEFAULT_WORKBENCH_LAYOUT = [18, 52, 30];
+export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
+
 export type UiState = {
   activeProjectId?: string;
   activeSessionId?: string;
@@ -45,7 +48,7 @@ export type UiState = {
 
 export const useUiStore = create<UiState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       openFilePaths: [],
       codexEvents: {},
       composerDraft: "",
@@ -55,33 +58,48 @@ export const useUiStore = create<UiState>()(
       editorSyncedContents: {},
       selectedPanel: "git",
       sidebarCollapsed: false,
-      workbenchLayout: [18, 52, 30],
-      setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
-      setActiveSessionId: (activeSessionId) =>
-        set((state) =>
-          state.activeSessionId === activeSessionId
-            ? { activeSessionId }
-            : {
-                activeSessionId,
-                activeFilePath: undefined,
-                composerDraft: "",
-                composerMentions: [],
-                editorDrafts: {},
-                editorSyncedContents: {},
-                mentionPopup: null,
-                openFilePaths: [],
-                selectedPreviewId: undefined,
-              },
-        ),
-      setActiveFilePath: (activeFilePath) =>
-        set((state) => ({
-          activeFilePath,
-          openFilePaths: activeFilePath && !state.openFilePaths.includes(activeFilePath) ? [...state.openFilePaths, activeFilePath] : state.openFilePaths,
-        })),
-      setComposerDraft: (composerDraft) => set({ composerDraft }),
-      setComposerMentions: (composerMentions) => set({ composerMentions }),
-      setMentionPopup: (mentionPopup) => set({ mentionPopup }),
-      clearComposer: () => set({ composerDraft: "", composerMentions: [], mentionPopup: null }),
+      workbenchLayout: DEFAULT_WORKBENCH_LAYOUT,
+      setActiveProjectId: (activeProjectId) => {
+        if (get().activeProjectId === activeProjectId) return;
+        set({ activeProjectId });
+      },
+      setActiveSessionId: (activeSessionId) => {
+        if (get().activeSessionId === activeSessionId) return;
+        set({
+          activeSessionId,
+          activeFilePath: undefined,
+          composerDraft: "",
+          composerMentions: [],
+          editorDrafts: {},
+          editorSyncedContents: {},
+          mentionPopup: null,
+          openFilePaths: [],
+          selectedPreviewId: undefined,
+        });
+      },
+      setActiveFilePath: (activeFilePath) => {
+        const state = get();
+        const openFilePaths = activeFilePath && !state.openFilePaths.includes(activeFilePath) ? [...state.openFilePaths, activeFilePath] : state.openFilePaths;
+        if (state.activeFilePath === activeFilePath && state.openFilePaths === openFilePaths) return;
+        set({ activeFilePath, openFilePaths });
+      },
+      setComposerDraft: (composerDraft) => {
+        if (get().composerDraft === composerDraft) return;
+        set({ composerDraft });
+      },
+      setComposerMentions: (composerMentions) => {
+        if (get().composerMentions === composerMentions) return;
+        set({ composerMentions });
+      },
+      setMentionPopup: (mentionPopup) => {
+        if (get().mentionPopup === mentionPopup) return;
+        set({ mentionPopup });
+      },
+      clearComposer: () => {
+        const state = get();
+        if (!state.composerDraft && state.composerMentions.length === 0 && state.mentionPopup === null) return;
+        set({ composerDraft: "", composerMentions: [], mentionPopup: null });
+      },
       appendCodexEvent: (sessionId, event) =>
         set((state) => ({
           codexEvents: {
@@ -91,18 +109,21 @@ export const useUiStore = create<UiState>()(
         })),
       clearCodexEvents: (sessionId) =>
         set((state) => {
+          if (!state.codexEvents[sessionId]) return state;
           const { [sessionId]: _discarded, ...codexEvents } = state.codexEvents;
           return { codexEvents };
         }),
-      setEditorDraft: (path, content) =>
-        set((state) => ({
-          editorDrafts: { ...state.editorDrafts, [path]: content },
-        })),
+      setEditorDraft: (path, content) => {
+        if (get().editorDrafts[path] === content) return;
+        set((state) => ({ editorDrafts: { ...state.editorDrafts, [path]: content } }));
+      },
       hydrateEditorDraft: (path, content) =>
         set((state) => {
           const currentDraft = state.editorDrafts[path];
           const previousContent = state.editorSyncedContents[path];
           const shouldUpdateDraft = currentDraft === undefined || currentDraft === previousContent;
+          if (!shouldUpdateDraft && previousContent === content) return state;
+          if (shouldUpdateDraft && currentDraft === content && previousContent === content) return state;
           return {
             editorDrafts: shouldUpdateDraft ? { ...state.editorDrafts, [path]: content } : state.editorDrafts,
             editorSyncedContents: { ...state.editorSyncedContents, [path]: content },
@@ -110,20 +131,34 @@ export const useUiStore = create<UiState>()(
         }),
       discardEditorDraft: (path) =>
         set((state) => {
+          if (!(path in state.editorDrafts) && !(path in state.editorSyncedContents)) return state;
           const { [path]: _discarded, ...editorDrafts } = state.editorDrafts;
           const { [path]: _synced, ...editorSyncedContents } = state.editorSyncedContents;
           return { editorDrafts, editorSyncedContents };
         }),
       closeFilePath: (path) =>
         set((state) => {
+          if (!state.openFilePaths.includes(path) && state.activeFilePath !== path) return state;
           const openFilePaths = state.openFilePaths.filter((item) => item !== path);
           const activeFilePath = state.activeFilePath === path ? openFilePaths.at(-1) : state.activeFilePath;
           return { activeFilePath, openFilePaths };
         }),
-      setSelectedPanel: (selectedPanel) => set({ selectedPanel }),
-      setSelectedPreviewId: (selectedPreviewId) => set({ selectedPreviewId }),
-      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
-      setWorkbenchLayout: (workbenchLayout) => set({ workbenchLayout }),
+      setSelectedPanel: (selectedPanel) => {
+        if (get().selectedPanel === selectedPanel) return;
+        set({ selectedPanel });
+      },
+      setSelectedPreviewId: (selectedPreviewId) => {
+        if (get().selectedPreviewId === selectedPreviewId) return;
+        set({ selectedPreviewId });
+      },
+      setSidebarCollapsed: (sidebarCollapsed) => {
+        if (get().sidebarCollapsed === sidebarCollapsed) return;
+        set({ sidebarCollapsed });
+      },
+      setWorkbenchLayout: (workbenchLayout) => {
+        if (sameLayout(get().workbenchLayout, workbenchLayout)) return;
+        set({ workbenchLayout });
+      },
     }),
     {
       name: "codex-web-ui",
@@ -140,3 +175,11 @@ export const useUiStore = create<UiState>()(
     },
   ),
 );
+
+export function selectCodexEvents(state: UiState, sessionId?: string) {
+  return sessionId ? state.codexEvents[sessionId] ?? EMPTY_CODEX_EVENTS : EMPTY_CODEX_EVENTS;
+}
+
+function sameLayout(current: number[], next: number[]) {
+  return current.length === next.length && current.every((value, index) => value === next[index]);
+}
