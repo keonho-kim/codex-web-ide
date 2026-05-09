@@ -24,8 +24,8 @@ export async function start(input: string[]) {
     console.log(`Auth token: ${server.auth.token}`);
   }
   const shutdown = createSignalShutdown(server.close);
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
   await new Promise(() => undefined);
 }
 
@@ -115,18 +115,48 @@ async function persistRuntimeSettings(host: string, port: number, previewPortSta
   });
 }
 
-export function createSignalShutdown(closeServer: () => Promise<void>) {
+export type SignalShutdownOptions = {
+  timeoutMs?: number;
+  exit?: (code: number) => void;
+  log?: (message: string) => void;
+  error?: (message: string) => void;
+  removePid?: () => Promise<void>;
+};
+
+const SHUTDOWN_TIMEOUT_MS = 2500;
+
+export function createSignalShutdown(closeServer: () => Promise<void>, options: SignalShutdownOptions = {}) {
   let closing = false;
+  const exit = options.exit ?? ((code) => process.exit(code));
+  const log = options.log ?? ((message) => console.log(message));
+  const errorLog = options.error ?? ((message) => console.error(message));
+  const removePid = options.removePid ?? removePidFile;
+  const timeoutMs = options.timeoutMs ?? SHUTDOWN_TIMEOUT_MS;
+  let exitCode = 0;
+
   return () => {
-    if (closing) return;
+    if (closing) {
+      errorLog("Forced shutdown.");
+      exit(130);
+      return;
+    }
     closing = true;
+    log("Shutting down Codex Web IDE...");
+    const timeout = setTimeout(() => {
+      errorLog("Shutdown timed out; forcing exit.");
+      exit(1);
+    }, timeoutMs);
+    timeout.unref?.();
+
     void closeServer()
       .catch((error) => {
-        console.error(error instanceof Error ? error.message : "Failed to close Codex Web IDE.");
+        errorLog(error instanceof Error ? error.message : "Failed to close Codex Web IDE.");
         process.exitCode = 1;
+        exitCode = 1;
       })
       .finally(() => {
-        void removePidFile().finally(() => process.exit(process.exitCode ?? 0));
+        clearTimeout(timeout);
+        void removePid().finally(() => exit(exitCode));
       });
   };
 }

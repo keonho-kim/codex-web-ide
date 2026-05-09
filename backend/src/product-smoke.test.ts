@@ -12,6 +12,7 @@ import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
 import { initProject } from "./cli/projectInit";
+import { createSignalShutdown } from "./cli/serverCommands";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -45,6 +46,7 @@ import {
   restoreEnv,
   runCli,
   startCli,
+  terminalWebSocketContains,
   tempDir,
   testSession,
   waitForExit,
@@ -276,6 +278,48 @@ describe("product smoke coverage", () => {
     }
   });
 
+  test("signal shutdown exits after graceful cleanup", async () => {
+    const exits: number[] = [];
+    let removeCount = 0;
+    const shutdown = createSignalShutdown(
+      async () => undefined,
+      {
+        exit: (code) => exits.push(code),
+        log: () => undefined,
+        error: () => undefined,
+        removePid: async () => {
+          removeCount += 1;
+        },
+      },
+    );
+
+    shutdown();
+    await delay(0);
+
+    expect(exits).toEqual([0]);
+    expect(removeCount).toBe(1);
+  });
+
+  test("signal shutdown force exits on repeated signal or timeout", async () => {
+    const repeatedExits: number[] = [];
+    const repeated = createSignalShutdown(
+      () => new Promise<void>(() => undefined),
+      { timeoutMs: 60_000, exit: (code) => repeatedExits.push(code), log: () => undefined, error: () => undefined, removePid: async () => undefined },
+    );
+    repeated();
+    repeated();
+    expect(repeatedExits).toEqual([130]);
+
+    const timeoutExits: number[] = [];
+    const timedOut = createSignalShutdown(
+      () => new Promise<void>(() => undefined),
+      { timeoutMs: 5, exit: (code) => timeoutExits.push(code), log: () => undefined, error: () => undefined, removePid: async () => undefined },
+    );
+    timedOut();
+    await delay(20);
+    expect(timeoutExits).toEqual([1]);
+  });
+
   test("marks managed services running after health check", async () => {
     const root = await tempDir();
     const events = new EventBus();
@@ -350,6 +394,12 @@ describe("product smoke coverage", () => {
     const settings = await workspace.getSettings();
     expect(settings.activeProjectId).toBeUndefined();
     expect(settings.recentProjectIds).not.toContain(project.id);
+  });
+
+  test("uses home shorthand as the default project browse location", async () => {
+    const workspace = new WorkspaceManager(new JsonStore(await tempDir()));
+
+    await expect(workspace.getSettings()).resolves.toMatchObject({ defaultProjectsDir: "~" });
   });
 
   test("canonicalizes project and session working directories", async () => {
@@ -646,6 +696,34 @@ describe("product smoke coverage", () => {
     }
   });
 
+  test("opens PTY terminals over the editor WebSocket route", async () => {
+    const home = await tempDir();
+    const cwd = await tempDir();
+    const previousHome = process.env.CODEX_WEB_HOME;
+    let server: Awaited<ReturnType<typeof startServer>> | undefined;
+    try {
+      process.env.CODEX_WEB_HOME = home;
+      const port = await freePort();
+      server = await startServer({ host: "127.0.0.1", port, previewPortStart: 24100, previewPortEnd: 24110 });
+      const session = await fetch(`http://127.0.0.1:${port}/api/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd, name: "PTY" }),
+      }).then((res) => res.json() as Promise<{ id: string }>);
+      const terminal = await fetch(`http://127.0.0.1:${port}/api/sessions/${session.id}/terminals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cols: 80, rows: 20 }),
+      }).then((res) => res.json() as Promise<{ id: string; status: string }>);
+      expect(terminal.status).toBe("running");
+      await expect(terminalWebSocketContains(`ws://127.0.0.1:${port}/api/sessions/${session.id}/terminals/${terminal.id}/ws`, "echo pty-ok\r", "pty-ok")).resolves.toContain("pty-ok");
+      await expect(fetch(`http://127.0.0.1:${port}/api/sessions/${session.id}/terminals`).then((res) => res.json())).resolves.toHaveLength(1);
+    } finally {
+      await server?.close();
+      restoreEnv("CODEX_WEB_HOME", previousHome);
+    }
+  });
+
   test("starts, reports, and stops through the CLI", async () => {
     const home = await tempDir();
     const port = await freePort();
@@ -701,3 +779,7 @@ describe("product smoke coverage", () => {
     ]);
   });
 });
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

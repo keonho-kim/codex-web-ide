@@ -18,7 +18,7 @@ export class WorkspaceManager {
       port: 17321,
       previewPortStart: 17330,
       previewPortEnd: 17399,
-      defaultProjectsDir: this.adapter.getDefaultProjectsDir(),
+      defaultProjectsDir: "~",
       activeProjectId: undefined,
       recentProjectIds: [],
       auth: { enabled: false },

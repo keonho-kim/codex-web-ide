@@ -1160,6 +1160,71 @@ File API와 Git API는 session cwd 밖 접근을 금지한다.
 
 Preview process는 기본적으로 `127.0.0.1`에만 bind한다. 외부 접근은 main Express proxy를 통해서만 허용한다.
 
+### 20.7 Telegram 승인 기반 인증
+
+Codex Web은 로컬 파일시스템, Git, Codex 실행, shell command, preview, service를 제어하는 개발 런타임이므로 외부 네트워크에 노출될 때는 원격 IDE 또는 원격 shell에 준하는 보안 모델을 적용한다.
+
+`security-and-auth.md`는 Telegram 기반 인증, 승인, 단일 브라우저 세션, audit log, CSRF/Origin 방어, preview proxy 인증, 향후 Telegram remote control 확장을 정의하는 세부 설계 문서다. PRODUCT.md에서는 다음 제품 요구사항을 상위 명세로 둔다.
+
+* `cw start --auth enable`은 Telegram 승인 기반 인증을 활성화한다.
+* Telegram 인증을 사용하려면 사전에 `cw config telegram`으로 bot token 검증과 owner pairing을 완료해야 한다.
+* 외부 listen host 또는 명시적 auth 활성화 상태에서 인증 설정이 불완전하면 server start를 중단한다.
+* 웹 UI active browser session은 기본적으로 최대 1개만 허용한다.
+* 새 browser session은 Telegram에서 승인하거나 기존 session replacement를 승인받아야 한다.
+* 로그인 성공 시 backend가 HttpOnly, SameSite cookie 기반 session을 발급한다.
+* state-changing API는 CSRF token과 Origin/Host 검증을 통과해야 한다.
+* `/preview/*`, SSE, terminal WebSocket, command, Git, file, Codex API는 인증 대상이다.
+* preview proxy는 등록된 PreviewManager target만 허용하고 arbitrary upstream proxy로 동작해서는 안 된다.
+* audit log는 login request, 승인/거부, session replacement, logout, 위험 명령 승인, 인증 실패, Origin/CSRF 실패를 기록한다.
+* Telegram remote control은 MVP 인증 이후 확장 기능으로 두며, Telegram에서 들어온 명령도 backend approval policy와 audit log를 통과해야 한다.
+
+브라우저 보안 요구사항:
+
+* session cookie는 JavaScript에서 읽을 수 없어야 한다.
+* login complete token, CSRF token, session id는 URL query string에 노출하지 않는다.
+* UI는 server-provided HTML/Markdown을 렌더링할 때 XSS 방어를 적용한다.
+* iframe preview는 가능한 범위에서 sandbox와 같은 브라우저 격리 정책을 적용한다.
+* WebSocket upgrade는 HTTP API와 동일한 인증/Origin 정책을 따른다.
+
+### 20.8 Audit log
+
+보안 이벤트는 `~/.codex-web/logs/audit.log`에 append-only JSON line 형식으로 기록한다. 민감값은 저장하지 않으며, token, cookie, bot token, CSRF secret, complete token은 log에 남기지 않는다.
+
+예시 이벤트:
+
+```text
+auth.login.requested
+auth.login.approved
+auth.login.denied
+auth.session.replaced
+auth.logout
+auth.failed
+csrf.failed
+origin.failed
+command.approval.requested
+command.approval.approved
+```
+
+### 20.9 Auth configuration
+
+인증 설정은 민감 정보와 비민감 정보를 분리한다.
+
+```text
+~/.codex-web/config.json
+~/.codex-web/secrets.json
+~/.codex-web/logs/audit.log
+```
+
+`config.json`은 provider, single-session 정책, Telegram owner id 같은 비밀이 아닌 설정을 저장한다. `secrets.json`은 Telegram bot token, session secret, CSRF secret 같은 민감 정보를 저장하며 생성 시 파일 권한을 `0600`으로 제한한다.
+
+환경변수는 secret 주입을 위해 허용한다.
+
+```text
+CW_TELEGRAM_BOT_TOKEN
+CW_SESSION_SECRET
+CW_CSRF_SECRET
+```
+
 ---
 
 ## 21. PlatformAdapter 설계
@@ -1565,6 +1630,23 @@ Preview processes must be started through `cw preview` so the UI can track ports
 4. config persistence
 5. platform adapter refinement
 6. Termux battery/wake-lock guide
+
+### Phase 8: Auth and Browser Security
+
+1. `cw config telegram`
+2. Telegram bot token validation
+3. Telegram owner pairing
+4. `cw start --auth enable`
+5. Telegram login approval
+6. single browser session enforcement
+7. session heartbeat and replacement approval
+8. HttpOnly session cookie
+9. CSRF token and Origin/Host validation
+10. authenticated preview proxy and terminal WebSocket
+11. audit log
+12. browser XSS and iframe hardening
+13. `cw auth status`
+14. `cw auth logout-all`
 
 ---
 

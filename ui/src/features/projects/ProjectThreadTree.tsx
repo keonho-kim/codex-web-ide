@@ -19,6 +19,7 @@ type ProjectEntry = {
 export function ProjectThreadTree({
   activeProjectId,
   activeSessionId,
+  onProjectDelete,
   onProjectSelect,
   onSessionSelect,
   projects,
@@ -26,6 +27,7 @@ export function ProjectThreadTree({
 }: {
   activeProjectId?: string;
   activeSessionId?: string;
+  onProjectDelete(id: string): void;
   onProjectSelect(id: string): void;
   onSessionSelect(id: string): void;
   projects: Project[];
@@ -122,7 +124,7 @@ export function ProjectThreadTree({
           <div key={entry.project.id}>
             <div
               className={cn(
-                "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-md",
+                "group grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-1 rounded-md",
                 isActiveProject && "bg-canvas",
               )}
             >
@@ -151,6 +153,16 @@ export function ProjectThreadTree({
                 onClick={() => createThread.mutate(entry)}
               >
                 <MessageSquarePlus data-icon="inline-start" />
+              </Button>
+              <Button
+                className="opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100"
+                title={`Remove ${entry.project.name}`}
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onProjectDelete(entry.project.id)}
+              >
+                <Trash2 data-icon="inline-start" />
               </Button>
             </div>
             {isOpen ? (

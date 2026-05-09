@@ -3,35 +3,35 @@
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --color-primary: #0066cc;
-  --color-primary-foreground: #ffffff;
-  --color-ink: #1d1d1f;
-  --color-muted: #7a7a7a;
-  --color-page: #f3f5f8;
-  --color-canvas: #ffffff;
-  --color-panel: #f9fbff;
-  --color-hairline: #d8dee8;
-  --color-control: #cfd7e3;
-  --color-subtle: #edf2f8;
-  --color-selected: #e6f1ff;
-  --color-selected-border: #94c6ff;
-  --color-success: #1f8a5b;
-  --color-success-soft: #e7f6ef;
-  --color-warning: #a86600;
-  --color-warning-soft: #fff3d8;
-  --color-codex: #5b5ce2;
-  --color-codex-soft: #efefff;
+  --color-primary: #4d6f91;
+  --color-primary-foreground: #fbfaf7;
+  --color-ink: #232321;
+  --color-muted: #74716a;
+  --color-page: #eeece7;
+  --color-canvas: #f8f7f3;
+  --color-panel: #f2f0eb;
+  --color-hairline: #d8d3c9;
+  --color-control: #c9c3b7;
+  --color-subtle: #e6e2da;
+  --color-selected: #dde7ee;
+  --color-selected-border: #93a9ba;
+  --color-success: #4d7a5c;
+  --color-success-soft: #e5eee4;
+  --color-warning: #8f6828;
+  --color-warning-soft: #f3ead8;
+  --color-codex: #68658d;
+  --color-codex-soft: #ece9f2;
 
-  --color-background: #ffffff;
-  --color-foreground: #1d1d1f;
-  --color-secondary: #f5f5f7;
-  --color-secondary-foreground: #1d1d1f;
-  --color-accent: #e8f1ff;
-  --color-accent-foreground: #003e7a;
-  --color-destructive: #c9252d;
-  --color-border: #d8d8df;
-  --color-input: #d8d8df;
-  --color-ring: #0066cc;
+  --color-background: #f8f7f3;
+  --color-foreground: #232321;
+  --color-secondary: #efede8;
+  --color-secondary-foreground: #232321;
+  --color-accent: #e9e6df;
+  --color-accent-foreground: #2e3f4d;
+  --color-destructive: #b24b45;
+  --color-border: #d8d3c9;
+  --color-input: #c9c3b7;
+  --color-ring: #4d6f91;
 }
 
 @layer base {
@@ -41,10 +41,35 @@
     background: var(--color-page);
   }
 
+  html {
+    background: var(--color-page);
+  }
+
   body {
     margin: 0;
     overflow: hidden;
-    background: var(--color-page);
+    background:
+      radial-gradient(circle at 18% 12%, rgb(255 255 255 / 0.42), transparent 28rem),
+      radial-gradient(circle at 84% 8%, rgb(255 255 255 / 0.22), transparent 24rem),
+      var(--color-page);
     text-rendering: geometricPrecision;
+  }
+
+  body::before {
+    position: fixed;
+    z-index: 2147483647;
+    inset: 0;
+    pointer-events: none;
+    content: "";
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.74' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23paper)' opacity='0.28'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+    mix-blend-mode: multiply;
+    opacity: 0.12;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    body::before {
+      display: none;
+    }
   }
 }

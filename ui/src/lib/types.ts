@@ -11,6 +11,7 @@ export type {
   Project,
   ServiceInstance,
   Session,
+  TerminalSession,
   WorkspaceSettings,
 } from "../../../backend/src/shared/types";
 

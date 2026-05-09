@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
 import type { AppServices } from "../../api/context";
-import { previewWebSocketHandlers } from "./bridge";
+import { frontProxyWebSocketHandlers } from "./bridge";
 import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "./http";
 import { previewWebSocketTarget } from "./target";
 import type { BunServe } from "./types";
@@ -35,16 +35,22 @@ export async function startBunFrontProxy({
         if (!services.auth.isAuthorizedHeaders(req.headers, url, clientAddress(req, server))) {
           return new Response("Authentication required", { status: 401 });
         }
+        const terminal = terminalWebSocketTarget(url, services);
+        if (terminal) {
+          return server.upgrade(req, { data: terminal })
+            ? undefined
+            : new Response("WebSocket upgrade failed", { status: 502 });
+        }
         const target = previewWebSocketTarget(req, services);
         if (!target) return new Response("Preview WebSocket target not found", { status: 404 });
-        return server.upgrade(req, { data: { target } })
+        return server.upgrade(req, { data: { kind: "preview", target } })
           ? undefined
           : new Response("WebSocket upgrade failed", { status: 502 });
       }
       if (isLongLivedHttpRequest(url)) server.timeout?.(req, 0);
       return proxyHttpRequest(req, internal.port, server);
     },
-    websocket: previewWebSocketHandlers,
+    websocket: frontProxyWebSocketHandlers,
   });
 
   return {
@@ -77,4 +83,15 @@ function closeInternal(server: Server) {
 
 export function isLongLivedHttpRequest(url: URL) {
   return /^\/api\/sessions\/[^/]+\/(?:codex\/)?events$/.test(url.pathname);
+}
+
+function terminalWebSocketTarget(url: URL, services: AppServices) {
+  const match = /^\/api\/sessions\/([^/]+)\/terminals\/([^/]+)\/ws$/.exec(url.pathname);
+  if (!match) return undefined;
+  return {
+    kind: "terminal" as const,
+    services,
+    sessionId: decodeURIComponent(match[1]),
+    terminalId: decodeURIComponent(match[2]),
+  };
 }

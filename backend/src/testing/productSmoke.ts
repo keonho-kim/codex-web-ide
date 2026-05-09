@@ -65,6 +65,37 @@ export function webSocketRoundTrip(url: string, message: string) {
   });
 }
 
+export function terminalWebSocketContains(url: string, input: string, expected: string) {
+  return new Promise<string>((resolve, reject) => {
+    const ws = new WebSocket(url);
+    let output = "";
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error(`Terminal WebSocket timeout. Output: ${output}`));
+    }, 5000);
+    ws.addEventListener("open", () => {
+      ws.send(JSON.stringify({ type: "input", data: input }));
+    });
+    ws.addEventListener("message", (event) => {
+      try {
+        const payload = JSON.parse(String(event.data)) as { type?: string; data?: unknown };
+        if (payload.type === "output" && typeof payload.data === "string") output += payload.data;
+      } catch {
+        output += String(event.data);
+      }
+      if (output.includes(expected)) {
+        clearTimeout(timer);
+        ws.close();
+        resolve(output);
+      }
+    });
+    ws.addEventListener("error", () => {
+      clearTimeout(timer);
+      reject(new Error("Terminal WebSocket error"));
+    });
+  });
+}
+
 export function restoreEnv(name: string, value: string | undefined) {
   if (value === undefined) {
     delete process.env[name];

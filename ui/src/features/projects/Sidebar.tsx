@@ -46,7 +46,7 @@ export function Sidebar({
 
   if (collapsed) {
     return (
-      <aside className="flex min-w-0 flex-col items-center gap-2 overflow-hidden rounded-lg border border-hairline bg-panel p-2 max-[900px]:flex-row">
+      <aside className="flex h-full min-w-0 flex-col items-center justify-start gap-3 overflow-hidden rounded-lg border border-hairline bg-panel p-2" data-testid="sidebar">
         <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
           <PanelLeftOpen data-icon="inline-start" />
         </Button>
@@ -57,10 +57,12 @@ export function Sidebar({
           onSessionSelect={onSessionSelect}
           sessions={sessions}
         />
-        <div className="grid gap-1 max-[900px]:grid-flow-col">
+        <div className="grid gap-1">
           {projects.map((project) => (
             <button
-              className="flex size-8 items-center justify-center rounded-md text-xs font-semibold text-muted hover:bg-canvas hover:text-ink"
+              className={`flex size-8 items-center justify-center rounded-md text-xs font-semibold ${
+                project.id === activeProjectId ? "border border-selected-border bg-selected text-primary" : "text-muted hover:bg-canvas hover:text-ink"
+              }`}
               key={project.id}
               title={project.name}
               type="button"
@@ -75,7 +77,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="min-w-0 overflow-auto rounded-lg border border-hairline bg-panel p-3 max-[900px]:p-3">
+    <aside className="h-full min-w-0 overflow-auto rounded-lg border border-hairline bg-panel p-3 max-[900px]:p-3" data-testid="sidebar">
       <div className="grid gap-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1">
           <SectionTitle label="Threads" />
@@ -91,6 +93,7 @@ export function Sidebar({
           sessions={sessions}
           activeProjectId={activeProjectId}
           activeSessionId={activeSessionId}
+          onProjectDelete={onProjectDelete}
           onProjectSelect={onProjectSelect}
           onSessionSelect={onSessionSelect}
         />

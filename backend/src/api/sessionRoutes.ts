@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createSessionSchema } from "../shared/schemas";
 import { asyncHandler, type AppServices } from "./context";
 
-export function registerSessionRoutes(app: Express, { codex, commands, events, files, git, sessions }: AppServices) {
+export function registerSessionRoutes(app: Express, { codex, commands, events, files, git, sessions, terminals }: AppServices) {
   app.get("/api/sessions", asyncHandler(async (_req, res) => {
     res.json(await sessions.list());
   }));
@@ -20,6 +20,7 @@ export function registerSessionRoutes(app: Express, { codex, commands, events, f
     await Promise.all([
       codex.deleteSession(req.params.id),
       commands.deleteSession(req.params.id),
+      terminals.deleteSession(req.params.id),
       files.unwatch(req.params.id),
       git.unwatch(req.params.id),
     ]);

@@ -1,13 +1,15 @@
-import { Bug, GitBranch, Server } from "lucide-react";
+import { Bug, GitBranch, MonitorPlay, Server } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { normalizeControlTab, useUiStore, type ControlTab } from "../../store/uiStore";
 import { GitPanel } from "../git/GitPanel";
 import { JobsPanel } from "../jobs/JobsPanel";
+import { PreviewPanel } from "../preview/PreviewPanel";
 import { ServicesPanel } from "../services/ServicesPanel";
 
 const controlTabs: Array<{ id: ControlTab; label: string; icon: typeof GitBranch }> = [
   { id: "git", label: "Git", icon: GitBranch },
   { id: "jobs", label: "Jobs", icon: Bug },
+  { id: "previews", label: "Previews", icon: MonitorPlay },
   { id: "services", label: "Services", icon: Server },
 ];
 
@@ -35,6 +37,9 @@ export function ControlPane({ sessionId }: { sessionId?: string }) {
       </TabsContent>
       <TabsContent className="min-h-0 overflow-hidden" value="jobs">
         <JobsPanel sessionId={sessionId} />
+      </TabsContent>
+      <TabsContent className="min-h-0 overflow-hidden" value="previews">
+        <PreviewPanel sessionId={sessionId} />
       </TabsContent>
       <TabsContent className="min-h-0 overflow-hidden" value="services">
         <ServicesPanel sessionId={sessionId} />

@@ -13,6 +13,7 @@ import { GitManager } from "./managers/gitManager";
 import { SessionManager } from "./managers/sessionManager";
 import { SkillManager } from "./managers/skillManager";
 import { JsonStore } from "./managers/storage";
+import { TerminalManager } from "./managers/terminalManager";
 import { WorkspaceManager } from "./managers/workspaceManager";
 import { createPlatformAdapter } from "./platform/adapter";
 import { canUseBunFrontProxy, startBunFrontProxy } from "./proxy/bunFrontProxy";
@@ -38,6 +39,7 @@ export async function createApp(options: ServerOptions = {}) {
   const skills = new SkillManager();
   const commands = new CommandManager(events, git, store, options.previewPortStart, options.previewPortEnd);
   await commands.hydrate();
+  const terminals = new TerminalManager();
   const codex = new CodexManager(events, git, sessions, skills, new CodexHistoryStore(store));
   await codex.hydrate(await sessions.list());
   const services = buildServices({
@@ -48,6 +50,7 @@ export async function createApp(options: ServerOptions = {}) {
     git,
     codex,
     commands,
+    terminals,
     auth,
     skills,
   });
@@ -57,6 +60,7 @@ export async function createApp(options: ServerOptions = {}) {
   app.locals.cleanup = async () => {
     const activeSessions = await sessions.list();
     await codex.shutdown();
+    terminals.shutdown();
     commands.shutdown();
     await Promise.all(activeSessions.flatMap((session) => [files.unwatch(session.id), git.unwatch(session.id)]));
   };
@@ -137,11 +141,13 @@ function buildServices({
   git,
   sessions,
   skills,
+  terminals,
   workspace,
 }: {
   auth: AuthManager;
   codex: CodexManager;
   commands: CommandManager;
+  terminals: TerminalManager;
   events: EventBus;
   files: FileManager;
   git: GitManager;
@@ -158,6 +164,7 @@ function buildServices({
     skills,
     codex,
     commands,
+    terminals,
     adapter: createPlatformAdapter(),
     auth,
   };

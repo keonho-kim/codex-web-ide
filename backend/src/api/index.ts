@@ -7,6 +7,7 @@ import { registerGitRoutes } from "./gitRoutes";
 import { registerMentionRoutes } from "./mentionRoutes";
 import { registerPreviewProxy } from "./previewProxy";
 import { registerSessionRoutes } from "./sessionRoutes";
+import { registerTerminalRoutes } from "./terminalRoutes";
 import { registerWorkspaceRoutes } from "./workspaceRoutes";
 
 export function registerApiRoutes(app: Express, services: AppServices) {
@@ -22,6 +23,7 @@ export function registerApiRoutes(app: Express, services: AppServices) {
   registerMentionRoutes(app, services);
   registerCodexRoutes(app, services);
   registerCommandRoutes(app, services);
+  registerTerminalRoutes(app, services);
   registerGitRoutes(app, services);
   registerPreviewProxy(app, services);
 }

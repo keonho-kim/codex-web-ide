@@ -22,6 +22,7 @@ test("does not notify subscribers for unchanged UI store values", () => {
   state.setControlTab(state.controlTab);
   state.setSelectedPreviewId(state.selectedPreviewId);
   state.setPreviewOpen(state.previewOpen);
+  state.setEditorBottomPanelOpen(state.editorBottomPanelOpen);
   state.setSidebarCollapsed(state.sidebarCollapsed);
   state.setEditorFilesCollapsed(state.editorFilesCollapsed);
   state.setWorkbenchLayout([...state.workbenchLayout]);
@@ -42,6 +43,7 @@ test("normalizes collapsed main panel state", () => {
 test("normalizes persisted workspace tab state", () => {
   expect(normalizeWorkbenchTab("editor")).toBe("editor");
   expect(normalizeWorkbenchTab("preview")).toBe("chat");
+  expect(normalizeControlTab("previews")).toBe("previews");
   expect(normalizeControlTab("services")).toBe("services");
   expect(normalizeControlTab("preview")).toBe("git");
 });

@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { PreviewSheet } from "./features/preview/PreviewSheet";
 import { Sidebar } from "./features/projects/Sidebar";
 import { Topbar } from "./features/app/Topbar";
 import { Workbench } from "./features/Workbench";
@@ -14,6 +14,14 @@ export function App() {
   const app = useAppData();
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
+  const compact = useMediaQuery("(max-width: 900px)");
+  const sidebarSize = sidebarCollapsed
+    ? compact
+      ? { defaultSize: 16, minSize: 16, maxSize: 18 }
+      : { defaultSize: 4, minSize: 4, maxSize: 5 }
+    : compact
+      ? { defaultSize: 28, minSize: 20, maxSize: 42 }
+      : { defaultSize: 24, minSize: 16, maxSize: 34 };
 
   useSessionEvents(app.activeSessionId, queryClient);
 
@@ -28,8 +36,8 @@ export function App() {
         activeSession={app.activeSession}
       />
 
-      <PanelGroup className="min-h-0" direction="horizontal">
-        <Panel defaultSize={sidebarCollapsed ? 10 : 28} minSize={sidebarCollapsed ? 9 : 22} maxSize={sidebarCollapsed ? 12 : 40}>
+      <PanelGroup className="h-full min-h-0" direction="horizontal" key={`${sidebarCollapsed ? "collapsed" : "expanded"}-${compact ? "compact" : "wide"}`}>
+        <Panel className="min-h-0" defaultSize={sidebarSize.defaultSize} minSize={sidebarSize.minSize} maxSize={sidebarSize.maxSize}>
           <Sidebar
             projects={app.orderedProjects}
             sessions={app.allSessions}
@@ -51,11 +59,24 @@ export function App() {
           />
         </Panel>
         {!sidebarCollapsed ? <PanelResizeHandle className="w-2 bg-page transition-colors hover:bg-selected-border" /> : null}
-        <Panel minSize={50}>
+        <Panel className="min-h-0" minSize={50}>
           <Workbench sessionId={app.activeSessionId} />
         </Panel>
       </PanelGroup>
-      <PreviewSheet sessionId={app.activeSessionId} />
     </main>
   );
+}
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => (typeof window === "undefined" ? false : window.matchMedia(query).matches));
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+
+  return matches;
 }

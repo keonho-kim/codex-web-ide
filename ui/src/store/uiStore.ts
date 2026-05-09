@@ -14,7 +14,7 @@ export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
 export type MainPanelKey = "files" | "editor" | "codex" | "bottom";
 export type CollapsedMainPanels = Record<MainPanelKey, boolean>;
 export type WorkbenchTab = "chat" | "editor" | "control";
-export type ControlTab = "git" | "jobs" | "services";
+export type ControlTab = "git" | "jobs" | "previews" | "services";
 export const DEFAULT_COLLAPSED_MAIN_PANELS: CollapsedMainPanels = {
   files: false,
   editor: false,
@@ -38,6 +38,7 @@ export type UiState = {
   controlTab: ControlTab;
   selectedPreviewId?: string;
   previewOpen: boolean;
+  editorBottomPanelOpen: boolean;
   sidebarCollapsed: boolean;
   editorFilesCollapsed: boolean;
   collapsedMainPanels: CollapsedMainPanels;
@@ -60,6 +61,7 @@ export type UiState = {
   setControlTab(tab: ControlTab): void;
   setSelectedPreviewId(id?: string): void;
   setPreviewOpen(open: boolean): void;
+  setEditorBottomPanelOpen(open: boolean): void;
   setSidebarCollapsed(collapsed: boolean): void;
   setEditorFilesCollapsed(collapsed: boolean): void;
   toggleMainPanel(panel: MainPanelKey): void;
@@ -80,6 +82,7 @@ export const useUiStore = create<UiState>()(
       workbenchTab: "chat",
       controlTab: "git",
       previewOpen: false,
+      editorBottomPanelOpen: false,
       sidebarCollapsed: false,
       editorFilesCollapsed: false,
       collapsedMainPanels: DEFAULT_COLLAPSED_MAIN_PANELS,
@@ -188,6 +191,10 @@ export const useUiStore = create<UiState>()(
         if (get().previewOpen === previewOpen) return;
         set({ previewOpen });
       },
+      setEditorBottomPanelOpen: (editorBottomPanelOpen) => {
+        if (get().editorBottomPanelOpen === editorBottomPanelOpen) return;
+        set({ editorBottomPanelOpen });
+      },
       setSidebarCollapsed: (sidebarCollapsed) => {
         if (get().sidebarCollapsed === sidebarCollapsed) return;
         set({ sidebarCollapsed });
@@ -219,6 +226,7 @@ export const useUiStore = create<UiState>()(
         controlTab: state.controlTab,
         selectedPreviewId: state.selectedPreviewId,
         previewOpen: state.previewOpen,
+        editorBottomPanelOpen: state.editorBottomPanelOpen,
         sidebarCollapsed: state.sidebarCollapsed,
         editorFilesCollapsed: state.editorFilesCollapsed,
         collapsedMainPanels: normalizeCollapsedMainPanels(state.collapsedMainPanels),
@@ -245,5 +253,5 @@ export function normalizeWorkbenchTab(value?: string): WorkbenchTab {
 }
 
 export function normalizeControlTab(value?: string): ControlTab {
-  return value === "jobs" || value === "services" ? value : "git";
+  return value === "jobs" || value === "previews" || value === "services" ? value : "git";
 }

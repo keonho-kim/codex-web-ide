@@ -1,9 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, GitBranch, Play, Server, Terminal } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { Activity, GitBranch, Server, Terminal } from "lucide-react";
 import { api } from "../../lib/api";
-import type { GitState, Job, PreviewInstance, ServiceInstance, Session } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
+import type { GitState, Job, ServiceInstance, Session } from "../../lib/types";
 
 export function Topbar({
   activeSession,
@@ -24,9 +22,6 @@ export function Topbar({
 }
 
 function TopbarStatus({ session }: { session?: Session }) {
-  const queryClient = useQueryClient();
-  const setSelectedPreviewId = useUiStore((state) => state.setSelectedPreviewId);
-  const setPreviewOpen = useUiStore((state) => state.setPreviewOpen);
   const sessionId = session?.id;
   const git = useQuery({
     queryKey: ["git", sessionId, "state"],
@@ -39,30 +34,11 @@ function TopbarStatus({ session }: { session?: Session }) {
     queryFn: () => api<Job[]>(`/api/sessions/${sessionId}/jobs`),
     enabled: Boolean(sessionId),
   });
-  const previews = useQuery({
-    queryKey: ["previews", sessionId],
-    queryFn: () => api<PreviewInstance[]>(`/api/sessions/${sessionId}/previews`),
-    enabled: Boolean(sessionId),
-  });
   const services = useQuery({
     queryKey: ["services", sessionId],
     queryFn: () => api<ServiceInstance[]>(`/api/sessions/${sessionId}/services`),
     enabled: Boolean(sessionId),
   });
-  const startPreview = useMutation({
-    mutationFn: () =>
-      api<PreviewInstance>(`/api/sessions/${sessionId}/previews`, {
-        method: "POST",
-        body: { command: ["bun", "run", "dev"] },
-      }),
-    onSuccess: async (preview) => {
-      setSelectedPreviewId(preview.id);
-      setPreviewOpen(true);
-      await queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
-    },
-  });
-
-  const activePreview = previews.data?.find((preview) => preview.status === "running" || preview.status === "starting");
   const runningJobs = jobs.data?.filter((job) => job.status === "queued" || job.status === "running").length ?? 0;
   const runningServices = services.data?.filter((service) => service.status === "starting" || service.status === "running").length ?? 0;
   const branchLabel = git.data?.branch ?? (git.data?.detached ? "detached" : "no branch");
@@ -86,24 +62,6 @@ function TopbarStatus({ session }: { session?: Session }) {
         <Server size={14} />
         <span>{runningServices}</span>
       </span>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={!sessionId || startPreview.isPending}
-        onClick={() => {
-          if (activePreview) {
-            setSelectedPreviewId(activePreview.id);
-            setPreviewOpen(true);
-            return;
-          }
-          startPreview.mutate();
-        }}
-      >
-        <Play data-icon="inline-start" />
-        {activePreview ? "Preview" : "Start preview"}
-      </Button>
-      {startPreview.error ? <span className="text-xs text-destructive">{startPreview.error instanceof Error ? startPreview.error.message : "Preview failed."}</span> : null}
     </div>
   );
 }

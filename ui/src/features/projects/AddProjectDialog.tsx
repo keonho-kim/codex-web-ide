@@ -7,6 +7,8 @@ import { api } from "../../lib/api";
 import { cn } from "../../lib/classes";
 import type { LocalPathListing, Project, Session } from "../../lib/types";
 
+const DEFAULT_BROWSE_PATH = "~";
+
 export function AddProjectDialog({
   compact = false,
   defaultProjectsDir,
@@ -44,12 +46,12 @@ export function AddProjectDialog({
 
   useEffect(() => {
     if (!open) return;
-    const startPath = defaultProjectsDir ?? "";
+    const startPath = DEFAULT_BROWSE_PATH;
     setCwd(startPath);
     setBrowsePath(startPath);
     setNewFolderName("");
     setError(undefined);
-  }, [defaultProjectsDir, open]);
+  }, [open]);
 
   const addProject = async () => {
     const path = cwd.trim();
@@ -77,7 +79,7 @@ export function AddProjectDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button aria-label="Add project" className="justify-start text-muted" title="Add project" type="button" variant="ghost" size={compact ? "icon-sm" : "sm"}>
+        <Button aria-label="Add project" className={cn(compact ? "justify-center" : "justify-start", "text-muted")} title="Add project" type="button" variant="ghost" size={compact ? "icon-sm" : "sm"}>
           <FolderPlus data-icon="inline-start" />
           {!compact ? "Add project" : null}
         </Button>
@@ -99,10 +101,10 @@ export function AddProjectDialog({
               className="min-w-0 rounded-md border border-control bg-canvas px-3 py-2 font-mono text-sm text-ink"
               value={cwd}
               onChange={(event) => setCwd(event.target.value)}
-              placeholder={defaultProjectsDir || "Project path"}
+              placeholder={DEFAULT_BROWSE_PATH}
             />
             <Button type="button" variant="outline" onClick={() => setBrowsePath(cwd.trim())} disabled={!cwd.trim()}>
-              Browse
+              Go to path
             </Button>
           </div>
           <div className="grid gap-2 rounded-md border border-hairline bg-panel p-2">

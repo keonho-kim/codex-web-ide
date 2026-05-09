@@ -114,6 +114,20 @@ export type ServiceInstance = {
   stderr: string[];
 };
 
+export type TerminalSession = {
+  id: string;
+  sessionId: string;
+  cwd: string;
+  shell: string;
+  pid: number;
+  cols: number;
+  rows: number;
+  status: "running" | "exited";
+  createdAt: number;
+  exitedAt?: number;
+  exitCode?: number;
+};
+
 export type GitFileStatus = {
   path: string;
   index: string;

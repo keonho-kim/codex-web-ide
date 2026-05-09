@@ -50,6 +50,17 @@ export const commandRequestSchema = z.object({
   approvedDangerous: z.boolean().default(false),
 });
 
+export const createTerminalSchema = z.object({
+  cols: z.number().int().min(20).max(240).optional(),
+  rows: z.number().int().min(6).max(80).optional(),
+  shell: z.string().min(1).optional(),
+});
+
+export const resizeTerminalSchema = z.object({
+  cols: z.number().int().min(20).max(240),
+  rows: z.number().int().min(6).max(80),
+});
+
 export const codexRunSchema = z.object({
   prompt: z.string().min(1),
   mentions: z
