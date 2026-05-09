@@ -40,6 +40,15 @@ cw config telegram
 cw start --host 0.0.0.0 --auth enable
 ```
 
+For remote access, prefer Tailscale over public port forwarding:
+
+```bash
+tailscale ip -4
+cw start --host 0.0.0.0 --port 17321 --auth enable
+```
+
+Then open `http://<tailscale-ip>:17321` from another device in the same tailnet and approve the browser session from Telegram. See [External Access With Tailscale And Telegram Auth](docs/external-access.md) for the full setup and security checklist.
+
 ## Managed Commands
 
 Use managed commands so the backend can track process state, logs, ports, and previews.
