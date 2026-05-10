@@ -35,6 +35,7 @@ import { assertCommandAllowed } from "./managers/commands/safety";
 import { ServiceRunner } from "./managers/commands/serviceRunner";
 import { FileManager } from "./managers/fileManager";
 import { safeFsPath } from "./managers/files/path";
+import { isForbiddenProjectEntry, resolveProjectRoot } from "./managers/projects/pathPolicy";
 import { GitManager } from "./managers/gitManager";
 import { SessionManager } from "./managers/sessionManager";
 import { SkillManager } from "./managers/skillManager";
@@ -102,6 +103,17 @@ describe("product smoke coverage", () => {
     await fs.symlink(outside, path.join(root, "linked"));
 
     await expect(safeFsPath(root, "linked/secret.txt")).rejects.toThrow("Path escape blocked");
+  });
+
+  test("rejects unsupported project roots before watchers can start", async () => {
+    const root = await tempDir();
+
+    await expect(resolveProjectRoot(root)).resolves.toBe(await fs.realpath(root));
+    await expect(resolveProjectRoot(path.parse(root).root)).rejects.toThrow("Project path is not a supported project directory");
+    if (process.platform !== "win32") {
+      expect(isForbiddenProjectEntry("/dev")).toBe(true);
+      await expect(resolveProjectRoot("/dev")).rejects.toThrow("Project path is not a supported project directory");
+    }
   });
 
   test("blocks command cwd escapes", async () => {
@@ -359,13 +371,15 @@ describe("product smoke coverage", () => {
 
   test("signal shutdown force exits on repeated signal or timeout", async () => {
     const repeatedExits: number[] = [];
+    const repeatedErrors: string[] = [];
     const repeated = createSignalShutdown(
       () => new Promise<void>(() => undefined),
-      { timeoutMs: 60_000, exit: (code) => repeatedExits.push(code), log: () => undefined, error: () => undefined, removePid: async () => undefined },
+      { timeoutMs: 60_000, exit: (code) => repeatedExits.push(code), log: () => undefined, error: (message) => repeatedErrors.push(message), removePid: async () => undefined },
     );
     repeated();
     repeated();
-    expect(repeatedExits).toEqual([130]);
+    expect(repeatedExits).toEqual([]);
+    expect(repeatedErrors).toEqual(["Shutdown already in progress. Waiting for cleanup to finish."]);
 
     const timeoutExits: number[] = [];
     const timedOut = createSignalShutdown(
@@ -475,6 +489,36 @@ describe("product smoke coverage", () => {
     expect(second.cwd).toBe(await fs.realpath(projectRoot));
     expect(session.cwd).toBe(await fs.realpath(projectRoot));
     expect(await workspace.listProjects()).toHaveLength(1);
+  });
+
+  test("repairs unsupported persisted project and session roots before hydration", async () => {
+    const storeRoot = await tempDir();
+    const validRoot = await tempDir();
+    const store = new JsonStore(storeRoot);
+    const workspace = new WorkspaceManager(store);
+    const validProject = { id: "valid-project", cwd: validRoot, name: "valid", lastOpenedAt: Date.now() };
+    await store.write("projects.json", [
+      { id: "root-project", cwd: path.parse(validRoot).root, name: "root", lastOpenedAt: Date.now() },
+      validProject,
+    ]);
+    await store.write("sessions.json", [
+      { id: "root-session", projectId: "root-project", cwd: path.parse(validRoot).root, name: "root", createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" },
+      { id: "orphan-session", projectId: "missing-project", cwd: validRoot, name: "orphan", createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" },
+      { id: "valid-session", projectId: validProject.id, cwd: validRoot, name: "valid", createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" },
+    ]);
+    await store.write("config.json", {
+      ...(await workspace.getSettings()),
+      activeProjectId: "root-project",
+      recentProjectIds: ["root-project", validProject.id, "missing-project"],
+    });
+
+    const repair = await workspace.repairPersistedState();
+
+    expect(repair.removedProjects.map((project) => project.id)).toEqual(["root-project"]);
+    expect(repair.removedSessions.map((session) => session.id)).toEqual(["root-session", "orphan-session"]);
+    await expect(workspace.listProjects()).resolves.toEqual([{ ...validProject, cwd: await fs.realpath(validRoot) }]);
+    await expect(store.read<unknown[]>("sessions.json", [])).resolves.toEqual([expect.objectContaining({ id: "valid-session", cwd: await fs.realpath(validRoot) })]);
+    await expect(workspace.getSettings()).resolves.toMatchObject({ activeProjectId: undefined, recentProjectIds: [validProject.id] });
   });
 
   test("allows multiple conversation sessions per project", async () => {
@@ -994,6 +1038,26 @@ describe("product smoke coverage", () => {
       await expect(waitForExit(server)).resolves.toBe(0);
     } finally {
       if (server.exitCode === null) server.kill("SIGTERM");
+    }
+  });
+
+  test("stops the package start script cleanly on SIGINT", async () => {
+    const home = await tempDir();
+    const port = await freePort();
+    const child = execa("bun", ["run", "cw", "start", "--host", "127.0.0.1", "--port", String(port), "--preview-port-start", "25020", "--preview-port-end", "25030"], {
+      cwd: path.resolve("."),
+      env: { ...process.env, CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0" },
+      reject: false,
+    });
+    try {
+      await waitForHealth(`http://127.0.0.1:${port}/api/health`);
+      child.kill("SIGINT");
+      const result = await child;
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("exited with code 130");
+      expect(result.stdout).toContain("Shutting down Codex Web IDE...");
+    } finally {
+      if (!child.killed) child.kill("SIGTERM");
     }
   });
 

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FileTreeNode } from "../../shared/types";
-import { ignoredPathPattern, isVisibleFileName } from "./ignore";
+import { isIgnoredPath, isVisibleFileName } from "./ignore";
 import { safeFsPath } from "./path";
 
 export async function readFileTree(root: string, input = ".", depth = 12): Promise<FileTreeNode[]> {
@@ -9,7 +9,7 @@ export async function readFileTree(root: string, input = ".", depth = 12): Promi
   const entries = await fs.readdir(base, { withFileTypes: true });
   const visible = entries
     .filter((entry) => isVisibleFileName(entry.name))
-    .filter((entry) => !ignoredPathPattern.test(path.join(base, entry.name)))
+    .filter((entry) => !isIgnoredPath(path.join(base, entry.name)))
     .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
   return Promise.all(
     visible.slice(0, 500).map(async (entry) => {

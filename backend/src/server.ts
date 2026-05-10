@@ -24,6 +24,7 @@ export type ServerOptions = {
   previewPortStart?: number;
   previewPortEnd?: number;
   auth?: "enable" | "disable";
+  onShutdownRequest?: () => void;
 };
 
 export async function createApp(options: ServerOptions = {}) {
@@ -32,6 +33,8 @@ export async function createApp(options: ServerOptions = {}) {
 
   const events = new EventBus();
   const workspace = new WorkspaceManager(store);
+  const repair = await workspace.repairPersistedState();
+  reportPersistedStateRepair(repair);
   const sessions = new SessionManager(store, workspace);
   const auth = new AuthManager(workspace, store);
   await auth.initialize(authRequired(options.host || process.env.CODEX_WEB_HOST || "127.0.0.1", options.auth), options.auth);
@@ -58,14 +61,25 @@ export async function createApp(options: ServerOptions = {}) {
   const app = express();
   app.locals.auth = auth;
   app.locals.services = services;
-  app.locals.cleanup = async () => {
-    const activeSessions = await sessions.list();
-    await codex.shutdown();
-    auth.shutdown();
-    terminals.shutdown();
-    commands.shutdown();
-    await Promise.all(activeSessions.flatMap((session) => [files.unwatch(session.id), git.unwatch(session.id)]));
-  };
+  app.locals.cleanup = () =>
+    runCleanup([
+      ["codex", () => codex.shutdown()],
+      ["auth", () => auth.shutdown()],
+      ["terminals", () => terminals.shutdown()],
+      ["commands", () => commands.shutdown()],
+      [
+        "watchers",
+        async () => {
+          const activeSessions = await sessions.list();
+          await Promise.allSettled(
+            activeSessions.flatMap((session) => [
+              withTimeout(files.unwatch(session.id), 1000, `file watcher ${session.id}`),
+              withTimeout(git.unwatch(session.id), 1000, `git watcher ${session.id}`),
+            ]),
+          );
+        },
+      ],
+    ]);
 
   for (const session of await sessions.list()) {
     files.watch(session.id, session.cwd);
@@ -90,46 +104,64 @@ export async function startServer(options: ServerOptions = {}) {
   const previewPortEnd = options.previewPortEnd || Number(process.env.CODEX_WEB_PREVIEW_PORT_END || persisted.previewPortEnd);
   const app = await createApp({ host, port, previewPortStart, previewPortEnd, auth: options.auth });
   const auth = app.locals.auth as AuthManager | undefined;
-  let closeAndExit: () => void = () => process.exit(0);
+  let requestShutdown = () => undefined;
   app.post("/api/shutdown", (req, res) => {
     if (!isLoopbackRequest(req)) {
       res.status(403).json({ error: "Shutdown is only allowed from localhost." });
       return;
     }
     res.json({ ok: true });
-    setTimeout(closeAndExit, 25);
+    setTimeout(requestShutdown, 25);
   });
   if (canUseBunFrontProxy()) {
     const services = app.locals.services as AppServices;
     const front = await startBunFrontProxy({ app, host, port, services });
-    closeAndExit = () => {
-      void app.locals.cleanup?.().finally(() => front.close().finally(() => process.exit(0)));
+    let closePromise: Promise<void> | undefined;
+    const close = () =>
+      (closePromise ??= runCleanup([
+        ["app cleanup", () => app.locals.cleanup?.()],
+        ["front proxy", () => withTimeout(front.close(), 1500, "front proxy")],
+      ]));
+    requestShutdown = () => {
+      if (options.onShutdownRequest) options.onShutdownRequest();
+      else void close();
     };
     return {
       host,
       port,
       auth: auth?.getStatus(),
-      close: async () => {
-        await app.locals.cleanup?.();
-        await front.close();
-      },
+      close,
     };
   }
   return new Promise<{ host: string; port: number; auth?: AuthState; close(): Promise<void> }>((resolve) => {
     const server = app.listen(port, host, () => {
-      closeAndExit = () => {
-        void app.locals.cleanup?.().finally(() => server.close(() => process.exit(0)));
+      let closePromise: Promise<void> | undefined;
+      const close = () => {
+        closePromise ??= runCleanup([
+          ["app cleanup", () => app.locals.cleanup?.()],
+          [
+            "http server",
+            () =>
+              withTimeout(
+                new Promise<void>((done, reject) => {
+                  server.close((error) => (error ? reject(error) : done()));
+                }),
+                1500,
+                "http server",
+              ),
+          ],
+        ]);
+        return closePromise;
+      };
+      requestShutdown = () => {
+        if (options.onShutdownRequest) options.onShutdownRequest();
+        else void close();
       };
       resolve({
         host,
         port,
         auth: auth?.getStatus(),
-        close: async () => {
-          await app.locals.cleanup?.();
-          await new Promise<void>((done, reject) => {
-            server.close((error) => (error ? reject(error) : done()));
-          });
-        },
+        close,
       });
     });
   });
@@ -171,6 +203,38 @@ function buildServices({
     adapter: createPlatformAdapter(),
     auth,
   };
+}
+
+function reportPersistedStateRepair(repair: Awaited<ReturnType<WorkspaceManager["repairPersistedState"]>>) {
+  const removed = repair.removedProjects.length + repair.removedSessions.length;
+  if (removed === 0) return;
+  console.warn(`Cleaned unsupported workspace entries: ${repair.removedProjects.length} project(s), ${repair.removedSessions.length} session(s).`);
+  if (!process.env.CODEX_WEB_DEBUG_REPAIR) return;
+  for (const project of repair.removedProjects) console.warn(`- project ${project.cwd}: ${project.reason}`);
+  for (const session of repair.removedSessions) console.warn(`- session ${session.cwd}: ${session.reason}`);
+}
+
+async function runCleanup(steps: Array<[string, () => unknown | Promise<unknown>]>) {
+  const failures: string[] = [];
+  for (const [name, step] of steps) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  if (failures.length > 0) console.warn(`Shutdown completed with cleanup warnings: ${failures.join("; ")}`);
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+    timeout.unref?.();
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
 }
 
 function serveStaticUi(app: express.Express) {

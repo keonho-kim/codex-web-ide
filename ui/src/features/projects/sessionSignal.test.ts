@@ -15,13 +15,20 @@ test("marks running Codex sessions as in progress", () => {
   expect(codexSessionSignal({ ...session, status: "running" }).kind).toBe("running");
 });
 
-test("marks completed idle Codex sessions with the completed signal", () => {
-  expect(codexSessionSignal(session)).toEqual({ kind: "completed", label: "응답 완료" });
+test("does not mark a never-used idle Codex session as completed", () => {
+  expect(codexSessionSignal(session)).toEqual({ kind: "idle", label: "" });
 });
 
 test("marks a latest user event as a Codex response request", () => {
   expect(codexSessionSignal(session, [{ id: "event", label: "codex.user", role: "user", timestamp: 1 }])).toEqual({
     kind: "requested",
     label: "codex가 응답을 요청함",
+  });
+});
+
+test("marks completed idle Codex sessions after an assistant event", () => {
+  expect(codexSessionSignal(session, [{ id: "event", label: "agent_message", role: "assistant", timestamp: 1 }])).toEqual({
+    kind: "completed",
+    label: "응답 완료",
   });
 });

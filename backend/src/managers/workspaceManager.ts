@@ -2,9 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { workspaceSettingsSchema } from "../shared/schemas";
-import type { LocalPathListing, Project, WorkspaceSettings } from "../shared/types";
+import type { LocalPathListing, Project, Session, WorkspaceSettings } from "../shared/types";
 import { createPlatformAdapter } from "../platform/adapter";
 import { expandUserPath } from "./files/path";
+import { isForbiddenProjectEntry, isInsideRoot, resolveProjectRoot } from "./projects/pathPolicy";
 import { JsonStore } from "./storage";
 
 export class WorkspaceManager {
@@ -55,9 +56,7 @@ export class WorkspaceManager {
   }
 
   async addProject(input: { cwd: string; name?: string }) {
-    const cwd = await fs.realpath(path.resolve(expandUserPath(input.cwd)));
-    const stat = await fs.stat(cwd);
-    if (!stat.isDirectory()) throw new Error("Project path must be a directory");
+    const cwd = await resolveProjectRoot(input.cwd);
     const projects = await this.listProjects();
     const existing = projects.find((project) => project.cwd === cwd);
     const project =
@@ -110,6 +109,71 @@ export class WorkspaceManager {
     return (await this.listProjects()).find((item) => item.id === id) ?? null;
   }
 
+  async repairPersistedState() {
+    const projects = await this.listProjects();
+    const repairedProjects: Project[] = [];
+    const removedProjects: Array<{ id: string; cwd: string; reason: string }> = [];
+    const seenProjectRoots = new Set<string>();
+
+    for (const project of projects) {
+      try {
+        const cwd = await resolveProjectRoot(project.cwd);
+        if (seenProjectRoots.has(cwd)) {
+          removedProjects.push({ id: project.id, cwd: project.cwd, reason: "duplicate canonical path" });
+          continue;
+        }
+        seenProjectRoots.add(cwd);
+        repairedProjects.push({ ...project, cwd, name: project.name || path.basename(cwd) || cwd });
+      } catch (error) {
+        removedProjects.push({ id: project.id, cwd: project.cwd, reason: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    const projectById = new Map(repairedProjects.map((project) => [project.id, project]));
+    const sessions = await this.store.read<Session[]>("sessions.json", []);
+    const repairedSessions: Session[] = [];
+    const removedSessions: Array<{ id: string; cwd: string; reason: string }> = [];
+
+    for (const session of sessions) {
+      try {
+        const project = session.projectId ? projectById.get(session.projectId) : null;
+        if (session.projectId && !project) {
+          removedSessions.push({ id: session.id, cwd: session.cwd, reason: "missing project" });
+          continue;
+        }
+        const cwd = await resolveProjectRoot(session.cwd);
+        if (project && !isInsideRoot(cwd, project.cwd)) {
+          removedSessions.push({ id: session.id, cwd: session.cwd, reason: "session path is outside project" });
+          continue;
+        }
+        repairedSessions.push({ ...session, cwd, name: session.name || project?.name || path.basename(cwd) || cwd });
+      } catch (error) {
+        removedSessions.push({ id: session.id, cwd: session.cwd, reason: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    if (removedProjects.length > 0 || repairedProjects.some((project, index) => project.cwd !== projects[index]?.cwd)) {
+      await this.store.write("projects.json", repairedProjects);
+    }
+    if (removedSessions.length > 0 || repairedSessions.some((session, index) => session.cwd !== sessions[index]?.cwd)) {
+      await this.store.write("sessions.json", repairedSessions);
+    }
+    const settings = await this.getSettings();
+    const validIds = new Set(repairedProjects.map((project) => project.id));
+    const nextSettings = {
+      ...settings,
+      activeProjectId: settings.activeProjectId && validIds.has(settings.activeProjectId) ? settings.activeProjectId : undefined,
+      recentProjectIds: settings.recentProjectIds.filter((id) => validIds.has(id)),
+    };
+    if (nextSettings.activeProjectId !== settings.activeProjectId || nextSettings.recentProjectIds.length !== settings.recentProjectIds.length) {
+      await this.updateSettings({
+        ...nextSettings,
+      });
+    }
+
+    return { removedProjects, removedSessions };
+  }
+
   async browsePath(input?: string): Promise<LocalPathListing> {
     const requested = input?.trim() || (await this.getSettings()).defaultProjectsDir || this.adapter.getHomeDir();
     const resolved = path.resolve(expandUserPath(requested));
@@ -126,6 +190,7 @@ export class WorkspaceManager {
         path: path.join(base, entry.name),
         isDirectory: entry.isDirectory(),
       }))
+      .filter((entry) => !entry.isDirectory || !isForbiddenProjectEntry(entry.path))
       .sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name));
     const parentPath = path.dirname(base) === base ? undefined : path.dirname(base);
     return { path: base, parentPath, entries: visible.slice(0, 800) };

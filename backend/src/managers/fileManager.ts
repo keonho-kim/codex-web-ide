@@ -2,10 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, { type FSWatcher } from "chokidar";
 import type { EventBus } from "../events/eventBus";
-import { ignoredPathPattern } from "./files/ignore";
+import { isIgnoredPath } from "./files/ignore";
 import { safeFsPath } from "./files/path";
 import { searchFiles } from "./files/search";
 import { readFileTree } from "./files/tree";
+import { assertSupportedProjectRootSync } from "./projects/pathPolicy";
 export { safePath } from "./files/path";
 
 const DEFAULT_FILE_TREE_DEPTH = 12;
@@ -17,9 +18,16 @@ export class FileManager {
 
   watch(sessionId: string, cwd: string) {
     if (this.watchers.has(sessionId)) return;
+    try {
+      assertSupportedProjectRootSync(cwd);
+    } catch (error) {
+      console.warn(`File watcher skipped unsupported session path ${cwd}: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
     const watcher = chokidar.watch(cwd, {
-      ignored: ignoredPathPattern,
+      ignored: (candidate) => isIgnoredPath(candidate),
       ignoreInitial: true,
+      ignorePermissionErrors: true,
       depth: 12,
       awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 },
     });
@@ -27,7 +35,10 @@ export class FileManager {
       this.events.publish(sessionId, { type: "file.changed", path: path.relative(cwd, file) });
     });
     watcher.on("error", (error) => {
-      if (isTransientWatchError(error)) return;
+      if (isTransientWatchError(error)) {
+        console.warn(`File watcher skipped inaccessible path for session ${sessionId}: ${describeWatchError(error)}`);
+        return;
+      }
       console.error(error);
     });
     this.watchers.set(sessionId, watcher);
@@ -82,5 +93,11 @@ export class FileManager {
 function isTransientWatchError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const code = (error as { code?: unknown }).code;
-  return code === "EINVAL" || code === "ENOENT";
+  return code === "EACCES" || code === "EPERM" || code === "EINVAL" || code === "ENOENT";
+}
+
+function describeWatchError(error: unknown) {
+  if (!error || typeof error !== "object") return String(error);
+  const item = error as { code?: unknown; path?: unknown; filename?: unknown };
+  return [item.code, item.path ?? item.filename].filter(Boolean).join(" ");
 }

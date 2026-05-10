@@ -1,10 +1,8 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { ListFilter, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "../../lib/classes";
 import { SectionTitle } from "../../components/SectionTitle";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
-import { api } from "../../lib/api";
 import { AddProjectDialog } from "./AddProjectDialog";
 import { ProjectThreadTree } from "./ProjectThreadTree";
 
@@ -39,12 +37,8 @@ export function Sidebar({
   onCollapsedChange(collapsed: boolean): void;
   stacked?: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const ensureProjectSession = async (project: Project) => {
-    const session = findProjectSession(project, sessions) ?? (await api<Session>("/api/sessions", { method: "POST", body: { projectId: project.id } }));
+  const selectProject = (project: Project) => {
     onProjectSelect(project.id);
-    onSessionSelect(session.id);
-    await queryClient.invalidateQueries({ queryKey: ["sessions"] });
   };
 
   if (collapsed) {
@@ -54,7 +48,7 @@ export function Sidebar({
           <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
             <PanelTopOpen data-icon="inline-start" />
           </Button>
-          <AddProjectDialog compact defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} onSessionSelect={onSessionSelect} sessions={sessions} />
+          <AddProjectDialog compact defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} />
           <div className="flex min-w-0 items-center gap-1">
             {projects.map((project) => (
               <button
@@ -65,7 +59,7 @@ export function Sidebar({
                 key={project.id}
                 title={project.name}
                 type="button"
-                onClick={() => void ensureProjectSession(project)}
+                onClick={() => selectProject(project)}
               >
                 {projectInitial(project.name)}
               </button>
@@ -79,13 +73,7 @@ export function Sidebar({
         <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
           <PanelLeftOpen data-icon="inline-start" />
         </Button>
-        <AddProjectDialog
-          compact
-          defaultProjectsDir={settings?.defaultProjectsDir}
-          onProjectSelect={onProjectSelect}
-          onSessionSelect={onSessionSelect}
-          sessions={sessions}
-        />
+        <AddProjectDialog compact defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} />
         <div className="grid gap-1">
           {projects.map((project) => (
             <button
@@ -95,7 +83,7 @@ export function Sidebar({
               key={project.id}
               title={project.name}
               type="button"
-              onClick={() => void ensureProjectSession(project)}
+              onClick={() => selectProject(project)}
             >
               {projectInitial(project.name)}
             </button>
@@ -127,16 +115,10 @@ export function Sidebar({
           onSessionDelete={onSessionDelete}
           onSessionSelect={onSessionSelect}
         />
-        <AddProjectDialog defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} onSessionSelect={onSessionSelect} sessions={sessions} />
+        <AddProjectDialog defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} />
       </div>
     </aside>
   );
-}
-
-function findProjectSession(project: Project, sessions: Session[]) {
-  return sessions
-    .filter((session) => session.projectId === project.id || session.cwd === project.cwd || session.cwd.startsWith(`${project.cwd.replace(/\/+$/, "")}/`))
-    .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0];
 }
 
 function projectInitial(name: string) {

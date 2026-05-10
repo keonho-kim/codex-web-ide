@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { ignoredPathPattern, isVisibleFileName } from "./ignore";
+import { isIgnoredPath, isVisibleFileName } from "./ignore";
 
 const DEFAULT_SEARCH_DEPTH = 12;
 const MAX_RESULTS = 50;
@@ -15,7 +15,7 @@ export async function searchFiles(root: string, query: string) {
       if (results.length >= MAX_RESULTS) break;
       if (!isVisibleFileName(entry.name)) continue;
       const absolute = path.join(dir, entry.name);
-      if (ignoredPathPattern.test(absolute)) continue;
+      if (isIgnoredPath(absolute)) continue;
       const relative = path.relative(root, absolute);
       if (relative.toLowerCase().includes(needle)) {
         results.push({ type: "file", path: relative, isDirectory: entry.isDirectory() });

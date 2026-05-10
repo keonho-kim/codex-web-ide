@@ -2,10 +2,11 @@ import { startServer } from "../server";
 import { createPlatformAdapter } from "../platform/adapter";
 import { JsonStore } from "../managers/storage";
 import { WorkspaceManager } from "../managers/workspaceManager";
-import { api, serverBaseUrl } from "./apiClient";
+import { serverBaseUrl } from "./apiClient";
 import { collectStartupDoctorWarnings } from "./doctor/checks";
 import { readPidFile, removePidFile, writePidFile } from "./pidFile";
 import { initProject } from "./projectInit";
+import { createRuntimeSupervisor, type RuntimeSupervisorOptions } from "./runtimeSupervisor";
 
 export async function start(input: string[]) {
   const host = readFlag(input, "--host") || undefined;
@@ -22,14 +23,22 @@ export async function start(input: string[]) {
     return;
   }
   await printStartupDoctorWarnings({ previewPortStart, previewPortEnd });
-  const server = await startServer({ host, port, previewPortStart, previewPortEnd, auth });
+  let shutdown: () => void = () => undefined;
+  const server = await startServer({
+    host,
+    port,
+    previewPortStart,
+    previewPortEnd,
+    auth,
+    onShutdownRequest: () => shutdown(),
+  });
   await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
   await writePidFile(server.port, server.host);
   console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
   if (server.auth?.enabled) {
     console.log("Auth: Telegram approval enabled");
   }
-  const shutdown = createSignalShutdown(server.close);
+  shutdown = createSignalShutdown(server.close);
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
   await new Promise(() => undefined);
@@ -56,7 +65,8 @@ export async function status() {
 
 export async function stop() {
   try {
-    await api<{ ok: boolean }>("/api/shutdown", { method: "POST" });
+    const response = await fetch(`${await serverBaseUrl()}/api/shutdown`, { method: "POST" });
+    if (!response.ok) throw new Error(await response.text());
     await removePidFile();
     console.log("stopped");
   } catch {
@@ -142,48 +152,5 @@ async function persistRuntimeSettings(host: string, port: number, previewPortSta
   });
 }
 
-export type SignalShutdownOptions = {
-  timeoutMs?: number;
-  exit?: (code: number) => void;
-  log?: (message: string) => void;
-  error?: (message: string) => void;
-  removePid?: () => Promise<void>;
-};
-
-const SHUTDOWN_TIMEOUT_MS = 2500;
-
-export function createSignalShutdown(closeServer: () => Promise<void>, options: SignalShutdownOptions = {}) {
-  let closing = false;
-  const exit = options.exit ?? ((code) => process.exit(code));
-  const log = options.log ?? ((message) => console.log(message));
-  const errorLog = options.error ?? ((message) => console.error(message));
-  const removePid = options.removePid ?? removePidFile;
-  const timeoutMs = options.timeoutMs ?? SHUTDOWN_TIMEOUT_MS;
-  let exitCode = 0;
-
-  return () => {
-    if (closing) {
-      errorLog("Forced shutdown.");
-      exit(130);
-      return;
-    }
-    closing = true;
-    log("Shutting down Codex Web IDE...");
-    const timeout = setTimeout(() => {
-      errorLog("Shutdown timed out; forcing exit.");
-      exit(1);
-    }, timeoutMs);
-    timeout.unref?.();
-
-    void closeServer()
-      .catch((error) => {
-        errorLog(error instanceof Error ? error.message : "Failed to close Codex Web IDE.");
-        process.exitCode = 1;
-        exitCode = 1;
-      })
-      .finally(() => {
-        clearTimeout(timeout);
-        void removePid().finally(() => exit(exitCode));
-      });
-  };
-}
+export type SignalShutdownOptions = RuntimeSupervisorOptions;
+export const createSignalShutdown = createRuntimeSupervisor;

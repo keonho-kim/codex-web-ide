@@ -1,10 +1,10 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import type { Session } from "../shared/types";
 import type { WorkspaceManager } from "./workspaceManager";
 import { JsonStore } from "./storage";
 import { expandUserPath, safeFsPath } from "./files/path";
+import { resolveProjectRoot } from "./projects/pathPolicy";
 
 export class SessionManager {
   constructor(
@@ -19,9 +19,7 @@ export class SessionManager {
   async create(input: { projectId?: string; cwd?: string; name?: string }) {
     const project = input.projectId ? await this.workspace.findProject(input.projectId) : null;
     if (input.projectId && !project) throw new Error("Project not found");
-    const cwd = await fs.realpath(project ? await safeFsPath(project.cwd, input.cwd || ".") : path.resolve(expandUserPath(input.cwd || process.cwd())));
-    const stat = await fs.stat(cwd);
-    if (!stat.isDirectory()) throw new Error("Session cwd must be a directory");
+    const cwd = await resolveProjectRoot(project ? await safeFsPath(project.cwd, input.cwd || ".") : path.resolve(expandUserPath(input.cwd || process.cwd())));
     const now = Date.now();
     const session: Session = {
       id: nanoid(),

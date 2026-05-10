@@ -1,10 +1,12 @@
 import { execa } from "execa";
 import path from "node:path";
+import fs from "node:fs";
 import chokidar, { type FSWatcher } from "chokidar";
 import type { GitFileStatus, GitState } from "../shared/types";
 import type { EventBus } from "../events/eventBus";
 import { safeFsPath } from "./files/path";
 import { parsePorcelainV2, parseStatus } from "./git/porcelain";
+import { assertSupportedProjectRootSync } from "./projects/pathPolicy";
 
 export class GitManager {
   private watchers = new Map<string, FSWatcher>();
@@ -15,13 +17,27 @@ export class GitManager {
 
   watch(sessionId: string, cwd: string, events: EventBus) {
     if (this.watchers.has(sessionId)) return;
+    try {
+      assertSupportedProjectRootSync(cwd);
+    } catch {
+      return;
+    }
     const gitDir = path.join(cwd, ".git");
+    if (!isDirectory(gitDir)) return;
     const watcher = chokidar.watch([path.join(gitDir, "HEAD"), path.join(gitDir, "refs", "heads")], {
       ignoreInitial: true,
+      ignorePermissionErrors: true,
       depth: 3,
     });
     watcher.on("all", async () => {
       events.publish(sessionId, { type: "git.state.updated", state: await this.state(cwd) });
+    });
+    watcher.on("error", (error) => {
+      if (isTransientWatchError(error)) {
+        console.warn(`Git watcher skipped inaccessible path for session ${sessionId}: ${describeWatchError(error)}`);
+        return;
+      }
+      console.error(error);
     });
     this.watchers.set(sessionId, watcher);
   }
@@ -134,4 +150,24 @@ async function assertValidBranchName(cwd: string, branch: string) {
 
 function assertSafeBranchArg(branch: string) {
   if (!branch.trim() || branch.startsWith("-")) throw new Error("Invalid Git branch name");
+}
+
+function isDirectory(input: string) {
+  try {
+    return fs.statSync(input).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isTransientWatchError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  return code === "EACCES" || code === "EPERM" || code === "EINVAL" || code === "ENOENT";
+}
+
+function describeWatchError(error: unknown) {
+  if (!error || typeof error !== "object") return String(error);
+  const item = error as { code?: unknown; path?: unknown; filename?: unknown };
+  return [item.code, item.path ?? item.filename].filter(Boolean).join(" ");
 }

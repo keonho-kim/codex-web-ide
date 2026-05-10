@@ -102,10 +102,11 @@ test("shows a React folder browser in the add project dialog", async ({ page }) 
 
   await page.getByRole("button", { name: "Add project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add project" })).toBeVisible();
-  await expect(page.getByPlaceholder("~")).toHaveValue("~");
-  await expect(page.getByRole("button", { name: "Go to path", exact: true })).toBeVisible();
-  await expect(page.getByPlaceholder("New folder name")).toBeVisible();
-  await expect(page.getByRole("button", { name: "New folder", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to path", exact: true })).toHaveCount(0);
+  await expect(page.getByPlaceholder("New folder name")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "New folder", exact: true })).toHaveCount(0);
+  await expect(page.getByTitle("Parent folder")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add project", exact: true }).last()).toBeVisible();
 });
 
 test("supports Codex slash command composer surfaces", async ({ page }, testInfo) => {
