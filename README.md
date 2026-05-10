@@ -33,7 +33,7 @@ To listen on another host or port:
 cw start --host 0.0.0.0 --port 17321
 ```
 
-When binding to a non-loopback host, Telegram approval authentication is enabled unless `CODEX_WEB_AUTH=0` is set. Configure it before exposing the app:
+`cw start` defaults to authentication disabled. Configure Telegram and pass `--auth enable` before exposing the app on a non-loopback host:
 
 ```bash
 cw config telegram

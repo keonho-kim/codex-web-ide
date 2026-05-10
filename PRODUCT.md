@@ -127,6 +127,14 @@ Clean code 기준은 다음을 따른다.
 * 관련 없는 behavior를 한 파일이나 object에 묶지 않는다.
 * 추상화는 실제 중복이나 복잡도를 줄일 때만 추가한다.
 
+### 3.9 Domain Backend / FSD Frontend 지향
+
+Backend는 domain 기반 소프트웨어 아키텍처를 지향한다. Codex, workspace/project, file, command, preview, service, Git, auth 같은 제품 domain은 API route, manager, persistence, event publish 책임을 분리하고, route handler는 orchestration을 얇게 유지한다.
+
+Frontend는 Feature-Sliced Design 방향을 따른다. `features/*`는 제품 기능 단위의 UI와 hook을 소유하고, 여러 feature가 공유하는 렌더러와 primitive는 `shared/*`로 승격한다. 예를 들어 Markdown/HTML/KaTeX rich content renderer는 editor와 chat이 함께 사용하므로 feature 내부가 아니라 shared renderer로 관리한다.
+
+Bundle 최적화는 기능 손실 없이 진행한다. Monaco, markdown/KaTeX, diff viewer, Tiptap처럼 무거운 기능은 lazy import와 Vite manual chunk로 분리하고, 사용자가 해당 기능을 실제로 열 때 로드되도록 유지한다.
+
 ---
 
 ## 4. 전체 아키텍처
@@ -492,17 +500,19 @@ type ComposerMention =
 ```text
 ┌────────────────────────────────────────────────────────────┐
 │ Topbar                                                     │
-│ Project / Session / Branch / Status / Start Preview         │
+│ Project / Session / Branch / Status / Global Config         │
 ├──────────────┬────────────────────────────┬────────────────┤
 │ File Tree    │ Editor                     │ Codex Chat      │
-│              │ Monaco                     │ Event Stream    │
+│              │ Monaco                     │ Timeline Events │
 ├──────────────┴────────────────────────────┴────────────────┤
 │ Bottom Panel                                                │
 │ Preview / Diff / Jobs / Services / Logs                     │
 └────────────────────────────────────────────────────────────┘
 ```
 
-UI의 전체 지향점은 Codex App이며 `./ui-example.jpg`를 기준 이미지로 삼는다. 좌측 사이드바는 project/thread/skill/settings 탐색을 담당하고, 중앙 chat surface 하단에는 composer를 고정한다.
+UI의 전체 지향점은 Codex App이며 `./ui-example.jpg`를 기준 이미지로 삼는다. 좌측 사이드바는 project/thread/skill 탐색을 담당하고, 중앙 chat surface 하단에는 composer를 고정한다. 전역 Codex 설정은 특정 chat 화면에 묶지 않고 Topbar 우측 상태 pill 그룹 끝의 gear 버튼에서 관리한다.
+
+색감은 밝은 흰색 SaaS 화면이 아니라 light gray 기반의 e-ink display / concrete paper tone을 따른다. `DESIGN.md`의 cool gray semantic palette를 기준으로 page, canvas, panel, border, selected state를 분리하며, 누리끼리한 beige cast와 강한 white glare를 피한다.
 
 ### 9.2 Workspace / Project UI
 
@@ -529,6 +539,8 @@ Chat composer는 `@`와 `$` 멘션을 지원한다.
 * 선택된 항목은 composer 안에서 mention chip으로 표시한다.
 * 파일/디렉토리 mention은 Codex 요청 컨텍스트에 path와 directory 여부를 함께 전달한다.
 * skill mention은 Codex 실행 지시 컨텍스트에 포함한다.
+
+Chat message cell은 user 입력과 Codex 응답 모두 동일한 rich content renderer를 사용한다. Markdown, GFM table/list, math/KaTeX, 그리고 sanitize된 HTML을 지원해야 하며, server-provided HTML/Markdown 렌더링 시 XSS 방어 요구사항을 유지한다.
 
 ### 9.4 TanStack Query 담당 영역
 
@@ -1140,6 +1152,7 @@ LAN 공개 시 인증을 추가한다. 초기 placeholder였던 token 기반 인
 
 * `cw config telegram`으로 owner pairing
 * `cw start --auth enable`로 Telegram approval 활성화
+* `--auth`를 생략한 `cw start`는 인증을 비활성화한 상태로 실행
 * UI 접속 시 Telegram 승인 요구
 * HttpOnly session cookie와 CSRF token 사용
 
@@ -1169,7 +1182,7 @@ Codex Web은 로컬 파일시스템, Git, Codex 실행, shell command, preview, 
 
 * `cw start --auth enable`은 Telegram 승인 기반 인증을 활성화한다.
 * Telegram 인증을 사용하려면 사전에 `cw config telegram`으로 bot token 검증과 owner pairing을 완료해야 한다.
-* 외부 listen host 또는 명시적 auth 활성화 상태에서 인증 설정이 불완전하면 server start를 중단한다.
+* 명시적 auth 활성화 상태에서 인증 설정이 불완전하면 server start를 중단한다.
 * 웹 UI active browser session은 기본적으로 최대 1개만 허용한다.
 * 새 browser session은 Telegram에서 승인하거나 기존 session replacement를 승인받아야 한다.
 * 로그인 성공 시 backend가 HttpOnly, SameSite cookie 기반 session을 발급한다.

@@ -1,13 +1,15 @@
+import { lazy, Suspense } from "react";
 import { BarChart3, Code2, Files, GitBranch, MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "../store/uiStore";
 import { CodexPane } from "./codex/CodexPane";
-import { CodexUsagePane } from "./codex/CodexUsagePane";
-import { EditorPane } from "./editor/EditorPane";
 import { FilePane } from "./files/FilePane";
-import { ControlPane } from "./control/ControlPane";
+
+const CodexUsagePane = lazy(() => import("./codex/CodexUsagePane").then((module) => ({ default: module.CodexUsagePane })));
+const ControlPane = lazy(() => import("./control/ControlPane").then((module) => ({ default: module.ControlPane })));
+const EditorPane = lazy(() => import("./editor/EditorPane").then((module) => ({ default: module.EditorPane })));
 
 const workbenchTabs: Array<{ id: WorkbenchTab; label: string; icon: typeof MessageSquare }> = [
   { id: "chat", label: "Chat", icon: MessageSquare },
@@ -69,17 +71,27 @@ export function Workbench({ sessionId }: { sessionId?: string }) {
               </>
             )}
             <Panel defaultSize={72} minSize={36}>
-              <EditorPane sessionId={sessionId} />
+              <Suspense fallback={<PaneLoading />}>
+                <EditorPane sessionId={sessionId} />
+              </Suspense>
             </Panel>
           </PanelGroup>
         </TabsContent>
         <TabsContent className="min-h-0 overflow-hidden" value="control">
-          <ControlPane sessionId={sessionId} />
+          <Suspense fallback={<PaneLoading />}>
+            <ControlPane sessionId={sessionId} />
+          </Suspense>
         </TabsContent>
         <TabsContent className="min-h-0 overflow-hidden" value="usage">
-          <CodexUsagePane sessionId={sessionId} />
+          <Suspense fallback={<PaneLoading />}>
+            <CodexUsagePane sessionId={sessionId} />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </section>
   );
+}
+
+function PaneLoading() {
+  return <div className="flex h-full items-center justify-center text-xs text-muted">Loading panel.</div>;
 }

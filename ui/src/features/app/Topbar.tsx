@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, GitBranch, Server, Terminal } from "lucide-react";
+import { Activity, GitBranch, Server, Settings, Terminal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import type { GitState, Job, ServiceInstance, Session } from "../../lib/types";
+import { GlobalSettingsDialog } from "./GlobalSettingsDialog";
 
 export function Topbar({
   activeSession,
 }: {
   activeSession?: Session;
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <header className="col-span-full flex items-center justify-between gap-4 rounded-lg border border-hairline bg-canvas px-4 py-3 max-[900px]:items-start max-[700px]:flex-col max-[700px]:gap-3">
       <div className="min-w-0">
@@ -16,7 +21,11 @@ export function Topbar({
       </div>
       <div className="flex min-w-0 items-center gap-2 max-[900px]:flex-wrap max-[700px]:w-full max-[700px]:overflow-x-auto">
         <TopbarStatus session={activeSession} />
+        <Button aria-label="Open global configuration" title="Global configuration" variant="outline" size="icon-sm" type="button" onClick={() => setSettingsOpen(true)}>
+          <Settings data-icon="inline-start" />
+        </Button>
       </div>
+      <GlobalSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   );
 }
