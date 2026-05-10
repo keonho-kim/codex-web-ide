@@ -4,8 +4,96 @@ async function openApp(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 }
 
-test("renders separated project panels across supported devices", async ({ page }, testInfo) => {
+async function openSeededApp(page: Page) {
+  await ensureOrchProject(page);
   await openApp(page);
+}
+
+function json(body: unknown) {
+  return {
+    body: JSON.stringify(body),
+    contentType: "application/json",
+  };
+}
+
+type E2eProject = {
+  id: string;
+  cwd: string;
+  name: string;
+};
+
+type E2eSession = {
+  id: string;
+  projectId?: string;
+};
+
+async function ensureOrchProject(page: Page) {
+  const cwd = "/Users/khkim/dev/orch";
+  const projects = (await (await page.request.get("/api/projects")).json()) as E2eProject[];
+  const project = projects.find((item) => item.cwd === cwd) ?? ((await (await page.request.post("/api/projects", { data: { cwd, name: "orch" } })).json()) as E2eProject);
+  await page.request.post(`/api/projects/${project.id}/open`);
+
+  const sessions = (await (await page.request.get("/api/sessions")).json()) as E2eSession[];
+  const session = sessions.find((item) => item.projectId === project.id) ?? ((await (await page.request.post("/api/sessions", { data: { projectId: project.id } })).json()) as E2eSession);
+  const threads = (await (await page.request.get(`/api/sessions/${session.id}/codex/threads`)).json()) as { threads: unknown[] };
+  if (threads.threads.length === 0) await page.request.post(`/api/sessions/${session.id}/codex/threads`, { data: { title: "Thread 1" } });
+}
+
+async function installNoThreadProjectRoutes(page: Page) {
+  const project = { id: "project-empty", name: "zeroShot", cwd: "/tmp/zeroShot", lastOpenedAt: Date.now() };
+  const thread = { id: "thread-1", sessionId: "session-empty", title: "Thread 1", createdAt: Date.now(), lastActiveAt: Date.now() };
+  let session: unknown;
+  let runStarted = false;
+  let cancelCalled = false;
+  let releaseRun = () => {};
+  const runGate = new Promise<void>((resolve) => {
+    releaseRun = resolve;
+  });
+
+  await page.route("**/api/projects", (route) => route.fulfill(json([project])));
+  await page.route("**/api/workspace/settings", (route) =>
+    route.fulfill(json({ activeProjectId: project.id, recentProjectIds: [project.id], defaultProjectsDir: "/tmp", host: "127.0.0.1", port: 17325, previewPortStart: 17330, previewPortEnd: 17399 })),
+  );
+  await page.route("**/api/sessions/events**", (route) => route.fulfill({ body: "retry: 1000\n\n: connected\n\n", contentType: "text/event-stream" }));
+  await page.route("**/api/sessions", async (route) => {
+    if (route.request().method() === "POST") {
+      session = { id: "session-empty", projectId: project.id, cwd: project.cwd, name: project.name, createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" };
+      await route.fulfill(json(session));
+      return;
+    }
+    await route.fulfill(json(session ? [session] : []));
+  });
+  await page.route("**/api/sessions/session-empty/codex/messages", (route) => route.fulfill(json([])));
+  await page.route("**/api/sessions/session-empty/codex/resume", (route) => route.fulfill(json({ running: runStarted && !cancelCalled, messages: [], thread: runStarted ? thread : null })));
+  await page.route("**/api/sessions/session-empty/codex/threads", async (route) => {
+    if (route.request().method() === "POST") {
+      runStarted = true;
+      await route.fulfill(json(thread));
+      return;
+    }
+    await route.fulfill(json({ threads: runStarted ? [thread] : [], activeThreadId: runStarted ? thread.id : null }));
+  });
+  await page.route("**/api/sessions/session-empty/codex/run", async (route) => {
+    runStarted = true;
+    session = { ...(session as object), status: "running" };
+    await runGate;
+    await route.fulfill(json({ running: true, threadId: thread.id }));
+  });
+  await page.route("**/api/sessions/session-empty/codex/cancel", (route) => {
+    cancelCalled = true;
+    session = { ...(session as object), status: "idle" };
+    return route.fulfill(json({ running: false }));
+  });
+
+  return {
+    cancelCalled: () => cancelCalled,
+    releaseRun,
+    runStarted: () => runStarted,
+  };
+}
+
+test("renders separated project panels across supported devices", async ({ page }, testInfo) => {
+  await openSeededApp(page);
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
@@ -57,7 +145,7 @@ test("renders separated project panels across supported devices", async ({ page 
 });
 
 test("supports sidebar collapse and primary project tabs", async ({ page }, testInfo) => {
-  await openApp(page);
+  await openSeededApp(page);
 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.getByText("No file open")).toBeVisible();
@@ -97,8 +185,38 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
   await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
 });
 
-test("shows a React folder browser in the add project dialog", async ({ page }) => {
+test("starts a new chat from the composer when a project has no threads", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "The no-thread composer bootstrap is covered once on desktop with mocked API state.");
+  const mock = await installNoThreadProjectRoutes(page);
   await openApp(page);
+
+  await expect(page.getByText("No chats yet. Start a new chat.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run", exact: true })).toHaveCount(0);
+  await expect(page.getByText("tokens")).toHaveCount(0);
+  await expect(page.getByText("changes")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Open composer context", exact: true }).click();
+  const contextPanel = page.getByTestId("composer-context-panel");
+  await expect(contextPanel).toBeVisible();
+  await expect(contextPanel.getByText("Model")).toBeVisible();
+  await expect(contextPanel.getByText("Sandbox")).toBeVisible();
+  await expect(contextPanel.getByText("Approvals")).toBeVisible();
+  await expect(contextPanel.getByText("Token usage")).toBeVisible();
+
+  await page.locator('[contenteditable="true"]').click();
+  await page.keyboard.type("이 프로젝트를 설명해줘");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect.poll(mock.runStarted).toBe(true);
+  await expect(page.getByRole("button", { name: "Interrupt Codex", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Interrupt Codex", exact: true }).click();
+  await expect.poll(mock.cancelCalled).toBe(true);
+  mock.releaseRun();
+  await expect(page.locator('[contenteditable="true"]')).toHaveText("");
+});
+
+test("shows a React folder browser in the add project dialog", async ({ page }) => {
+  await openSeededApp(page);
 
   await page.getByRole("button", { name: "Add project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add project" })).toBeVisible();
@@ -112,7 +230,7 @@ test("shows a React folder browser in the add project dialog", async ({ page }) 
 test("supports Codex slash command composer surfaces", async ({ page }, testInfo) => {
   test.skip(true, "Composer slash-command behavior is covered outside the responsive layout smoke suite.");
   test.skip(testInfo.project.name !== "desktop", "Composer slash-command editing is covered on desktop; responsive layout is covered separately.");
-  await openApp(page);
+  await openSeededApp(page);
 
   await page.locator('[contenteditable="true"]').click();
   await page.keyboard.type("/");
@@ -137,7 +255,7 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
 
 test("keeps chat visible as the primary small-screen project view", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "desktop", "Small-screen primary chat access is covered on mobile and tablet targets.");
-  await openApp(page);
+  await openSeededApp(page);
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();

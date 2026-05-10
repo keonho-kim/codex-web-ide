@@ -4,11 +4,19 @@ import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { getErrorMessage } from "../../lib/errors";
-import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention } from "../../lib/types";
+import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention, Session } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 import { mentionKey, parseMentionSearch } from "./mentionUtils";
 
-export function useComposer(sessionId?: string) {
+export function useComposer({
+  activeProjectId,
+  onSessionCreated,
+  sessionId,
+}: {
+  activeProjectId?: string;
+  onSessionCreated?(sessionId: string): void;
+  sessionId?: string;
+}) {
   const queryClient = useQueryClient();
   const draft = useUiStore((state) => state.composerDraft);
   const mentionSearch = useUiStore((state) => state.mentionPopup);
@@ -105,16 +113,26 @@ export function useComposer(sessionId?: string) {
   });
 
   const runCodex = useMutation({
-    mutationFn: () =>
-      api(`/api/sessions/${sessionId}/codex/run`, {
+    mutationFn: async () => {
+      let targetSessionId = sessionId;
+      if (!targetSessionId) {
+        if (!activeProjectId) throw new Error("Select a project before starting Codex.");
+        const session = await api<Session>("/api/sessions", { method: "POST", body: { projectId: activeProjectId } });
+        targetSessionId = session.id;
+        onSessionCreated?.(session.id);
+      }
+      await api(`/api/sessions/${targetSessionId}/codex/run`, {
         method: "POST",
         body: { prompt: draft, mentions: selectedMentions },
-      }),
-    onSuccess: async () => {
+      });
+      return { sessionId: targetSessionId };
+    },
+    onSuccess: async ({ sessionId: targetSessionId }) => {
       editor?.commands.clearContent();
       clearComposer();
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["codex", sessionId] }),
+        queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId] }),
+        queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId, "threads"] }),
         queryClient.invalidateQueries({ queryKey: ["sessions"] }),
       ]);
     },
@@ -166,9 +184,11 @@ export function useComposer(sessionId?: string) {
   };
 
   const submitComposer = () => {
-    if (!sessionId || !draft.trim() || runCodex.isPending || slashCommand.isPending) return;
+    if (!draft.trim() || runCodex.isPending || slashCommand.isPending) return;
+    if (!sessionId && !activeProjectId) return;
     const parsed = parseSlashInvocation(draft, slashCommands.data ?? []);
     if (parsed) {
+      if (!sessionId) return;
       if (parsed.command.nativeSurface === "modal" || (parsed.command.requiresConfirmation && !parsed.args)) {
         setActiveSlashCommand(parsed.command);
         setSlashDialogOpen(true);

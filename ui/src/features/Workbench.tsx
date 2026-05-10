@@ -12,7 +12,15 @@ import { FilePane } from "./files/FilePane";
 const ControlPane = lazy(() => import("./control/ControlPane").then((module) => ({ default: module.ControlPane })));
 const EditorPane = lazy(() => import("./editor/EditorPane").then((module) => ({ default: module.EditorPane })));
 
-export function Workbench({ sessionId }: { sessionId?: string }) {
+export function Workbench({
+  activeProjectId,
+  onSessionCreated,
+  sessionId,
+}: {
+  activeProjectId?: string;
+  onSessionCreated(sessionId: string): void;
+  sessionId?: string;
+}) {
   const workbenchTab = normalizeWorkbenchTab(useUiStore((state) => state.workbenchTab));
   const setWorkbenchTab = useUiStore((state) => state.setWorkbenchTab);
   const editorFilesCollapsed = useUiStore((state) => state.editorFilesCollapsed);
@@ -37,43 +45,43 @@ export function Workbench({ sessionId }: { sessionId?: string }) {
           <span className="truncate text-xs text-muted max-[700px]:hidden">{sessionId ? "One project view at a time" : "Select a project to begin"}</span>
         </div>
         <TabsContent className="min-h-0 overflow-hidden" value="chat">
-          <CodexPane sessionId={sessionId} />
+          <CodexPane activeProjectId={activeProjectId} onSessionCreated={onSessionCreated} sessionId={sessionId} />
         </TabsContent>
         <TabsContent className="min-h-0 overflow-hidden" value="editor">
           {stacked ? (
             <StackedEditorPane editorFilesCollapsed={editorFilesCollapsed} sessionId={sessionId} setEditorFilesCollapsed={setEditorFilesCollapsed} />
           ) : (
-          <PanelGroup className="h-full min-h-0 bg-canvas" direction="horizontal">
-            {editorFilesCollapsed ? (
-              <Panel defaultSize={5} minSize={4} maxSize={6}>
-                <div className="flex h-full flex-col items-center gap-2 border-r border-hairline bg-panel p-2">
-                  <Button aria-label="Show files" title="Show files" type="button" variant="ghost" size="icon-sm" onClick={() => setEditorFilesCollapsed(false)}>
-                    <PanelLeftOpen data-icon="inline-start" />
-                  </Button>
-                  <Files size={16} className="text-muted" />
-                </div>
-              </Panel>
-            ) : (
-              <>
-                <Panel defaultSize={28} minSize={20}>
-                  <div className="grid h-full min-h-0 grid-rows-[48px_minmax(0,1fr)]">
-                    <div className="flex h-12 items-center justify-end border-b border-hairline bg-panel px-2">
-                      <Button aria-label="Hide files" title="Hide files" type="button" variant="ghost" size="icon-sm" onClick={() => setEditorFilesCollapsed(true)}>
-                        <PanelLeftClose data-icon="inline-start" />
-                      </Button>
-                    </div>
-                    <FilePane sessionId={sessionId} />
+            <PanelGroup className="h-full min-h-0 bg-canvas" direction="horizontal">
+              {editorFilesCollapsed ? (
+                <Panel defaultSize={5} minSize={4} maxSize={6}>
+                  <div className="flex h-full flex-col items-center gap-2 border-r border-hairline bg-panel p-2">
+                    <Button aria-label="Show files" title="Show files" type="button" variant="ghost" size="icon-sm" onClick={() => setEditorFilesCollapsed(false)}>
+                      <PanelLeftOpen data-icon="inline-start" />
+                    </Button>
+                    <Files size={16} className="text-muted" />
                   </div>
                 </Panel>
-                <PanelResizeHandle className="w-2 bg-page transition-colors hover:bg-selected-border" />
-              </>
-            )}
-            <Panel defaultSize={72} minSize={36}>
-              <Suspense fallback={<PaneLoading />}>
-                <EditorPane sessionId={sessionId} />
-              </Suspense>
-            </Panel>
-          </PanelGroup>
+              ) : (
+                <>
+                  <Panel defaultSize={28} minSize={20}>
+                    <div className="grid h-full min-h-0 grid-rows-[48px_minmax(0,1fr)]">
+                      <div className="flex h-12 items-center justify-end border-b border-hairline bg-panel px-2">
+                        <Button aria-label="Hide files" title="Hide files" type="button" variant="ghost" size="icon-sm" onClick={() => setEditorFilesCollapsed(true)}>
+                          <PanelLeftClose data-icon="inline-start" />
+                        </Button>
+                      </div>
+                      <FilePane sessionId={sessionId} />
+                    </div>
+                  </Panel>
+                  <PanelResizeHandle className="w-2 bg-page transition-colors hover:bg-selected-border" />
+                </>
+              )}
+              <Panel defaultSize={72} minSize={36}>
+                <Suspense fallback={<PaneLoading />}>
+                  <EditorPane sessionId={sessionId} />
+                </Suspense>
+              </Panel>
+            </PanelGroup>
           )}
         </TabsContent>
         <TabsContent className="min-h-0 overflow-hidden" value="control">

@@ -76,7 +76,7 @@ export function App() {
             onCollapsedChange={setSidebarCollapsed}
             stacked
           />
-          <Workbench sessionId={app.activeSessionId} />
+          <Workbench activeProjectId={app.activeProjectId} onSessionCreated={app.setActiveSessionId} sessionId={app.activeSessionId} />
         </div>
       ) : (
         <PanelGroup className="h-full min-h-0" direction="horizontal" key={`${sidebarCollapsed ? "collapsed" : "expanded"}-${compact ? "compact" : "wide"}`}>
@@ -101,7 +101,7 @@ export function App() {
           </Panel>
           {!sidebarCollapsed ? <PanelResizeHandle className="w-2 bg-page transition-colors hover:bg-selected-border" /> : null}
           <Panel className="min-h-0" minSize={50}>
-            <Workbench sessionId={app.activeSessionId} />
+            <Workbench activeProjectId={app.activeProjectId} onSessionCreated={app.setActiveSessionId} sessionId={app.activeSessionId} />
           </Panel>
         </PanelGroup>
       )}

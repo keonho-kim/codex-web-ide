@@ -5,7 +5,15 @@ import type { CodexMessage, CodexThreadRecord } from "../../lib/types";
 import { CodexTimeline } from "./CodexTimeline";
 import { Composer } from "./Composer";
 
-export function CodexPane({ sessionId }: { sessionId?: string }) {
+export function CodexPane({
+  activeProjectId,
+  onSessionCreated,
+  sessionId,
+}: {
+  activeProjectId?: string;
+  onSessionCreated(sessionId: string): void;
+  sessionId?: string;
+}) {
   const messages = useQuery({
     queryKey: ["codex", sessionId, "messages"],
     queryFn: () => api<CodexMessage[]>(`/api/sessions/${sessionId}/codex/messages`),
@@ -25,7 +33,7 @@ export function CodexPane({ sessionId }: { sessionId?: string }) {
         <span className="text-[11px] text-codex">{status.data?.running ? "running" : "ready"}</span>
       </div>
       <CodexTimeline messages={messages.data ?? []} running={status.data?.running ?? false} sessionId={sessionId} />
-      <Composer sessionId={sessionId} running={status.data?.running ?? false} />
+      <Composer activeProjectId={activeProjectId} onSessionCreated={onSessionCreated} sessionId={sessionId} running={status.data?.running ?? false} />
     </section>
   );
 }
