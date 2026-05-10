@@ -979,6 +979,10 @@ describe("product smoke coverage", () => {
     try {
       await waitForHealth(`http://127.0.0.1:${port}/api/health`);
 
+      const duplicateStart = await runCli(["start", "--host", "127.0.0.1", "--port", String(port)], env);
+      expect(duplicateStart.exitCode).toBe(0);
+      expect(duplicateStart.stdout).toContain(`Codex Web IDE already running on http://127.0.0.1:${port}`);
+
       const status = await runCli(["status"], env);
       expect(status.exitCode).toBe(0);
       expect(status.stdout).toContain("running: yes");

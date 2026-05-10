@@ -16,6 +16,11 @@ export async function start(input: string[]) {
   if (previewPortStart && previewPortEnd && previewPortStart > previewPortEnd) {
     throw new Error("--preview-port-start must be less than or equal to --preview-port-end.");
   }
+  const runningUrl = await runningServerUrl();
+  if (runningUrl) {
+    console.log(`Codex Web IDE already running on ${runningUrl}`);
+    return;
+  }
   await printStartupDoctorWarnings({ previewPortStart, previewPortEnd });
   const server = await startServer({ host, port, previewPortStart, previewPortEnd, auth });
   await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
@@ -56,6 +61,20 @@ export async function stop() {
     console.log("stopped");
   } catch {
     console.log("running: no");
+  }
+}
+
+async function runningServerUrl() {
+  const baseUrl = await serverBaseUrl();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 750);
+  try {
+    const response = await fetch(`${baseUrl}/api/health`, { signal: controller.signal });
+    return response.ok ? baseUrl : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
