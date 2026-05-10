@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Check, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { normalizeStatuslineItems } from "../../lib/statusline";
 import type { CodexSlashCommandDefinition } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 import { CommandSettingsBody } from "./CodexSettingsForm";
@@ -43,7 +44,7 @@ export function SlashCommandDialog({
           <DialogDescription>{command.description}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          <CommandSettingsBody command={command.command} values={merged} onChange={setLocal} />
+          <CommandSettingsBody command={command.command} values={merged} onChange={(next) => setLocal((current) => ({ ...current, ...next }))} />
           {command.supportsInlineArgs ? (
             <label className="grid gap-1 text-xs font-medium text-muted">
               Arguments
@@ -71,7 +72,7 @@ export function SlashCommandDialog({
 }
 
 function persistedSettings(command: string, values: Options) {
-  if (command === "statusline") return { statuslineItems: values.statuslineItems as string[] };
+  if (command === "statusline") return { statuslineItems: normalizeStatuslineItems(values.statuslineItems as string[] | undefined), useThemeColors: Boolean(values.useThemeColors ?? true) };
   if (command === "title") return { titleItems: values.titleItems as string[] };
   if (command === "experimental") return { experimentalFeatures: values.experimentalFeatures as Record<string, boolean> };
   if (command === "model") return { model: String(values.model), reasoningEffort: String(values.reasoningEffort) };

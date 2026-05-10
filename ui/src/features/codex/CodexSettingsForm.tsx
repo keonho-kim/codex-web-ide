@@ -1,9 +1,9 @@
 import type { UiState } from "../../store/uiStore";
+import { STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "../../lib/statusline";
 
 export type CodexCommandSettings = UiState["codexCommandSettings"];
 export type CodexSettingsPatch = Partial<CodexCommandSettings>;
 
-export const statusItems = ["model", "reasoning", "permissions", "branch", "changes", "tokens", "raw"];
 export const titleItems = ["project", "thread", "branch", "status"];
 export const experimentalFeatures = ["goals", "plugins", "collaboration modes", "realtime", "multi agents"];
 
@@ -18,7 +18,12 @@ export function CodexSettingsForm({
     <div className="grid gap-5">
       <section className="grid gap-3">
         <h3 className="text-xs font-semibold uppercase text-muted">Display</h3>
-        <Checklist label="Status line items" items={statusItems} selected={values.statuslineItems} onChange={(statuslineItems) => onChange({ statuslineItems })} />
+        <StatuslineChecklist
+          selected={values.statuslineItems}
+          useThemeColors={values.useThemeColors}
+          onChange={(statuslineItems) => onChange({ statuslineItems })}
+          onThemeColorsChange={(useThemeColors) => onChange({ useThemeColors })}
+        />
         <Checklist label="Terminal title items" items={titleItems} selected={values.titleItems} onChange={(titleItems) => onChange({ titleItems })} />
       </section>
       <section className="grid gap-3">
@@ -50,7 +55,14 @@ export function CodexSettingsForm({
 
 export function CommandSettingsBody({ command, values, onChange }: { command: string; values: Record<string, unknown>; onChange(next: Record<string, unknown>): void }) {
   if (command === "statusline") {
-    return <Checklist label="Status line items" items={statusItems} selected={(values.statuslineItems as string[]) ?? []} onChange={(items) => onChange({ statuslineItems: items })} />;
+    return (
+      <StatuslineChecklist
+        selected={normalizeStatuslineItems(values.statuslineItems as string[] | undefined)}
+        useThemeColors={Boolean(values.useThemeColors ?? true)}
+        onChange={(statuslineItems) => onChange({ statuslineItems })}
+        onThemeColorsChange={(useThemeColors) => onChange({ useThemeColors })}
+      />
+    );
   }
   if (command === "title") {
     return <Checklist label="Terminal title items" items={titleItems} selected={(values.titleItems as string[]) ?? []} onChange={(items) => onChange({ titleItems: items })} />;
@@ -83,6 +95,42 @@ export function CommandSettingsBody({ command, values, onChange }: { command: st
     return <Select label="Theme" value={String(values.theme ?? "system")} options={["system", "light", "dark", "github", "solarized"]} onChange={(theme) => onChange({ theme })} />;
   }
   return <p className="rounded-md border border-subtle bg-canvas p-3 text-sm text-muted">This command is handled by Codex Web as a native command surface. Confirm to apply it to the current session.</p>;
+}
+
+function StatuslineChecklist({
+  selected,
+  useThemeColors,
+  onChange,
+  onThemeColorsChange,
+}: {
+  selected: readonly string[];
+  useThemeColors: boolean;
+  onChange(items: CodexStatusLineItem[]): void;
+  onThemeColorsChange(checked: boolean): void;
+}) {
+  const normalized = normalizeStatuslineItems(selected);
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-muted">Status line items</span>
+        <label className="inline-flex items-center gap-2 text-xs text-muted">
+          <input type="checkbox" checked={useThemeColors} onChange={(event) => onThemeColorsChange(event.target.checked)} />
+          Use theme colors
+        </label>
+      </div>
+      <div className="grid gap-2">
+        {STATUSLINE_ITEMS.map((item) => (
+          <label className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-md border border-subtle bg-canvas px-3 py-2 text-sm" key={item.id}>
+            <input className="mt-1" type="checkbox" checked={normalized.includes(item.id)} onChange={(event) => onChange(event.target.checked ? [...normalized, item.id] : normalized.filter((value) => value !== item.id))} />
+            <span className="grid gap-0.5">
+              <span className="font-mono text-xs font-semibold text-ink">{item.label}</span>
+              <span className="text-xs text-muted">{item.description}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Checklist({ label, items, selected, onChange }: { label: string; items: string[]; selected: string[]; onChange(items: string[]): void }) {

@@ -793,9 +793,9 @@ describe("product smoke coverage", () => {
     expect(status.status?.session.name).toBe("slash");
     expect(status.status?.commands.supported).toBe(CODEX_SLASH_COMMANDS.length);
 
-    const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model", "tokens"] } });
+    const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model-with-reasoning", "context-remaining"], useThemeColors: true } });
     expect(applied.message).toContain("/statusline");
-    expect((await codex.listMessages(session)).at(-1)?.text).toContain("statuslineItems: model, tokens");
+    expect((await codex.listMessages(session)).at(-1)?.text).toContain("statuslineItems: model-with-reasoning, context-remaining");
   });
 
   test("codex hydrate clears stale running session state", async () => {

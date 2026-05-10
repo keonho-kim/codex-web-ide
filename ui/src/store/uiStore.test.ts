@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems } from "../lib/statusline";
 import { normalizeCollapsedMainPanels, normalizeControlTab, normalizeWorkbenchTab, selectCodexEvents, useUiStore } from "./uiStore";
 
 test("returns stable empty Codex event snapshots", () => {
@@ -93,4 +94,9 @@ test("normalizes persisted workspace tab state", () => {
   expect(normalizeControlTab("previews")).toBe("previews");
   expect(normalizeControlTab("services")).toBe("services");
   expect(normalizeControlTab("preview")).toBe("git");
+});
+
+test("normalizes legacy status line items to Codex TUI items", () => {
+  expect(normalizeStatuslineItems(["model", "reasoning", "branch", "tokens", "permissions", "raw"])).toEqual(["model-with-reasoning", "git-branch", "context-remaining"]);
+  expect(normalizeStatuslineItems()).toEqual(DEFAULT_STATUSLINE_ITEMS);
 });

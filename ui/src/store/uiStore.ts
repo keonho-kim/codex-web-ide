@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "../lib/statusline";
 import type { ComposerMention, MentionPopupState } from "../lib/types";
 
 export type CodexEventSummary = {
@@ -53,7 +54,8 @@ export type UiState = {
   collapsedMainPanels: CollapsedMainPanels;
   workbenchLayout: number[];
   codexCommandSettings: {
-    statuslineItems: string[];
+    statuslineItems: CodexStatusLineItem[];
+    useThemeColors: boolean;
     titleItems: string[];
     experimentalFeatures: Record<string, boolean>;
     model: string;
@@ -110,7 +112,8 @@ export const useUiStore = create<UiState>()(
       collapsedMainPanels: DEFAULT_COLLAPSED_MAIN_PANELS,
       workbenchLayout: DEFAULT_WORKBENCH_LAYOUT,
       codexCommandSettings: {
-        statuslineItems: ["model", "branch", "tokens"],
+        statuslineItems: DEFAULT_STATUSLINE_ITEMS,
+        useThemeColors: true,
         titleItems: ["project", "thread"],
         experimentalFeatures: {},
         model: "Codex SDK default",
@@ -260,6 +263,7 @@ export const useUiStore = create<UiState>()(
           codexCommandSettings: {
             ...state.codexCommandSettings,
             ...settings,
+            statuslineItems: normalizeStatuslineItems(settings.statuslineItems ?? state.codexCommandSettings.statuslineItems),
           },
         })),
     }),
@@ -282,6 +286,21 @@ export const useUiStore = create<UiState>()(
         workbenchLayout: state.workbenchLayout,
         codexCommandSettings: state.codexCommandSettings,
       }),
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<UiState> | undefined;
+        const persistedSettings = persistedState?.codexCommandSettings;
+        return {
+          ...current,
+          ...persistedState,
+          codexCommandSettings: {
+            ...current.codexCommandSettings,
+            ...persistedSettings,
+            statuslineItems: normalizeStatuslineItems(persistedSettings?.statuslineItems),
+            useThemeColors: persistedSettings?.useThemeColors ?? current.codexCommandSettings.useThemeColors,
+          },
+          collapsedMainPanels: normalizeCollapsedMainPanels(persistedState?.collapsedMainPanels),
+        };
+      },
     },
   ),
 );

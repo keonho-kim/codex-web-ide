@@ -66,6 +66,19 @@ async function installNoThreadProjectRoutes(page: Page) {
   });
   await page.route("**/api/sessions/session-empty/codex/messages", (route) => route.fulfill(json([])));
   await page.route("**/api/sessions/session-empty/codex/resume", (route) => route.fulfill(json({ running: runStarted && !cancelCalled, messages: [], thread: runStarted ? thread : null })));
+  await page.route("**/api/sessions/session-empty/codex/status", (route) =>
+    route.fulfill(
+      json({
+        session: session ?? { id: "session-empty", projectId: project.id, cwd: project.cwd, name: project.name, createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" },
+        thread: runStarted ? thread : null,
+        model: { label: "Codex SDK default", source: "runtime default" },
+        permissions: { sandbox: "workspace-write", approvals: "on-request" },
+        git: { branch: "main", detached: false, commit: "abc123", dirty: false, stagedCount: 0, unstagedCount: 0, untrackedCount: 0 },
+        usage: { note: "Not available yet" },
+        commands: { supported: 40, source: "test" },
+      }),
+    ),
+  );
   await page.route("**/api/sessions/session-empty/codex/threads", async (route) => {
     if (route.request().method() === "POST") {
       runStarted = true;
@@ -85,6 +98,8 @@ async function installNoThreadProjectRoutes(page: Page) {
     session = { ...(session as object), status: "idle" };
     return route.fulfill(json({ running: false }));
   });
+  await page.route("**/api/sessions/session-empty/jobs", (route) => route.fulfill(json([])));
+  await page.route("**/api/sessions/session-empty/services", (route) => route.fulfill(json([])));
 
   return {
     cancelCalled: () => cancelCalled,
@@ -196,19 +211,21 @@ test("starts a new chat from the composer when a project has no threads", async 
   await expect(page.getByRole("button", { name: "Run", exact: true })).toHaveCount(0);
   await expect(page.getByText("tokens")).toHaveCount(0);
   await expect(page.getByText("changes")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Open composer context", exact: true }).click();
-  const contextPanel = page.getByTestId("composer-context-panel");
-  await expect(contextPanel).toBeVisible();
-  await expect(contextPanel.getByText("Model")).toBeVisible();
-  await expect(contextPanel.getByText("Sandbox")).toBeVisible();
-  await expect(contextPanel.getByText("Approvals")).toBeVisible();
-  await expect(contextPanel.getByText("Token usage")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open composer context", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Context:")).toHaveCount(0);
+  const statusline = page.getByTestId("codex-statusline");
+  await expect(statusline).toBeVisible();
+  await expect(statusline).toContainText("Codex SDK default medium");
+  await expect(statusline).toContainText("Ready");
+  await expect(statusline).toContainText("Tasks 0");
 
   await page.locator('[contenteditable="true"]').click();
   await page.keyboard.type("이 프로젝트를 설명해줘");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect.poll(mock.runStarted).toBe(true);
+  await expect(statusline).toContainText("/tmp/zeroShot");
+  await expect(statusline).toContainText("main");
+  await expect(statusline).toContainText("Working");
   await expect(page.getByRole("button", { name: "Interrupt Codex", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Interrupt Codex", exact: true }).click();
   await expect.poll(mock.cancelCalled).toBe(true);
@@ -258,7 +275,6 @@ test("shows a React folder browser in the add project dialog", async ({ page }) 
 });
 
 test("supports Codex slash command composer surfaces", async ({ page }, testInfo) => {
-  test.skip(true, "Composer slash-command behavior is covered outside the responsive layout smoke suite.");
   test.skip(testInfo.project.name !== "desktop", "Composer slash-command editing is covered on desktop; responsive layout is covered separately.");
   await openSeededApp(page);
 
