@@ -72,6 +72,58 @@ export type ComposerMention =
   | { type: "file"; path: string; isDirectory: boolean }
   | { type: "skill"; id: string; name: string };
 
+export type CodexSlashCommandCategory = "conversation" | "configuration" | "workspace" | "utility" | "debug";
+
+export type CodexSlashCommandDefinition = {
+  command: string;
+  description: string;
+  category: CodexSlashCommandCategory;
+  supportsInlineArgs: boolean;
+  nativeSurface: "direct" | "modal" | "tab" | "composer";
+  requiresConfirmation?: boolean;
+  platform?: "all" | "windows";
+  debugOnly?: boolean;
+};
+
+export type CodexStatusSnapshot = {
+  session: {
+    id: string;
+    name: string;
+    cwd: string;
+    status: SessionStatus;
+  };
+  thread: CodexThreadRecord | null;
+  model: {
+    label: string;
+    source: string;
+  };
+  permissions: {
+    sandbox: string;
+    approvals: string;
+  };
+  git: GitState;
+  usage: {
+    totalTokens?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    reasoningOutputTokens?: number;
+    lastEventAt?: number;
+    note?: string;
+  };
+  commands: {
+    supported: number;
+    source: string;
+  };
+};
+
+export type CodexSlashCommandResult = {
+  command: string;
+  handled: boolean;
+  message?: string;
+  status?: CodexStatusSnapshot;
+  draft?: string;
+};
+
 export type CommandSpec = {
   id: string;
   sessionId: string;

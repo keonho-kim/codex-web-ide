@@ -32,6 +32,20 @@ export class CodexThreadManager {
     return thread;
   }
 
+  async renameActive(session: Session, title: string) {
+    const thread = await this.active(session);
+    const next = { ...thread, title: title.trim(), lastActiveAt: Date.now() };
+    await this.history.updateThread(next);
+    return next;
+  }
+
+  async forkActive(session: Session) {
+    const current = await this.active(session);
+    const fork = await this.history.createThread(session.id, `${current.title} fork`);
+    await this.sessions.update(session.id, { activeCodexThreadId: fork.id, codexThreadId: undefined });
+    return fork;
+  }
+
   async delete(session: Session, threadId: string) {
     const result = await this.history.deleteThread(session, threadId);
     this.threads.delete(threadId);

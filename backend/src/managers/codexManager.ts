@@ -1,14 +1,17 @@
 import type { ThreadEvent } from "@openai/codex-sdk";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { nanoid } from "nanoid";
 import type { EventBus } from "../events/eventBus";
 import type { GitManager } from "./gitManager";
 import type { SessionManager } from "./sessionManager";
 import type { SkillManager } from "./skillManager";
-import type { CodexMessage, ComposerMention, Session } from "../shared/types";
+import type { CodexMessage, CodexSlashCommandResult, CodexStatusSnapshot, ComposerMention, Session } from "../shared/types";
 import type { CodexHistoryStore } from "./codex/historyStore";
 import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
 import { buildCodexMentionContext, validateCodexMentions } from "./codex/mentions";
 import { buildCodexPrompt } from "./codex/prompt";
+import { CODEX_SLASH_COMMANDS, findCodexSlashCommand, normalizeSlashCommand } from "./codex/slashCommands";
 import { CodexThreadManager } from "./codex/threads";
 
 type RunningTurn = {
@@ -20,6 +23,7 @@ export class CodexManager {
   private running = new Map<string, RunningTurn>();
   private cancelled = new Set<string>();
   private deleted = new Set<string>();
+  private usage = new Map<string, CodexStatusSnapshot["usage"]>();
   private threadManager: CodexThreadManager;
 
   constructor(
@@ -70,6 +74,113 @@ export class CodexManager {
     };
   }
 
+  async status(session: Session): Promise<CodexStatusSnapshot> {
+    const thread = await this.threadManager.current(session);
+    return {
+      session: {
+        id: session.id,
+        name: session.name,
+        cwd: session.cwd,
+        status: session.status,
+      },
+      thread,
+      model: {
+        label: process.env.CODEX_MODEL || "Codex SDK default",
+        source: process.env.CODEX_MODEL ? "CODEX_MODEL" : "runtime default",
+      },
+      permissions: {
+        sandbox: "workspace-write",
+        approvals: "on-request",
+      },
+      git: await this.git.state(session.cwd),
+      usage: this.usage.get(session.id) ?? { note: "Token usage appears after Codex emits usage events for this session." },
+      commands: {
+        supported: CODEX_SLASH_COMMANDS.length,
+        source: "OpenAI Codex TUI 0.129.0 slash command registry",
+      },
+    };
+  }
+
+  async slashCommands() {
+    return CODEX_SLASH_COMMANDS;
+  }
+
+  async runSlashCommand(session: Session, input: { command: string; args?: string; options?: Record<string, unknown> }): Promise<CodexSlashCommandResult> {
+    const command = normalizeSlashCommand(input.command);
+    const definition = findCodexSlashCommand(command);
+    if (!definition) throw new Error(`Unsupported Codex slash command: /${command}`);
+    const args = input.args?.trim() || "";
+    const options = input.options ?? {};
+
+    if (command === "status") {
+      return { command, handled: true, status: await this.status(session) };
+    }
+    if (command === "mention") return { command, handled: true, draft: "@" };
+
+    if (command === "new") {
+      const thread = await this.createThread(session, "New thread");
+      await this.append(session.id, thread.id, systemMessage("Started a new Codex thread."));
+      return { command, handled: true, message: "Started a new Codex thread." };
+    }
+    if (command === "fork") {
+      const current = await this.threadManager.active(session);
+      const previous = this.messages.get(current.id) ?? (await this.history.list(current.id));
+      const thread = await this.threadManager.forkActive(session);
+      if (previous.length > 0) {
+        await this.history.save(thread.id, previous);
+        this.messages.set(thread.id, previous);
+      }
+      await this.append(session.id, thread.id, systemMessage("Forked the current Codex thread."));
+      return { command, handled: true, message: "Forked the current Codex thread." };
+    }
+    if (command === "rename") {
+      const title = stringOption(options, "title") || args;
+      if (!title.trim()) return { command, handled: false, message: "Thread name is required." };
+      const thread = await this.threadManager.renameActive(session, title);
+      await this.append(session.id, thread.id, systemMessage(`Renamed the current thread to "${thread.title}".`));
+      return { command, handled: true, message: `Renamed the current thread to "${thread.title}".` };
+    }
+    if (command === "clear") {
+      const thread = await this.threadManager.active(session);
+      this.messages.set(thread.id, []);
+      await this.history.save(thread.id, []);
+      return { command, handled: true, message: "Cleared the current Codex thread transcript." };
+    }
+    if (command === "init") {
+      const created = await ensureRuntimeAgentsFile(session.cwd);
+      const message = created ? "Created AGENTS.md with Codex Web runtime policy." : "AGENTS.md already exists; left it unchanged.";
+      await this.append(session.id, (await this.threadManager.active(session)).id, systemMessage(message));
+      return { command, handled: true, message };
+    }
+    if (command === "diff") {
+      const [staged, unstaged] = await Promise.all([this.git.diff(session.cwd, undefined, true), this.git.diff(session.cwd)]);
+      const text = [staged ? "Staged diff:\n" + staged : "", unstaged ? "Unstaged diff:\n" + unstaged : ""].filter(Boolean).join("\n\n") || "No git diff available.";
+      await this.append(session.id, (await this.threadManager.active(session)).id, createAssistantMessage(text));
+      return { command, handled: true, message: "Added git diff to the Codex transcript." };
+    }
+    if (command === "compact") {
+      return this.runPromptSlash(session, command, "Summarize the conversation so far, preserve key decisions and open tasks, and keep the next steps concise.");
+    }
+    if (command === "review") {
+      return this.runPromptSlash(session, command, args || "Review my current changes and find correctness, security, regression, and missing-test issues.");
+    }
+    if (command === "plan") {
+      return this.runPromptSlash(session, command, args || "Switch to planning mode for the next task. Ask only for missing constraints that block implementation.");
+    }
+    if (command === "goal") {
+      const message = args ? `Goal set for this Codex thread: ${args}` : "Open the goal modal to set, pause, resume, or clear a long-running objective.";
+      await this.append(session.id, (await this.threadManager.active(session)).id, systemMessage(message));
+      return { command, handled: true, message };
+    }
+    if (command === "side") {
+      return this.runPromptSlash(session, command, args || "Start a side analysis for the current topic and keep it separate from the main implementation path.");
+    }
+
+    const message = nativeCommandMessage(command, options, args);
+    await this.append(session.id, (await this.threadManager.active(session)).id, systemMessage(message));
+    return { command, handled: true, message };
+  }
+
   async run(session: Session, input: { prompt: string; mentions: ComposerMention[] }) {
     if (this.running.has(session.id)) throw new Error("Codex is already running for this session");
     await validateCodexMentions(session.cwd, input.mentions);
@@ -101,6 +212,9 @@ export class CodexManager {
       sessions: this.sessions,
       thread,
       appendAssistantMessage: (text) => this.append(session.id, activeThread.id, createAssistantMessage(text)),
+      recordUsage: (usage) => {
+        this.usage.set(session.id, usage);
+      },
       updateThreadId: (codexThreadId) => this.threadManager.updateCodexThreadId(session, activeThread, codexThreadId),
     });
 
@@ -141,4 +255,45 @@ export class CodexManager {
     await this.history.save(threadId, next);
     this.events.publish(sessionId, { type: "codex.event", payload: { message } });
   }
+
+  private async runPromptSlash(session: Session, command: string, prompt: string): Promise<CodexSlashCommandResult> {
+    await this.run(session, { prompt, mentions: [] });
+    return { command, handled: true, message: `Started /${command}.` };
+  }
+}
+
+function systemMessage(text: string): CodexMessage {
+  return { id: nanoid(), role: "system", text, createdAt: Date.now() };
+}
+
+function stringOption(options: Record<string, unknown>, key: string) {
+  const value = options[key];
+  return typeof value === "string" ? value : "";
+}
+
+async function ensureRuntimeAgentsFile(cwd: string) {
+  const file = path.join(cwd, "AGENTS.md");
+  const content = `# Codex Web Runtime Policy
+
+This project is managed by Codex Web.
+
+Do not run long-running commands directly.
+Use \`cw job <command...>\`, \`cw preview <command...>\`, and \`cw service <command...>\` so the UI can track work.
+`;
+  try {
+    await fs.writeFile(file, content, { flag: "wx" });
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
+}
+
+function nativeCommandMessage(command: string, options: Record<string, unknown>, args: string) {
+  const payload = Object.entries(options)
+    .filter(([, value]) => value !== undefined && value !== "")
+    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`)
+    .join("\n");
+  const details = [args ? `Args: ${args}` : "", payload].filter(Boolean).join("\n");
+  return details ? `Applied /${command} through the Codex Web native command surface.\n${details}` : `Handled /${command} through the Codex Web native command surface.`;
 }

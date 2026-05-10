@@ -7,6 +7,7 @@ test("renders separated project panels across supported devices", async ({ page 
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Control", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toBeVisible();
   await expect(page.getByText("Threads")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
   await expect(page.getByTitle("Remove orch")).toHaveCount(1);
@@ -17,6 +18,8 @@ test("renders separated project panels across supported devices", async ({ page 
   await expect(page.getByRole("tab", { name: "Jobs", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Previews", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Services", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Codex Usage", exact: true }).click();
+  await expect(page.getByText("Native /status view for the active session.")).toBeVisible();
   const workbenchBox = await page.getByTestId("workbench").boundingBox();
   expect(workbenchBox?.height ?? 0).toBeGreaterThan((page.viewportSize()?.height ?? 0) * 0.65);
 
@@ -41,7 +44,7 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
   await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: "Chat", exact: true }).click();
-  await expect(page.getByText("Start a Codex run from the composer.")).toBeVisible();
+  await expect(page.locator('[contenteditable="true"]')).toBeVisible();
 
   await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
   await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
@@ -70,10 +73,41 @@ test("shows a React folder browser in the add project dialog", async ({ page }) 
   await expect(page.getByRole("button", { name: "New folder", exact: true })).toBeVisible();
 });
 
+test("supports Codex slash command composer surfaces", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Composer slash-command editing is covered on desktop; responsive layout is covered separately.");
+  await page.goto("/");
+
+  await page.locator('[contenteditable="true"]').click();
+  await page.keyboard.type("/");
+  await expect(page.getByTestId("slash-command-suggestions")).toBeVisible();
+  expect(await page.getByTestId("slash-command-option").count()).toBeGreaterThan(10);
+  await page.keyboard.type("pl");
+  await expect(page.getByTestId("slash-command-option").first()).toContainText("/plan");
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[contenteditable="true"]')).toContainText("/plan");
+  await page.keyboard.press("Control+A");
+  await page.keyboard.press("Backspace");
+
+  await page.keyboard.type("/status");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toHaveAttribute("data-state", "active");
+  await expect(page.getByText("Slash Commands")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Chat", exact: true }).click();
+  await page.locator('[contenteditable="true"]').click();
+  await page.keyboard.type("/statusline");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "/statusline" })).toBeVisible();
+  await expect(page.getByText("Status line items")).toBeVisible();
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByRole("dialog", { name: "/statusline" })).toHaveCount(0);
+  await expect(page.getByText(/Applied \/statusline through the Codex Web native command surface/).last()).toBeVisible();
+});
+
 test("keeps chat visible as the primary small-screen project view", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
-  await expect(page.getByText("Start a Codex run from the composer.")).toBeVisible();
+  await expect(page.locator('[contenteditable="true"]')).toBeVisible();
 });

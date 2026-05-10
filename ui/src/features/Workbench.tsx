@@ -1,9 +1,10 @@
-import { Code2, Files, GitBranch, MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BarChart3, Code2, Files, GitBranch, MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "../store/uiStore";
 import { CodexPane } from "./codex/CodexPane";
+import { CodexUsagePane } from "./codex/CodexUsagePane";
 import { EditorPane } from "./editor/EditorPane";
 import { FilePane } from "./files/FilePane";
 import { ControlPane } from "./control/ControlPane";
@@ -12,6 +13,7 @@ const workbenchTabs: Array<{ id: WorkbenchTab; label: string; icon: typeof Messa
   { id: "chat", label: "Chat", icon: MessageSquare },
   { id: "editor", label: "Editor", icon: Code2 },
   { id: "control", label: "Control", icon: GitBranch },
+  { id: "usage", label: "Codex Usage", icon: BarChart3 },
 ];
 
 export function Workbench({ sessionId }: { sessionId?: string }) {
@@ -73,6 +75,9 @@ export function Workbench({ sessionId }: { sessionId?: string }) {
         </TabsContent>
         <TabsContent className="min-h-0 overflow-hidden" value="control">
           <ControlPane sessionId={sessionId} />
+        </TabsContent>
+        <TabsContent className="min-h-0 overflow-hidden" value="usage">
+          <CodexUsagePane sessionId={sessionId} />
         </TabsContent>
       </Tabs>
     </section>

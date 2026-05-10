@@ -1,10 +1,10 @@
-import { useEffect, useMemo, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { getErrorMessage } from "../../lib/errors";
-import type { ComposerMention } from "../../lib/types";
+import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
 import { mentionKey, parseMentionSearch } from "./mentionUtils";
 
@@ -17,13 +17,17 @@ export function useComposer(sessionId?: string) {
   const setMentionSearch = useUiStore((state) => state.setMentionPopup);
   const setSelectedMentions = useUiStore((state) => state.setComposerMentions);
   const clearComposer = useUiStore((state) => state.clearComposer);
+  const setWorkbenchTab = useUiStore((state) => state.setWorkbenchTab);
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
+  const [activeSlashCommand, setActiveSlashCommand] = useState<CodexSlashCommandDefinition | null>(null);
+  const [slashDialogOpen, setSlashDialogOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
     content: draft,
     editorProps: {
       attributes: {
-        class: "min-h-[92px] w-full rounded-md border border-control bg-canvas px-2.5 py-1.5 pr-32 text-sm text-ink outline-none transition-colors focus:border-primary max-[700px]:min-h-[84px] [&_p]:m-0",
+        class: "max-h-[180px] min-h-[88px] w-full overflow-y-auto rounded-t-md bg-canvas px-2.5 py-2 text-sm text-ink outline-none max-[700px]:min-h-[76px] [&_p]:m-0",
       },
     },
     onUpdate: ({ editor }) => {
@@ -59,6 +63,45 @@ export function useComposer(sessionId?: string) {
     if (mentionSearch?.trigger === "$") return skillMentions.data ?? [];
     return [];
   }, [fileMentions.data, mentionSearch?.trigger, skillMentions.data]);
+  const slashCommands = useQuery({
+    queryKey: ["codex", "slash-commands"],
+    queryFn: () => api<CodexSlashCommandDefinition[]>("/api/codex/slash-commands"),
+  });
+  const slashSearch = useMemo(() => parseSlashSearch(draft), [draft]);
+  const slashSuggestions = useMemo(() => {
+    if (slashSearch === null) return [];
+    const query = slashSearch.toLowerCase();
+    return (slashCommands.data ?? [])
+      .filter((command) => command.command.includes(query) || command.description.toLowerCase().includes(query))
+      .sort((a, b) => commandRank(a, query) - commandRank(b, query));
+  }, [slashCommands.data, slashSearch]);
+
+  useEffect(() => {
+    setSelectedSlashIndex(0);
+  }, [slashSearch]);
+
+  const slashCommand = useMutation({
+    mutationFn: ({ command, args, options }: { command: string; args?: string; options?: Record<string, unknown> }) =>
+      api<CodexSlashCommandResult>(`/api/sessions/${sessionId}/codex/slash-command`, {
+        method: "POST",
+        body: { command, args: args ?? "", options: options ?? {} },
+      }),
+    onSuccess: async (result) => {
+      if (result.draft) {
+        editor?.commands.setContent(textDocument(result.draft));
+        setDraft(result.draft);
+      } else {
+        editor?.commands.clearContent();
+        clearComposer();
+      }
+      if (result.status || result.command === "status") setWorkbenchTab("usage");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["codex", sessionId] }),
+        queryClient.invalidateQueries({ queryKey: ["codex", sessionId, "status"] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+      ]);
+    },
+  });
 
   const runCodex = useMutation({
     mutationFn: () =>
@@ -88,44 +131,152 @@ export function useComposer(sessionId?: string) {
     editor?.commands.focus();
   };
 
+  const selectSlashCommand = (command: CodexSlashCommandDefinition) => {
+    if (command.nativeSurface === "modal" || command.requiresConfirmation) {
+      setActiveSlashCommand(command);
+      setSlashDialogOpen(true);
+      return;
+    }
+    if (command.supportsInlineArgs && command.nativeSurface === "composer") {
+      const nextText = `/${command.command} `;
+      editor?.commands.setContent(textDocument(nextText));
+      setDraft(nextText);
+      editor?.commands.focus();
+      return;
+    }
+    slashCommand.mutate({ command: command.command });
+  };
+
+  const applySlashCommand = (command: CodexSlashCommandDefinition, options: Record<string, unknown>, args?: string) => {
+    slashCommand.mutate({ command: command.command, args, options });
+    setSlashDialogOpen(false);
+  };
+
   const removeMention = (mention: ComposerMention) => {
     setSelectedMentions(selectedMentions.filter((item) => mentionKey(item) !== mentionKey(mention)));
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!mentionSearch || suggestions.length === 0) return;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      const direction = event.key === "ArrowDown" ? 1 : -1;
-      setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
+  const submitComposer = () => {
+    if (!sessionId || !draft.trim() || runCodex.isPending || slashCommand.isPending) return;
+    const parsed = parseSlashInvocation(draft, slashCommands.data ?? []);
+    if (parsed) {
+      if (parsed.command.nativeSurface === "modal" || (parsed.command.requiresConfirmation && !parsed.args)) {
+        setActiveSlashCommand(parsed.command);
+        setSlashDialogOpen(true);
+      } else {
+        slashCommand.mutate({ command: parsed.command.command, args: parsed.args });
+      }
+      return;
     }
-    if (event.key === "Enter" || event.key === "Tab") {
-      event.preventDefault();
-      addMention(suggestions[mentionSearch.selectedIndex] ?? suggestions[0]);
+    runCodex.mutate();
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, running = false) => {
+    if (slashSuggestions.length > 0) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        setSelectedSlashIndex((selectedSlashIndex + direction + slashSuggestions.length) % slashSuggestions.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        selectSlashCommand(slashSuggestions[selectedSlashIndex] ?? slashSuggestions[0]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        editor?.commands.setContent("");
+        setDraft("");
+        return;
+      }
     }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setMentionSearch(null);
+    if (mentionSearch && suggestions.length > 0) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        addMention(suggestions[mentionSearch.selectedIndex] ?? suggestions[0]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMentionSearch(null);
+        return;
+      }
     }
+    if (event.defaultPrevented || running) return;
+    if (event.key === "Enter" && event.ctrlKey) return;
+    if (event.key !== "Enter") return;
+    const lines = lineCount(draft);
+    if (!event.shiftKey && lines <= 1) {
+      event.preventDefault();
+      submitComposer();
+      return;
+    }
+    if (event.shiftKey && lines > 1) {
+      event.preventDefault();
+      submitComposer();
+      return;
+    }
+    event.preventDefault();
   };
 
   return {
     addMention,
+    activeSlashCommand,
+    applySlashCommand,
     cancelCodex: () => cancelCodex.mutate(),
     cancelPending: cancelCodex.isPending,
     draft,
     editor,
-    error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : null,
+    error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : slashCommand.error ? getErrorMessage(slashCommand.error) : null,
     mentionSearch,
     onKeyDown,
     removeMention,
-    runCodex: () => runCodex.mutate(),
-    runPending: runCodex.isPending,
+    runCodex: submitComposer,
+    runPending: runCodex.isPending || slashCommand.isPending,
     selectedMentions,
+    selectedSlashIndex,
     suggestions,
+    slashDialogOpen,
+    slashSuggestions,
+    selectSlashCommand,
+    setSlashDialogOpen,
   };
 }
 
 function textDocument(text: string) {
   return text ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] } : "";
+}
+
+function parseSlashSearch(text: string) {
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith("/") || /\s/.test(trimmed)) return null;
+  return trimmed.slice(1);
+}
+
+function parseSlashInvocation(text: string, commands: CodexSlashCommandDefinition[]) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("/")) return null;
+  const match = /^\/([a-z0-9_-]+)(?:\s+([\s\S]*))?$/.exec(trimmed);
+  if (!match) return null;
+  const command = commands.find((item) => item.command === match[1]);
+  return command ? { command, args: match[2] ?? "" } : null;
+}
+
+function commandRank(command: CodexSlashCommandDefinition, query: string) {
+  if (!query) return 0;
+  if (command.command === query) return 0;
+  if (command.command.startsWith(query)) return 1;
+  if (command.command.includes(query)) return 2;
+  return 3;
+}
+
+function lineCount(text: string) {
+  return Math.max(1, text.split(/\r?\n/).length);
 }

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import type { Thread, ThreadEvent } from "@openai/codex-sdk";
 import type { EventBus } from "../../events/eventBus";
-import type { Session } from "../../shared/types";
+import type { CodexStatusSnapshot, Session } from "../../shared/types";
 import type { GitManager } from "../gitManager";
 import type { SessionManager } from "../sessionManager";
 
@@ -16,6 +16,7 @@ export async function consumeCodexEvents({
   sessions,
   thread,
   appendAssistantMessage,
+  recordUsage,
   updateThreadId,
 }: {
   events: EventBus;
@@ -28,6 +29,7 @@ export async function consumeCodexEvents({
   sessions: SessionManager;
   thread: Thread;
   appendAssistantMessage(text: string): Promise<void>;
+  recordUsage(usage: CodexStatusSnapshot["usage"]): void;
   updateThreadId(codexThreadId: string): Promise<void>;
 }) {
   const agentMessages = new Map<string, string>();
@@ -36,6 +38,8 @@ export async function consumeCodexEvents({
   try {
     for await (const event of eventStream) {
       events.publish(session.id, { type: "codex.event", payload: event });
+      const usage = extractTokenUsage(event);
+      if (usage) recordUsage(usage);
       if (event.type === "thread.started") {
         await updateThreadId(event.thread_id);
       }
@@ -75,4 +79,36 @@ export function createAssistantMessage(text: string) {
     text,
     createdAt: Date.now(),
   };
+}
+
+function extractTokenUsage(event: ThreadEvent): CodexStatusSnapshot["usage"] | undefined {
+  const usage = findUsageObject(event);
+  if (!usage) return undefined;
+  const inputTokens = numberValue(usage.input_tokens ?? usage.inputTokens);
+  const outputTokens = numberValue(usage.output_tokens ?? usage.outputTokens);
+  const reasoningOutputTokens = numberValue(usage.reasoning_output_tokens ?? usage.reasoningOutputTokens);
+  const totalTokens = numberValue(usage.total_tokens ?? usage.totalTokens) ?? (inputTokens ?? 0) + (outputTokens ?? 0);
+  if (!inputTokens && !outputTokens && !reasoningOutputTokens && !totalTokens) return undefined;
+  return {
+    inputTokens,
+    outputTokens,
+    reasoningOutputTokens,
+    totalTokens,
+    lastEventAt: Date.now(),
+  };
+}
+
+function findUsageObject(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  if (record.usage && typeof record.usage === "object") return record.usage as Record<string, unknown>;
+  for (const child of Object.values(record)) {
+    const found = findUsageObject(child);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
