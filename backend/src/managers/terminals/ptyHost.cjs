@@ -60,7 +60,7 @@ function createTerminal() {
       onExit: (handler) => pty.onExit(handler),
     };
   } catch (error) {
-    const child = childProcess.spawn(shell, shellArgs(shell), {
+    const child = childProcess.spawn(shell, pipeShellArgs(), {
       cwd: options.cwd,
       env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -100,4 +100,8 @@ function shellArgs(shellPath) {
   if (process.platform === "win32") return [];
   const name = String(shellPath).split(/[\\/]/).pop();
   return name === "bash" || name === "zsh" || name === "sh" || name === "fish" ? ["-i"] : [];
+}
+
+function pipeShellArgs() {
+  return [];
 }

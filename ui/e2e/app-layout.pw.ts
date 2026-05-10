@@ -37,6 +37,7 @@ async function ensureOrchProject(page: Page) {
   const session = sessions.find((item) => item.projectId === project.id) ?? ((await (await page.request.post("/api/sessions", { data: { projectId: project.id } })).json()) as E2eSession);
   const threads = (await (await page.request.get(`/api/sessions/${session.id}/codex/threads`)).json()) as { threads: unknown[] };
   if (threads.threads.length === 0) await page.request.post(`/api/sessions/${session.id}/codex/threads`, { data: { title: "Thread 1" } });
+  return { project, session };
 }
 
 async function installNoThreadProjectRoutes(page: Page) {
@@ -213,6 +214,35 @@ test("starts a new chat from the composer when a project has no threads", async 
   await expect.poll(mock.cancelCalled).toBe(true);
   mock.releaseRun();
   await expect(page.locator('[contenteditable="true"]')).toHaveText("");
+});
+
+test("supports editor shortcuts and Monaco context actions", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Editor shortcut behavior is covered once on desktop.");
+  const { session } = await ensureOrchProject(page);
+  await page.request.put(`/api/sessions/${session.id}/files/write`, {
+    data: {
+      path: "e2e-editor-shortcuts.ts",
+      content: "export function targetName() {\n  return targetName();\n}\n",
+    },
+  });
+  await openApp(page);
+
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await page.getByRole("button", { name: "e2e-editor-shortcuts.ts", exact: true }).click();
+  await expect(page.locator(".monaco-editor")).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+J");
+  await expect(page.getByTestId("editor-terminal-panel")).toBeVisible();
+  await page.getByRole("button", { name: "Kill terminal", exact: true }).click();
+  await page.getByRole("button", { name: "Close terminal panel", exact: true }).click();
+  await expect(page.getByTestId("editor-terminal-panel")).toHaveCount(0);
+
+  await page.locator(".monaco-editor").click();
+  await page.keyboard.press("ControlOrMeta+Shift+L");
+  await page.locator(".monaco-editor").click({ button: "right", position: { x: 160, y: 80 } });
+  await expect(page.getByRole("menuitem", { name: /Go to Definition/ }).first()).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Select All Occurrences/ })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Paste/ }).first()).toBeVisible();
 });
 
 test("shows a React folder browser in the add project dialog", async ({ page }) => {

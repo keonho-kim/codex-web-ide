@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { loader, type OnMount } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { PreviewSuggestionToast } from "./PreviewSuggestionToast";
 
 type EditorMode = "raw" | "preview";
 type MonacoEditor = Parameters<OnMount>[0];
+type MonacoInstance = Parameters<OnMount>[1];
 
 const DocumentPreview = lazy(() => import("./DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
 
@@ -40,6 +41,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   const hydrateEditorDraft = useUiStore((state) => state.hydrateEditorDraft);
   const setSelectedPreviewId = useUiStore((state) => state.setSelectedPreviewId);
   const setEditorBottomPanelOpen = useUiStore((state) => state.setEditorBottomPanelOpen);
+  const toggleTerminalPanel = useCallback(() => {
+    setEditorBottomPanelOpen(!useUiStore.getState().editorBottomPanelOpen);
+  }, [setEditorBottomPanelOpen]);
 
   const file = useQuery({
     queryKey: ["file", sessionId, activeFilePath],
@@ -117,9 +121,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
         return;
       }
       const key = event.key.toLowerCase();
-      if (key === "`") {
+      if (key === "j") {
         event.preventDefault();
-        setEditorBottomPanelOpen(!editorBottomPanelOpen);
+        toggleTerminalPanel();
         return;
       }
       if (key === "s") {
@@ -136,12 +140,12 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
       if (key === "l" && activeFilePath) {
         event.preventDefault();
         editorRef.current?.focus();
-        editorRef.current?.trigger("keyboard", "expandLineSelection", null);
+        editorRef.current?.trigger("keyboard", event.shiftKey ? "editor.action.selectHighlights" : "expandLineSelection", null);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeFilePath, dirty, editorBottomPanelOpen, quickOpen, save, setEditorBottomPanelOpen]);
+  }, [activeFilePath, dirty, quickOpen, save, toggleTerminalPanel]);
 
   const runPreview = (command: string[]) => {
     if (!sessionId || command.length === 0 || !confirmDangerousCommand(command)) return;
@@ -181,7 +185,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
               </button>
             </div>
           ) : null}
-          <Button title="Open terminal" type="button" variant="outline" size="icon-sm" onClick={() => setEditorBottomPanelOpen(!editorBottomPanelOpen)}>
+          <Button aria-label="Open terminal" title="Open terminal (Ctrl/Cmd+J)" type="button" variant="outline" size="icon-sm" onClick={() => setEditorBottomPanelOpen(!editorBottomPanelOpen)}>
             <Terminal data-icon="inline-start" />
           </Button>
           <Button title="Quick open" type="button" variant="outline" size="icon-sm" onClick={() => setQuickOpen(true)}>
@@ -252,9 +256,10 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
             path={activeFilePath}
             value={draft}
             theme="vs-light"
-            options={{ minimap: { enabled: false }, fontSize: 14, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 18, bottom: 18 } }}
-            onMount={(editor) => {
+            options={{ minimap: { enabled: false }, fontSize: 14, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 18, bottom: 18 }, contextmenu: true }}
+            onMount={(editor, monacoInstance) => {
               editorRef.current = editor;
+              registerEditorActions(editor, monacoInstance, toggleTerminalPanel);
             }}
             onChange={(value) => {
               if (activeFilePath) setEditorDraft(activeFilePath, value ?? "");
@@ -293,6 +298,25 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
       ) : null}
     </section>
   );
+}
+
+function registerEditorActions(editor: MonacoEditor, monacoInstance: MonacoInstance, toggleTerminal: () => void) {
+  editor.addAction({
+    id: "codex-web.toggle-terminal",
+    label: "Toggle Terminal",
+    keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyJ],
+    contextMenuGroupId: "navigation",
+    contextMenuOrder: 1,
+    run: () => toggleTerminal(),
+  });
+  editor.addAction({
+    id: "codex-web.select-all-occurrences",
+    label: "Select All Occurrences",
+    keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyL],
+    contextMenuGroupId: "9_selection",
+    contextMenuOrder: 1,
+    run: (target) => target.trigger("contextmenu", "editor.action.selectHighlights", null),
+  });
 }
 
 function QuickOpen({
