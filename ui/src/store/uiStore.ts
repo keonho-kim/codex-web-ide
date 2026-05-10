@@ -4,9 +4,17 @@ import type { ComposerMention, MentionPopupState } from "../lib/types";
 
 export type CodexEventSummary = {
   id: string;
+  kind?: "assistant" | "command" | "tool" | "file" | "reasoning" | "search" | "todo" | "error" | "turn" | "event";
   label: string;
+  title?: string;
+  status?: string;
+  preview?: string;
+  body?: string;
   detail?: string;
   messageId?: string;
+  sourceItemId?: string;
+  role?: "assistant" | "user" | "system";
+  text?: string;
   timestamp: number;
 };
 
@@ -155,12 +163,20 @@ export const useUiStore = create<UiState>()(
         set({ composerDraft: "", composerMentions: [], mentionPopup: null });
       },
       appendCodexEvent: (sessionId, event) =>
-        set((state) => ({
-          codexEvents: {
-            ...state.codexEvents,
-            [sessionId]: [...(state.codexEvents[sessionId] ?? []), event].slice(-12),
-          },
-        })),
+        set((state) => {
+          const current = state.codexEvents[sessionId] ?? [];
+          const existingIndex = event.sourceItemId ? current.findIndex((item) => item.sourceItemId === event.sourceItemId) : -1;
+          const next =
+            existingIndex === -1
+              ? [...current, event]
+              : current.map((item, index) => (index === existingIndex ? { ...item, ...event, id: item.id } : item));
+          return {
+            codexEvents: {
+              ...state.codexEvents,
+              [sessionId]: next.slice(-24),
+            },
+          };
+        }),
       clearCodexEvents: (sessionId) =>
         set((state) => {
           if (!state.codexEvents[sessionId]) return state;
@@ -175,7 +191,7 @@ export const useUiStore = create<UiState>()(
         set((state) => {
           const currentDraft = state.editorDrafts[path];
           const previousContent = state.editorSyncedContents[path];
-          const shouldUpdateDraft = currentDraft === undefined || currentDraft === previousContent;
+          const shouldUpdateDraft = currentDraft === undefined || currentDraft === previousContent || (previousContent === undefined && currentDraft === "");
           if (!shouldUpdateDraft && previousContent === content) return state;
           if (shouldUpdateDraft && currentDraft === content && previousContent === content) return state;
           return {

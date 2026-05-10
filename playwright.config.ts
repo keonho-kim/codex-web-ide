@@ -13,6 +13,7 @@ export default defineConfig({
   testDir: "./ui/e2e",
   testMatch: "**/*.pw.ts",
   reporter: "line",
+  workers: 1,
   use: {
     baseURL: "http://127.0.0.1:17325",
     trace: "retain-on-failure",

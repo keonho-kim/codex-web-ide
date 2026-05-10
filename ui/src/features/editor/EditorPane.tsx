@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { loader, type OnMount } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, FileText, Play, Save, Search, Terminal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ type EditorMode = "raw" | "preview";
 type MonacoEditor = Parameters<OnMount>[0];
 
 const DocumentPreview = lazy(() => import("./DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
+
+loader.config({ monaco });
 
 export function EditorPane({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();

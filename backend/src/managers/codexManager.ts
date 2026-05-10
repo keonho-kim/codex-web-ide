@@ -38,6 +38,7 @@ export class CodexManager {
 
   async hydrate(sessions: Session[]) {
     this.messages = await this.history.hydrate(sessions);
+    await Promise.all(sessions.filter((session) => session.status === "running").map((session) => this.sessions.update(session.id, { status: "idle" }).catch(() => undefined)));
   }
 
   async listThreads(session: Session) {

@@ -21,6 +21,7 @@ export function useComposer(sessionId?: string) {
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [activeSlashCommand, setActiveSlashCommand] = useState<CodexSlashCommandDefinition | null>(null);
   const [slashDialogOpen, setSlashDialogOpen] = useState(false);
+  const activeMentionSearch = mentionSearch ?? parseMentionSearch(draft);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -43,26 +44,26 @@ export function useComposer(sessionId?: string) {
   }, [draft, editor]);
 
   const fileMentions = useQuery({
-    queryKey: ["mentions", "files", sessionId, mentionSearch?.query],
+    queryKey: ["mentions", "files", sessionId, activeMentionSearch?.query],
     queryFn: () =>
       api<Array<{ type: "file"; path: string; isDirectory: boolean }>>(
-        `/api/sessions/${sessionId}/mentions/files?q=${encodeURIComponent(mentionSearch?.query || "")}`,
+        `/api/sessions/${sessionId}/mentions/files?q=${encodeURIComponent(activeMentionSearch?.query || "")}`,
       ),
-    enabled: Boolean(sessionId && mentionSearch?.trigger === "@"),
+    enabled: Boolean(sessionId && activeMentionSearch?.trigger === "@"),
   });
   const skillMentions = useQuery({
-    queryKey: ["mentions", "skills", sessionId, mentionSearch?.query],
+    queryKey: ["mentions", "skills", sessionId, activeMentionSearch?.query],
     queryFn: () =>
       api<Array<{ type: "skill"; id: string; name: string }>>(
-        `/api/sessions/${sessionId}/mentions/skills?q=${encodeURIComponent(mentionSearch?.query || "")}`,
+        `/api/sessions/${sessionId}/mentions/skills?q=${encodeURIComponent(activeMentionSearch?.query || "")}`,
       ),
-    enabled: Boolean(sessionId && mentionSearch?.trigger === "$"),
+    enabled: Boolean(sessionId && activeMentionSearch?.trigger === "$"),
   });
   const suggestions = useMemo<ComposerMention[]>(() => {
-    if (mentionSearch?.trigger === "@") return fileMentions.data ?? [];
-    if (mentionSearch?.trigger === "$") return skillMentions.data ?? [];
+    if (activeMentionSearch?.trigger === "@") return fileMentions.data ?? [];
+    if (activeMentionSearch?.trigger === "$") return skillMentions.data ?? [];
     return [];
-  }, [fileMentions.data, mentionSearch?.trigger, skillMentions.data]);
+  }, [activeMentionSearch?.trigger, fileMentions.data, skillMentions.data]);
   const slashCommands = useQuery({
     queryKey: ["codex", "slash-commands"],
     queryFn: () => api<CodexSlashCommandDefinition[]>("/api/codex/slash-commands"),
@@ -112,7 +113,10 @@ export function useComposer(sessionId?: string) {
     onSuccess: async () => {
       editor?.commands.clearContent();
       clearComposer();
-      await queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["codex", sessionId] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+      ]);
     },
   });
   const cancelCodex = useMutation({
@@ -144,6 +148,11 @@ export function useComposer(sessionId?: string) {
       editor?.commands.focus();
       return;
     }
+    if (command.nativeSurface === "tab") {
+      editor?.commands.clearContent();
+      clearComposer();
+      setWorkbenchTab("usage");
+    }
     slashCommand.mutate({ command: command.command });
   };
 
@@ -164,6 +173,11 @@ export function useComposer(sessionId?: string) {
         setActiveSlashCommand(parsed.command);
         setSlashDialogOpen(true);
       } else {
+        if (parsed.command.nativeSurface === "tab") {
+          editor?.commands.clearContent();
+          clearComposer();
+          setWorkbenchTab("usage");
+        }
         slashCommand.mutate({ command: parsed.command.command, args: parsed.args });
       }
       return;
@@ -191,16 +205,16 @@ export function useComposer(sessionId?: string) {
         return;
       }
     }
-    if (mentionSearch && suggestions.length > 0) {
+    if (activeMentionSearch && suggestions.length > 0) {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         const direction = event.key === "ArrowDown" ? 1 : -1;
-        setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
+        setMentionSearch({ ...activeMentionSearch, selectedIndex: (activeMentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
         return;
       }
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
-        addMention(suggestions[mentionSearch.selectedIndex] ?? suggestions[0]);
+        addMention(suggestions[activeMentionSearch.selectedIndex] ?? suggestions[0]);
         return;
       }
       if (event.key === "Escape") {
@@ -236,6 +250,7 @@ export function useComposer(sessionId?: string) {
     editor,
     error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : slashCommand.error ? getErrorMessage(slashCommand.error) : null,
     mentionSearch,
+    activeMentionSearch,
     onKeyDown,
     removeMention,
     runCodex: submitComposer,

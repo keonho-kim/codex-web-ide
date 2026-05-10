@@ -233,6 +233,48 @@ describe("product smoke coverage", () => {
     }
   });
 
+  test("multiplexes session event streams for active and running sessions", async () => {
+    const first = { ...testSession(await tempDir()), id: "first" };
+    const second = { ...testSession(await tempDir()), id: "second" };
+    const events = new EventBus();
+    const app = express();
+    app.use(express.json());
+    registerSessionRoutes(app, {
+      codex: {},
+      commands: {},
+      events,
+      files: {},
+      git: {},
+      sessions: { get: async (id: string) => (id === first.id ? first : second), list: async () => [first, second] },
+    } as unknown as AppServices);
+    const port = await freePort();
+    const server = await new Promise<net.Server>((resolve, reject) => {
+      const listener = app.listen(port, "127.0.0.1", () => resolve(listener));
+      listener.once("error", reject);
+    });
+    const controller = new AbortController();
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/sessions/events?ids=${first.id},${second.id}`, { signal: controller.signal });
+      expect(response.ok).toBe(true);
+      const reader = response.body?.getReader();
+      expect(reader).toBeTruthy();
+      await reader!.read();
+
+      events.publish(second.id, {
+        type: "git.state.updated",
+        state: { branch: null, commit: null, detached: false, dirty: false, stagedCount: 0, unstagedCount: 0, untrackedCount: 0 },
+      });
+      const next = await reader!.read();
+      const chunk = new TextDecoder().decode(next.value);
+      expect(chunk).toContain("event: git.state.updated");
+      expect(chunk).toContain(`"sessionId":"${second.id}"`);
+      await reader!.cancel();
+    } finally {
+      controller.abort();
+      await closeServer(server);
+    }
+  });
+
   test("runs managed jobs and captures output", async () => {
     const root = await tempDir();
     const runner = new JobRunner(new EventBus(), new GitManager(), new ProcessRegistry());
@@ -264,6 +306,7 @@ describe("product smoke coverage", () => {
 
   test("managed CLI commands create cwd sessions and call command APIs", async () => {
     const cwd = await tempDir();
+    const canonicalCwd = await fs.realpath(cwd);
     const originalCwd = process.cwd();
     const calls: Array<{ pathName: string; body?: unknown; method?: string }> = [];
     process.chdir(cwd);
@@ -271,21 +314,21 @@ describe("product smoke coverage", () => {
       const result = await executeManagedCommand("preview", ["--approve-dangerous", "bun", "run", "dev"], async (pathName, options = {}) => {
         calls.push({ pathName, body: options.body, method: options.method });
         if (pathName === "/api/sessions") {
-          if (options.method === "POST") return { ...testSession(cwd), id: "created-session" } as never;
+          if (options.method === "POST") return { ...testSession(canonicalCwd), id: "created-session" } as never;
           return [] as never;
         }
         if (pathName === "/api/sessions/created-session/commands/preview") {
-          return { id: "preview", sessionId: "created-session", cwd, command: ["bun", "run", "dev"] } as never;
+          return { id: "preview", sessionId: "created-session", cwd: canonicalCwd, command: ["bun", "run", "dev"] } as never;
         }
         throw new Error(`Unexpected API call: ${pathName}`);
       });
 
       expect(result.output).toContain("\"preview\"");
-      expect(calls).toContainEqual({ pathName: "/api/sessions", body: { cwd }, method: "POST" });
+      expect(calls).toContainEqual({ pathName: "/api/sessions", body: { cwd: canonicalCwd }, method: "POST" });
       expect(calls).toContainEqual({
         pathName: "/api/sessions/created-session/commands/preview",
         method: "POST",
-        body: { command: ["bun", "run", "dev"], cwd, approvedDangerous: true },
+        body: { command: ["bun", "run", "dev"], cwd: canonicalCwd, approvedDangerous: true },
       });
     } finally {
       process.chdir(originalCwd);
@@ -432,6 +475,39 @@ describe("product smoke coverage", () => {
     expect(second.cwd).toBe(await fs.realpath(projectRoot));
     expect(session.cwd).toBe(await fs.realpath(projectRoot));
     expect(await workspace.listProjects()).toHaveLength(1);
+  });
+
+  test("allows multiple conversation sessions per project", async () => {
+    const storeRoot = await tempDir();
+    const projectRoot = await tempDir();
+    const store = new JsonStore(storeRoot);
+    const workspace = new WorkspaceManager(store);
+    const sessions = new SessionManager(store, workspace);
+    const project = await workspace.addProject({ cwd: projectRoot });
+
+    const first = await sessions.create({ projectId: project.id });
+    const second = await sessions.create({ projectId: project.id });
+
+    expect(first.id).not.toBe(second.id);
+    expect((await sessions.list()).filter((session) => session.projectId === project.id)).toHaveLength(2);
+  });
+
+  test("allows concurrent conversation sessions across projects", async () => {
+    const storeRoot = await tempDir();
+    const firstRoot = await tempDir();
+    const secondRoot = await tempDir();
+    const store = new JsonStore(storeRoot);
+    const workspace = new WorkspaceManager(store);
+    const sessions = new SessionManager(store, workspace);
+    const firstProject = await workspace.addProject({ cwd: firstRoot });
+    const secondProject = await workspace.addProject({ cwd: secondRoot });
+
+    const firstSession = await sessions.create({ projectId: firstProject.id });
+    const secondSession = await sessions.create({ projectId: secondProject.id });
+
+    expect(firstSession.projectId).toBe(firstProject.id);
+    expect(secondSession.projectId).toBe(secondProject.id);
+    expect((await sessions.list()).map((session) => session.projectId).sort()).toEqual([firstProject.id, secondProject.id].sort());
   });
 
   test("browses project folders with files visible and creates folders", async () => {
@@ -678,6 +754,21 @@ describe("product smoke coverage", () => {
     expect((await codex.listMessages(session)).at(-1)?.text).toContain("statuslineItems: model, tokens");
   });
 
+  test("codex hydrate clears stale running session state", async () => {
+    const root = await tempDir();
+    const store = new JsonStore(path.join(root, ".store"));
+    await store.ensure();
+    const workspace = new WorkspaceManager(store);
+    const sessions = new SessionManager(store, workspace);
+    const session = await sessions.create({ cwd: root, name: "stale" });
+    await sessions.update(session.id, { status: "running" });
+    const codex = new CodexManager(new EventBus(), new GitManager(), sessions, new SkillManager(), new CodexHistoryStore(store));
+
+    await codex.hydrate(await sessions.list());
+
+    expect((await sessions.get(session.id)).status).toBe("idle");
+  });
+
   test("codex completion publishes refreshed Git state", async () => {
     const events = new EventBus();
     const session = testSession(await tempDir());
@@ -759,6 +850,7 @@ describe("product smoke coverage", () => {
   });
 
   test("recognizes long-lived session event routes for Bun timeout handling", () => {
+    expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/events?ids=session"))).toBe(true);
     expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/events"))).toBe(true);
     expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/codex/events"))).toBe(true);
     expect(isLongLivedHttpRequest(new URL("http://127.0.0.1/api/sessions/session/git/state"))).toBe(false);

@@ -19,7 +19,7 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_auto_minmax(0,1fr)] gap-3 overflow-hidden bg-canvas p-4 max-[700px]:p-3">
+    <section className="grid h-full min-w-0 grid-rows-[38px_auto_minmax(0,1fr)] gap-3 overflow-hidden bg-canvas p-4 max-[700px]:p-3" data-testid="file-pane">
       <SectionTitle label="Files" />
       <FileActions sessionId={sessionId} />
       <div ref={treeHost} className="min-h-0 overflow-hidden text-[13px]">

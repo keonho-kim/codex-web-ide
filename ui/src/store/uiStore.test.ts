@@ -8,6 +8,42 @@ test("returns stable empty Codex event snapshots", () => {
   expect(selectCodexEvents(state, "missing-session")).toBe(selectCodexEvents(state, "missing-session"));
 });
 
+test("updates existing Codex item event snapshots", () => {
+  const state = useUiStore.getState();
+  state.clearCodexEvents("session-a");
+
+  state.appendCodexEvent("session-a", {
+    id: "event-started",
+    kind: "command",
+    label: "item.started",
+    sourceItemId: "cmd-1",
+    title: "bun test",
+    status: "in_progress",
+    timestamp: 100,
+  });
+  state.appendCodexEvent("session-a", {
+    id: "event-completed",
+    kind: "command",
+    label: "item.completed",
+    sourceItemId: "cmd-1",
+    title: "bun test",
+    status: "completed",
+    body: "ok",
+    timestamp: 200,
+  });
+
+  expect(selectCodexEvents(useUiStore.getState(), "session-a")).toEqual([
+    expect.objectContaining({
+      id: "event-started",
+      label: "item.completed",
+      sourceItemId: "cmd-1",
+      status: "completed",
+      body: "ok",
+      timestamp: 200,
+    }),
+  ]);
+});
+
 test("does not notify subscribers for unchanged UI store values", () => {
   const state = useUiStore.getState();
   let notifications = 0;
@@ -29,6 +65,17 @@ test("does not notify subscribers for unchanged UI store values", () => {
 
   unsubscribe();
   expect(notifications).toBe(0);
+});
+
+test("hydrates an empty pre-load editor draft with loaded file content", () => {
+  const path = "src/app.ts";
+  const state = useUiStore.getState();
+  state.discardEditorDraft(path);
+
+  state.setEditorDraft(path, "");
+  state.hydrateEditorDraft(path, "export const value = 1;\n");
+
+  expect(useUiStore.getState().editorDrafts[path]).toBe("export const value = 1;\n");
 });
 
 test("normalizes collapsed main panel state", () => {

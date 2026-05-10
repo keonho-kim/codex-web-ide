@@ -24,7 +24,7 @@ export function GlobalSettingsDialog({ open, onOpenChange }: { open: boolean; on
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] max-w-2xl overflow-hidden">
+      <DialogContent className="grid max-h-[min(760px,calc(100vh-2rem))] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings size={18} />
@@ -32,7 +32,7 @@ export function GlobalSettingsDialog({ open, onOpenChange }: { open: boolean; on
           </DialogTitle>
           <DialogDescription>Configure Codex display, runtime, and mode defaults for this browser workspace.</DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 overflow-auto pr-1">
+        <div className="min-h-0 overflow-y-auto overscroll-contain pr-1">
           <CodexSettingsForm
             values={merged}
             onChange={(patch) => {

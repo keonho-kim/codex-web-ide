@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { api as defaultApi } from "./apiClient";
 import type { Job, PreviewInstance, ServiceInstance, Session } from "../shared/types";
 
@@ -18,10 +19,11 @@ export async function executeManagedCommand(kind: ManagedCommandKind, commandArg
   if (command.length === 0) {
     return { exitCode: 1, error: `Usage: cw ${kind} <command...>` };
   }
-  const session = await ensureSessionForCwd(api);
+  const cwd = await currentWorkingDirectory();
+  const session = await ensureSessionForCwd(api, cwd);
   const result = await api<Job | PreviewInstance | ServiceInstance>(`/api/sessions/${session.id}/commands/${kind}`, {
     method: "POST",
-    body: { command, cwd: process.cwd(), approvedDangerous },
+    body: { command, cwd, approvedDangerous },
   });
 
   if (kind === "job") {
@@ -31,12 +33,15 @@ export async function executeManagedCommand(kind: ManagedCommandKind, commandArg
   return { output: JSON.stringify(result, null, 2) };
 }
 
-async function ensureSessionForCwd(api: ApiClient) {
-  const cwd = path.resolve(process.cwd());
+async function ensureSessionForCwd(api: ApiClient, cwd: string) {
   const sessions = await api<Session[]>("/api/sessions");
   const existing = sessions.find((session) => session.cwd === cwd);
   if (existing) return existing;
   return api<Session>("/api/sessions", { method: "POST", body: { cwd } });
+}
+
+async function currentWorkingDirectory() {
+  return fs.realpath(path.resolve(process.cwd()));
 }
 
 async function followJob(sessionId: string, jobId: string, api: ApiClient) {

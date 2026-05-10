@@ -82,7 +82,7 @@ function closeInternal(server: Server) {
 }
 
 export function isLongLivedHttpRequest(url: URL) {
-  return /^\/api\/sessions\/[^/]+\/(?:codex\/)?events$/.test(url.pathname);
+  return url.pathname === "/api/sessions/events" || /^\/api\/sessions\/[^/]+\/(?:codex\/)?events$/.test(url.pathname);
 }
 
 function terminalWebSocketTarget(url: URL, services: AppServices) {

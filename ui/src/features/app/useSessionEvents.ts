@@ -1,88 +1,87 @@
 import { useEffect } from "react";
 import type { useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "../../store/uiStore";
+import type { Envelope } from "../../lib/types";
+import { summarizeCodexEvent } from "../codex/codexEventSummary";
 
-export function useSessionEvents(activeSessionId: string | undefined, queryClient: ReturnType<typeof useQueryClient>) {
+export function useSessionEvents(sessionIds: string[] | string | undefined, queryClient: ReturnType<typeof useQueryClient>) {
   const appendCodexEvent = useUiStore((state) => state.appendCodexEvent);
+  const ids = Array.isArray(sessionIds) ? sessionIds : sessionIds ? [sessionIds] : [];
+  const key = ids.join(":");
 
   useEffect(() => {
-    if (!activeSessionId) return;
-    const source = new EventSource(`/api/sessions/${activeSessionId}/events`);
-    source.onmessage = () => {
-      void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
-      void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
-      void queryClient.invalidateQueries({ queryKey: ["previews", activeSessionId] });
-    };
-    source.addEventListener("codex.event", (event) => {
-      appendCodexEvent(activeSessionId, summarizeCodexEvent(event));
-      void queryClient.invalidateQueries({ queryKey: ["codex", activeSessionId] });
-      void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
-    });
-    source.addEventListener("job.finished", () => {
-      void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
-      void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
-    });
-    source.addEventListener("git.state.updated", () => {
-      void queryClient.invalidateQueries({ queryKey: ["git", activeSessionId] });
-    });
-    for (const eventName of ["job.started", "job.stdout", "job.stderr"]) {
-      source.addEventListener(eventName, () => {
-        void queryClient.invalidateQueries({ queryKey: ["jobs", activeSessionId] });
-      });
-    }
-    for (const eventName of ["preview.started", "preview.stdout", "preview.stderr", "preview.health.updated", "preview.stopped"]) {
-      source.addEventListener(eventName, () => {
-        void queryClient.invalidateQueries({ queryKey: ["previews", activeSessionId] });
-      });
-    }
-    for (const eventName of ["service.started", "service.stdout", "service.stderr", "service.health.updated", "service.stopped"]) {
-      source.addEventListener(eventName, () => {
-        void queryClient.invalidateQueries({ queryKey: ["services", activeSessionId] });
-      });
-    }
-    source.addEventListener("file.changed", () => {
-      void queryClient.invalidateQueries({ queryKey: ["tree", activeSessionId] });
-      void queryClient.invalidateQueries({ queryKey: ["file", activeSessionId] });
-    });
+    const activeIds = key ? key.split(":").filter(Boolean) : [];
+    if (activeIds.length === 0) return;
+    const source = subscribeSessionEvents(activeIds, appendCodexEvent, queryClient);
     return () => source.close();
-  }, [activeSessionId, appendCodexEvent, queryClient]);
+  }, [appendCodexEvent, key, queryClient]);
 }
 
-function summarizeCodexEvent(event: MessageEvent) {
-  const fallback = { id: crypto.randomUUID(), label: event.type, timestamp: Date.now() };
+function subscribeSessionEvents(sessionIds: string[], appendCodexEvent: ReturnType<typeof useUiStore.getState>["appendCodexEvent"], queryClient: ReturnType<typeof useQueryClient>) {
+  const source = new EventSource(`/api/sessions/events?ids=${encodeURIComponent(sessionIds.join(","))}`);
+  source.onmessage = () => {
+    void queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    for (const sessionId of sessionIds) {
+      void queryClient.invalidateQueries({ queryKey: ["git", sessionId] });
+      void queryClient.invalidateQueries({ queryKey: ["jobs", sessionId] });
+      void queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
+    }
+  };
+  source.addEventListener("codex.event", (event) => {
+    const sessionId = sessionIdFromEvent(event);
+    if (!sessionId) return;
+    appendCodexEvent(sessionId, summarizeCodexEvent(event));
+    void queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    void queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
+    void queryClient.invalidateQueries({ queryKey: ["git", sessionId] });
+  });
+  source.addEventListener("job.finished", (event) => {
+    const sessionId = sessionIdFromEvent(event);
+    if (!sessionId) return;
+    void queryClient.invalidateQueries({ queryKey: ["jobs", sessionId] });
+    void queryClient.invalidateQueries({ queryKey: ["git", sessionId] });
+  });
+  source.addEventListener("git.state.updated", (event) => {
+    const sessionId = sessionIdFromEvent(event);
+    if (!sessionId) return;
+    void queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    void queryClient.invalidateQueries({ queryKey: ["git", sessionId] });
+  });
+  for (const eventName of ["job.started", "job.stdout", "job.stderr"]) {
+    source.addEventListener(eventName, (event) => {
+      const sessionId = sessionIdFromEvent(event);
+      if (!sessionId) return;
+      void queryClient.invalidateQueries({ queryKey: ["jobs", sessionId] });
+    });
+  }
+  for (const eventName of ["preview.started", "preview.stdout", "preview.stderr", "preview.health.updated", "preview.stopped"]) {
+    source.addEventListener(eventName, (event) => {
+      const sessionId = sessionIdFromEvent(event);
+      if (!sessionId) return;
+      void queryClient.invalidateQueries({ queryKey: ["previews", sessionId] });
+    });
+  }
+  for (const eventName of ["service.started", "service.stdout", "service.stderr", "service.health.updated", "service.stopped"]) {
+    source.addEventListener(eventName, (event) => {
+      const sessionId = sessionIdFromEvent(event);
+      if (!sessionId) return;
+      void queryClient.invalidateQueries({ queryKey: ["services", sessionId] });
+    });
+  }
+  source.addEventListener("file.changed", (event) => {
+    const sessionId = sessionIdFromEvent(event);
+    if (!sessionId) return;
+    void queryClient.invalidateQueries({ queryKey: ["tree", sessionId] });
+    void queryClient.invalidateQueries({ queryKey: ["file", sessionId] });
+  });
+  return source;
+}
+
+function sessionIdFromEvent(event: Event) {
   try {
-    const envelope = JSON.parse(event.data) as { id?: string; timestamp?: number; payload?: unknown };
-    const payload = envelope.payload;
-    if (!payload || typeof payload !== "object") return fallback;
-    const record = payload as Record<string, unknown>;
-    const message = messagePayload(record.message);
-    return {
-      id: envelope.id || fallback.id,
-      label: typeof message?.role === "string" ? `codex.${message.role}` : typeof record.type === "string" ? record.type : event.type,
-      detail: message?.text || eventDetail(record),
-      messageId: message?.id,
-      timestamp: typeof envelope.timestamp === "number" ? envelope.timestamp : Date.now(),
-    };
+    const envelope = JSON.parse((event as MessageEvent).data) as Partial<Envelope>;
+    return typeof envelope.sessionId === "string" ? envelope.sessionId : undefined;
   } catch {
-    return fallback;
+    return undefined;
   }
-}
-
-function eventDetail(record: Record<string, unknown>) {
-  if (typeof record.message === "string") return record.message;
-  if (typeof record.error === "object" && record.error && "message" in record.error) {
-    const message = (record.error as { message?: unknown }).message;
-    return typeof message === "string" ? message : undefined;
-  }
-  if (typeof record.item === "object" && record.item && "type" in record.item) {
-    const type = (record.item as { type?: unknown }).type;
-    return typeof type === "string" ? type : undefined;
-  }
-  return undefined;
-}
-
-function messagePayload(value: unknown) {
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  return typeof record.text === "string" ? { id: typeof record.id === "string" ? record.id : undefined, role: record.role, text: record.text } : null;
 }

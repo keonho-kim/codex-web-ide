@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Folder, MessageSquare, MessageSquarePlus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Circle, CircleAlert, Folder, Loader2, MessageSquare, MessageSquarePlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/classes";
+import { EMPTY_CODEX_EVENTS, useUiStore } from "../../store/uiStore";
 import type { CodexThreadRecord, Project, Session } from "../../lib/types";
+import { codexSessionSignal } from "./sessionSignal";
 
 type ThreadListResponse = {
   threads: CodexThreadRecord[];
@@ -13,7 +15,12 @@ type ThreadListResponse = {
 
 type ProjectEntry = {
   project: Project;
-  session?: Session;
+  sessions: Session[];
+};
+
+type SessionEntry = {
+  project: Project;
+  session: Session;
 };
 
 export function ProjectThreadTree({
@@ -34,7 +41,9 @@ export function ProjectThreadTree({
   sessions: Session[];
 }) {
   const queryClient = useQueryClient();
-  const entries = useMemo(() => projects.map((project) => ({ project, session: primarySessionForProject(project, sessions) })), [projects, sessions]);
+  const entries = useMemo(() => projects.map((project) => ({ project, sessions: sessionsForProject(project, sessions) })), [projects, sessions]);
+  const sessionEntries = useMemo(() => entries.flatMap((entry) => entry.sessions.map((session) => ({ project: entry.project, session }))), [entries]);
+  const codexEvents = useUiStore((state) => state.codexEvents);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(activeProjectId ? [activeProjectId] : []));
 
   useEffect(() => {
@@ -43,16 +52,17 @@ export function ProjectThreadTree({
   }, [activeProjectId]);
 
   const threadQueries = useQueries({
-    queries: entries.map((entry) => ({
-      queryKey: ["codex", entry.session?.id, "threads"],
-      queryFn: () => api<ThreadListResponse>(`/api/sessions/${entry.session?.id}/codex/threads`),
-      enabled: Boolean(entry.session?.id),
+    queries: sessionEntries.map((entry) => ({
+      queryKey: ["codex", entry.session.id, "threads"],
+      queryFn: () => api<ThreadListResponse>(`/api/sessions/${entry.session.id}/codex/threads`),
+      enabled: Boolean(entry.session.id),
     })),
   });
+  const threadsBySessionId = useMemo(() => new Map(sessionEntries.map((entry, index) => [entry.session.id, threadQueries[index]])), [sessionEntries, threadQueries]);
 
-  const createThread = useMutation({
+  const createChatSession = useMutation({
     mutationFn: async (entry: ProjectEntry) => {
-      const session = entry.session ?? (await api<Session>("/api/sessions", { method: "POST", body: { projectId: entry.project.id } }));
+      const session = await api<Session>("/api/sessions", { method: "POST", body: { projectId: entry.project.id } });
       const thread = await api<CodexThreadRecord>(`/api/sessions/${session.id}/codex/threads`, { method: "POST", body: {} });
       return { project: entry.project, session, thread };
     },
@@ -68,20 +78,18 @@ export function ProjectThreadTree({
   });
 
   const ensureProjectSession = async (entry: ProjectEntry) => {
-    const session = entry.session ?? (await api<Session>("/api/sessions", { method: "POST", body: { projectId: entry.project.id } }));
+    const session = entry.sessions[0] ?? (await api<Session>("/api/sessions", { method: "POST", body: { projectId: entry.project.id } }));
     onProjectSelect(entry.project.id);
     onSessionSelect(session.id);
     await queryClient.invalidateQueries({ queryKey: ["sessions"] });
   };
 
   const selectThread = useMutation({
-    mutationFn: async ({ entry, threadId }: { entry: ProjectEntry; threadId: string }) => {
-      if (!entry.session) throw new Error("Project session not found.");
+    mutationFn: async ({ entry, threadId }: { entry: SessionEntry; threadId: string }) => {
       const thread = await api<CodexThreadRecord>(`/api/sessions/${entry.session.id}/codex/threads/${threadId}/select`, { method: "POST" });
       return { entry, thread };
     },
     onSuccess: async ({ entry }) => {
-      if (!entry.session) return;
       onProjectSelect(entry.project.id);
       onSessionSelect(entry.session.id);
       await Promise.all([
@@ -92,12 +100,10 @@ export function ProjectThreadTree({
   });
 
   const deleteThread = useMutation({
-    mutationFn: async ({ entry, threadId }: { entry: ProjectEntry; threadId: string }) => {
-      if (!entry.session) throw new Error("Project session not found.");
+    mutationFn: async ({ entry, threadId }: { entry: SessionEntry; threadId: string }) => {
       return api<ThreadListResponse>(`/api/sessions/${entry.session.id}/codex/threads/${threadId}`, { method: "DELETE" });
     },
     onSuccess: async (_result, { entry }) => {
-      if (!entry.session) return;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["sessions"] }),
         queryClient.invalidateQueries({ queryKey: ["codex", entry.session.id] }),
@@ -116,10 +122,10 @@ export function ProjectThreadTree({
 
   return (
     <nav className="grid gap-1">
-      {entries.map((entry, index) => {
+      {entries.map((entry) => {
         const isOpen = expanded.has(entry.project.id);
-        const threads = threadQueries[index].data;
         const isActiveProject = entry.project.id === activeProjectId;
+        const projectRunning = entry.sessions.some((session) => session.status === "running");
         return (
           <div key={entry.project.id}>
             <div
@@ -143,14 +149,15 @@ export function ProjectThreadTree({
               >
                 <Folder size={15} />
                 <span className="truncate">{entry.project.name}</span>
+                {projectRunning ? <Loader2 className="shrink-0 animate-spin text-muted motion-reduce:animate-none" size={12} /> : null}
               </button>
               <Button
                 title={`New chat in ${entry.project.name}`}
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                disabled={createThread.isPending}
-                onClick={() => createThread.mutate(entry)}
+                disabled={createChatSession.isPending}
+                onClick={() => createChatSession.mutate(entry)}
               >
                 <MessageSquarePlus data-icon="inline-start" />
               </Button>
@@ -167,46 +174,66 @@ export function ProjectThreadTree({
             </div>
             {isOpen ? (
               <div className="mt-1 grid gap-1 pl-8">
-                {threads?.threads.map((thread) => {
-                  const active = entry.session?.id === activeSessionId && thread.id === threads.activeThreadId;
+                {entry.sessions.map((session) => {
+                  const sessionEntry = { project: entry.project, session };
+                  const query = threadsBySessionId.get(session.id);
+                  const threads = query?.data;
+                  const activeThread = threads?.threads.find((thread) => thread.id === threads.activeThreadId) ?? threads?.threads[0];
+                  const active = session.id === activeSessionId;
                   return (
                     <div
                       className={cn(
                         "group grid min-h-8 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 rounded-md text-sm text-muted hover:bg-canvas",
                         active && "bg-canvas text-ink",
                       )}
-                      key={thread.id}
+                      data-testid="project-chat-session"
+                      key={session.id}
                     >
-                      <button className="inline-flex min-w-0 items-center gap-1.5 px-2 py-1.5 text-left" type="button" onClick={() => selectThread.mutate({ entry, threadId: thread.id })}>
-                        <MessageSquare size={14} />
-                        <span className="truncate">{thread.title}</span>
-                      </button>
-                      <span className="text-[11px] text-muted">{formatRelativeTime(thread.lastActiveAt)}</span>
-                      <Button
-                        className="opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100"
-                        title={`Delete ${thread.title}`}
+                      <button
+                        className="inline-flex min-w-0 items-center gap-1.5 px-2 py-1.5 text-left"
                         type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        disabled={deleteThread.isPending}
-                        onClick={() => deleteThread.mutate({ entry, threadId: thread.id })}
+                        onClick={() => {
+                          if (activeThread) selectThread.mutate({ entry: sessionEntry, threadId: activeThread.id });
+                          else {
+                            onProjectSelect(entry.project.id);
+                            onSessionSelect(session.id);
+                          }
+                        }}
                       >
-                        <Trash2 data-icon="inline-start" />
-                      </Button>
+                        <MessageSquare size={14} />
+                        <span className="truncate">{activeThread?.title ?? session.name}</span>
+                        <SessionSignal events={codexEvents[session.id] ?? EMPTY_CODEX_EVENTS} session={session} />
+                      </button>
+                      <span className="text-[11px] text-muted">{formatRelativeTime(activeThread?.lastActiveAt ?? session.lastActiveAt)}</span>
+                      {activeThread ? (
+                        <Button
+                          className="opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100"
+                          title={`Delete ${activeThread.title}`}
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          disabled={deleteThread.isPending}
+                          onClick={() => deleteThread.mutate({ entry: sessionEntry, threadId: activeThread.id })}
+                        >
+                          <Trash2 data-icon="inline-start" />
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
                     </div>
                   );
                 })}
-                {entry.session && threadQueries[index].isLoading ? <p className="m-0 px-2 py-1 text-xs text-muted">Loading chats.</p> : null}
-                {entry.session && !threadQueries[index].isLoading && threads?.threads.length === 0 ? (
+                {entry.sessions.some((session) => threadsBySessionId.get(session.id)?.isLoading) ? <p className="m-0 px-2 py-1 text-xs text-muted">Loading chats.</p> : null}
+                {entry.sessions.length > 0 && entry.sessions.every((session) => (threadsBySessionId.get(session.id)?.data?.threads.length ?? 0) === 0) ? (
                   <button
                     className="rounded-md px-2 py-2 text-left text-xs font-medium text-muted hover:bg-canvas hover:text-primary"
                     type="button"
-                    onClick={() => createThread.mutate(entry)}
+                    onClick={() => createChatSession.mutate(entry)}
                   >
-                    No threads yet. Start a new thread.
+                    No chats yet. Start a new chat.
                   </button>
                 ) : null}
-                {!entry.session ? <p className="m-0 px-2 py-1 text-xs text-muted">No chats yet.</p> : null}
+                {entry.sessions.length === 0 ? <p className="m-0 px-2 py-1 text-xs text-muted">No chats yet.</p> : null}
               </div>
             ) : null}
           </div>
@@ -217,10 +244,37 @@ export function ProjectThreadTree({
   );
 }
 
-function primarySessionForProject(project: Project, sessions: Session[]) {
+function SessionSignal({ events, session }: { events: typeof EMPTY_CODEX_EVENTS; session: Session }) {
+  const signal = codexSessionSignal(session, events);
+  if (signal.kind === "running") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted" title={signal.label}>
+        <Loader2 className="animate-spin motion-reduce:animate-none" size={12} />
+        {signal.label}
+      </span>
+    );
+  }
+  if (signal.kind === "requested") return <span className="shrink-0 text-[11px] text-codex">{signal.label}</span>;
+  if (signal.kind === "error") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-destructive" title={signal.label}>
+        <CircleAlert size={12} />
+        {signal.label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-primary" title={signal.label}>
+      <Circle className="fill-primary" size={10} />
+      {signal.label}
+    </span>
+  );
+}
+
+function sessionsForProject(project: Project, sessions: Session[]) {
   return sessions
     .filter((session) => session.projectId === project.id || session.cwd === project.cwd || session.cwd.startsWith(`${project.cwd.replace(/\/+$/, "")}/`))
-    .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0];
+    .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
 }
 
 function formatRelativeTime(timestamp: number) {

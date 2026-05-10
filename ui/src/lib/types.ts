@@ -5,6 +5,7 @@ export type {
   CodexStatusSnapshot,
   CodexThreadRecord,
   ComposerMention,
+  Envelope,
   FileTreeNode,
   GitFileStatus,
   GitState,

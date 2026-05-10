@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ListFilter, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ListFilter, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "../../lib/classes";
 import { SectionTitle } from "../../components/SectionTitle";
 import type { Project, Session, WorkspaceSettings } from "../../lib/types";
 import { api } from "../../lib/api";
@@ -21,6 +22,7 @@ export function Sidebar({
   settingsPending,
   collapsed,
   onCollapsedChange,
+  stacked = false,
 }: {
   projects: Project[];
   sessions: Session[];
@@ -35,6 +37,7 @@ export function Sidebar({
   settingsPending?: boolean;
   collapsed: boolean;
   onCollapsedChange(collapsed: boolean): void;
+  stacked?: boolean;
 }) {
   const queryClient = useQueryClient();
   const ensureProjectSession = async (project: Project) => {
@@ -45,6 +48,32 @@ export function Sidebar({
   };
 
   if (collapsed) {
+    if (stacked) {
+      return (
+        <aside className="flex min-h-12 min-w-0 items-center gap-2 overflow-x-auto rounded-lg border border-hairline bg-panel p-2" data-testid="sidebar">
+          <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
+            <PanelTopOpen data-icon="inline-start" />
+          </Button>
+          <AddProjectDialog compact defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} onSessionSelect={onSessionSelect} sessions={sessions} />
+          <div className="flex min-w-0 items-center gap-1">
+            {projects.map((project) => (
+              <button
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold",
+                  project.id === activeProjectId ? "border border-selected-border bg-selected text-primary" : "text-muted hover:bg-canvas hover:text-ink",
+                )}
+                key={project.id}
+                title={project.name}
+                type="button"
+                onClick={() => void ensureProjectSession(project)}
+              >
+                {projectInitial(project.name)}
+              </button>
+            ))}
+          </div>
+        </aside>
+      );
+    }
     return (
       <aside className="flex h-full min-w-0 flex-col items-center justify-start gap-3 overflow-hidden rounded-lg border border-hairline bg-panel p-2" data-testid="sidebar">
         <Button aria-label="Expand sidebar" title="Expand sidebar" type="button" onClick={() => onCollapsedChange(false)} variant="ghost" size="icon-sm">
@@ -85,7 +114,7 @@ export function Sidebar({
             <ListFilter data-icon="inline-start" />
           </Button>
           <Button aria-label="Collapse sidebar" title="Collapse sidebar" type="button" onClick={() => onCollapsedChange(true)} variant="ghost" size="icon-sm">
-            <PanelLeftClose data-icon="inline-start" />
+            {stacked ? <PanelTopClose data-icon="inline-start" /> : <PanelLeftClose data-icon="inline-start" />}
           </Button>
         </div>
         <ProjectThreadTree

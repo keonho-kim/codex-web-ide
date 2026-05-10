@@ -1,24 +1,20 @@
 const readline = require("node:readline");
+const childProcess = require("node:child_process");
 const { spawn } = require("node-pty");
 
 const options = JSON.parse(process.argv[2] || "{}");
-const pty = spawn(options.shell, options.args || [], {
-  name: "xterm-256color",
-  cols: options.cols || 80,
-  rows: options.rows || 24,
-  cwd: options.cwd,
-  env: {
-    ...process.env,
-    ...(options.env || {}),
-    TERM: "xterm-256color",
-    COLORTERM: "truecolor",
-  },
-});
+const env = {
+  ...process.env,
+  ...(options.env || {}),
+  TERM: "xterm-256color",
+  COLORTERM: "truecolor",
+};
+const terminal = createTerminal();
 
-send({ type: "ready", pid: pty.pid });
+send({ type: "ready", pid: terminal.pid, backend: terminal.backend });
 
-pty.onData((data) => send({ type: "output", data }));
-pty.onExit(({ exitCode, signal }) => {
+terminal.onData((data) => send({ type: "output", data }));
+terminal.onExit(({ exitCode, signal }) => {
   send({ type: "exit", exitCode, signal });
   process.exit(0);
 });
@@ -27,18 +23,61 @@ const input = readline.createInterface({ input: process.stdin, crlfDelay: Infini
 input.on("line", (line) => {
   try {
     const message = JSON.parse(line);
-    if (message.type === "input" && typeof message.data === "string") pty.write(message.data);
-    if (message.type === "resize" && Number.isFinite(message.cols) && Number.isFinite(message.rows)) pty.resize(message.cols, message.rows);
-    if (message.type === "kill") pty.kill();
+    if (message.type === "input" && typeof message.data === "string") terminal.write(message.data);
+    if (message.type === "resize" && Number.isFinite(message.cols) && Number.isFinite(message.rows)) terminal.resize(message.cols, message.rows);
+    if (message.type === "kill") terminal.kill();
   } catch (error) {
     send({ type: "error", message: error instanceof Error ? error.message : String(error) });
   }
 });
 
-process.on("disconnect", () => pty.kill());
-process.on("SIGTERM", () => pty.kill());
-process.on("SIGINT", () => pty.kill());
+process.on("disconnect", () => terminal.kill());
+process.on("SIGTERM", () => terminal.kill());
+process.on("SIGINT", () => terminal.kill());
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function createTerminal() {
+  try {
+    const pty = spawn(options.shell, options.args || [], {
+      name: "xterm-256color",
+      cols: options.cols || 80,
+      rows: options.rows || 24,
+      cwd: options.cwd,
+      env,
+    });
+    return {
+      backend: "pty",
+      pid: pty.pid,
+      write: (data) => pty.write(data),
+      resize: (cols, rows) => pty.resize(cols, rows),
+      kill: () => pty.kill(),
+      onData: (handler) => pty.onData(handler),
+      onExit: (handler) => pty.onExit(handler),
+    };
+  } catch (error) {
+    const child = childProcess.spawn(options.shell, options.args || [], {
+      cwd: options.cwd,
+      env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return {
+      backend: "pipe",
+      pid: child.pid || 0,
+      write: (data) => child.stdin.write(data.replace(/\r/g, "\n")),
+      resize: () => undefined,
+      kill: () => child.kill(),
+      onData: (handler) => {
+        const prefix = error instanceof Error ? `PTY unavailable: ${error.message}\n` : "PTY unavailable.\n";
+        handler(prefix);
+        child.stdout.on("data", (chunk) => handler(String(chunk)));
+        child.stderr.on("data", (chunk) => handler(String(chunk)));
+      },
+      onExit: (handler) => {
+        child.on("exit", (exitCode, signal) => handler({ exitCode, signal }));
+      },
+    };
+  }
 }
