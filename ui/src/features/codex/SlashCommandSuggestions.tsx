@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Settings2, TerminalSquare } from "lucide-react";
 import { cn } from "../../lib/classes";
 import type { CodexSlashCommandDefinition } from "../../lib/types";
@@ -11,9 +12,15 @@ export function SlashCommandSuggestions({
   selectedIndex: number;
   onSelect(command: CodexSlashCommandDefinition): void;
 }) {
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
   if (commands.length === 0) return null;
   return (
-    <div className="absolute right-0 bottom-full left-0 z-20 mb-2 max-h-72 overflow-auto rounded-md border border-control bg-panel p-1 shadow-lg">
+    <div className="absolute right-0 bottom-full left-0 z-20 mb-2 max-h-72 overflow-auto rounded-md border border-control bg-panel p-1 shadow-lg" data-testid="slash-command-suggestions">
       {commands.map((command, index) => {
         const Icon = command.nativeSurface === "modal" ? Settings2 : TerminalSquare;
         return (
@@ -23,6 +30,10 @@ export function SlashCommandSuggestions({
               index === selectedIndex && "border-selected-border bg-selected text-primary",
             )}
             key={command.command}
+            ref={(node) => {
+              itemRefs.current[index] = node;
+            }}
+            data-testid="slash-command-option"
             type="button"
             onMouseDown={(event) => {
               event.preventDefault();

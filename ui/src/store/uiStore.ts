@@ -6,6 +6,7 @@ export type CodexEventSummary = {
   id: string;
   label: string;
   detail?: string;
+  messageId?: string;
   timestamp: number;
 };
 

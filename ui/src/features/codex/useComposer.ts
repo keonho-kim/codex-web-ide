@@ -27,7 +27,7 @@ export function useComposer(sessionId?: string) {
     content: draft,
     editorProps: {
       attributes: {
-        class: "min-h-[92px] w-full rounded-md border border-control bg-canvas px-2.5 py-1.5 pr-32 text-sm text-ink outline-none transition-colors focus:border-primary max-[700px]:min-h-[84px] [&_p]:m-0",
+        class: "max-h-[180px] min-h-[88px] w-full overflow-y-auto rounded-t-md bg-canvas px-2.5 py-2 text-sm text-ink outline-none max-[700px]:min-h-[76px] [&_p]:m-0",
       },
     },
     onUpdate: ({ editor }) => {
@@ -69,11 +69,11 @@ export function useComposer(sessionId?: string) {
   });
   const slashSearch = useMemo(() => parseSlashSearch(draft), [draft]);
   const slashSuggestions = useMemo(() => {
-    if (!slashSearch) return [];
+    if (slashSearch === null) return [];
     const query = slashSearch.toLowerCase();
     return (slashCommands.data ?? [])
       .filter((command) => command.command.includes(query) || command.description.toLowerCase().includes(query))
-      .slice(0, 10);
+      .sort((a, b) => commandRank(a, query) - commandRank(b, query));
   }, [slashCommands.data, slashSearch]);
 
   useEffect(() => {
@@ -156,7 +156,22 @@ export function useComposer(sessionId?: string) {
     setSelectedMentions(selectedMentions.filter((item) => mentionKey(item) !== mentionKey(mention)));
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const submitComposer = () => {
+    if (!sessionId || !draft.trim() || runCodex.isPending || slashCommand.isPending) return;
+    const parsed = parseSlashInvocation(draft, slashCommands.data ?? []);
+    if (parsed) {
+      if (parsed.command.nativeSurface === "modal" || (parsed.command.requiresConfirmation && !parsed.args)) {
+        setActiveSlashCommand(parsed.command);
+        setSlashDialogOpen(true);
+      } else {
+        slashCommand.mutate({ command: parsed.command.command, args: parsed.args });
+      }
+      return;
+    }
+    runCodex.mutate();
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, running = false) => {
     if (slashSuggestions.length > 0) {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
@@ -176,20 +191,39 @@ export function useComposer(sessionId?: string) {
         return;
       }
     }
-    if (!mentionSearch || suggestions.length === 0) return;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      const direction = event.key === "ArrowDown" ? 1 : -1;
-      setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
+    if (mentionSearch && suggestions.length > 0) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        setMentionSearch({ ...mentionSearch, selectedIndex: (mentionSearch.selectedIndex + direction + suggestions.length) % suggestions.length });
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        addMention(suggestions[mentionSearch.selectedIndex] ?? suggestions[0]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMentionSearch(null);
+        return;
+      }
     }
-    if (event.key === "Enter" || event.key === "Tab") {
+    if (event.defaultPrevented || running) return;
+    if (event.key === "Enter" && event.ctrlKey) return;
+    if (event.key !== "Enter") return;
+    const lines = lineCount(draft);
+    if (!event.shiftKey && lines <= 1) {
       event.preventDefault();
-      addMention(suggestions[mentionSearch.selectedIndex] ?? suggestions[0]);
+      submitComposer();
+      return;
     }
-    if (event.key === "Escape") {
+    if (event.shiftKey && lines > 1) {
       event.preventDefault();
-      setMentionSearch(null);
+      submitComposer();
+      return;
     }
+    event.preventDefault();
   };
 
   return {
@@ -204,19 +238,7 @@ export function useComposer(sessionId?: string) {
     mentionSearch,
     onKeyDown,
     removeMention,
-    runCodex: () => {
-      const parsed = parseSlashInvocation(draft, slashCommands.data ?? []);
-      if (parsed) {
-        if (parsed.command.nativeSurface === "modal" || (parsed.command.requiresConfirmation && !parsed.args)) {
-          setActiveSlashCommand(parsed.command);
-          setSlashDialogOpen(true);
-        } else {
-          slashCommand.mutate({ command: parsed.command.command, args: parsed.args });
-        }
-        return;
-      }
-      runCodex.mutate();
-    },
+    runCodex: submitComposer,
     runPending: runCodex.isPending || slashCommand.isPending,
     selectedMentions,
     selectedSlashIndex,
@@ -245,4 +267,16 @@ function parseSlashInvocation(text: string, commands: CodexSlashCommandDefinitio
   if (!match) return null;
   const command = commands.find((item) => item.command === match[1]);
   return command ? { command, args: match[2] ?? "" } : null;
+}
+
+function commandRank(command: CodexSlashCommandDefinition, query: string) {
+  if (!query) return 0;
+  if (command.command === query) return 0;
+  if (command.command.startsWith(query)) return 1;
+  if (command.command.includes(query)) return 2;
+  return 3;
+}
+
+function lineCount(text: string) {
+  return Math.max(1, text.split(/\r?\n/).length);
 }

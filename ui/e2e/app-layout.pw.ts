@@ -78,19 +78,30 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
   await page.goto("/");
 
   await page.locator('[contenteditable="true"]').click();
+  await page.keyboard.type("/");
+  await expect(page.getByTestId("slash-command-suggestions")).toBeVisible();
+  expect(await page.getByTestId("slash-command-option").count()).toBeGreaterThan(10);
+  await page.keyboard.type("pl");
+  await expect(page.getByTestId("slash-command-option").first()).toContainText("/plan");
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[contenteditable="true"]')).toContainText("/plan");
+  await page.keyboard.press("Control+A");
+  await page.keyboard.press("Backspace");
+
   await page.keyboard.type("/status");
-  await page.getByRole("button", { name: /\/status show current session/ }).click();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toHaveAttribute("data-state", "active");
   await expect(page.getByText("Slash Commands")).toBeVisible();
 
   await page.getByRole("tab", { name: "Chat", exact: true }).click();
   await page.locator('[contenteditable="true"]').click();
   await page.keyboard.type("/statusline");
-  await page.getByRole("button", { name: /\/statusline configure which/ }).click();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "/statusline" })).toBeVisible();
   await expect(page.getByText("Status line items")).toBeVisible();
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByRole("dialog", { name: "/statusline" })).toHaveCount(0);
+  await expect(page.getByText(/Applied \/statusline through the Codex Web native command surface/).last()).toBeVisible();
 });
 
 test("keeps chat visible as the primary small-screen project view", async ({ page }) => {

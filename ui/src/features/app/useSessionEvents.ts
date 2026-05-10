@@ -55,10 +55,12 @@ function summarizeCodexEvent(event: MessageEvent) {
     const payload = envelope.payload;
     if (!payload || typeof payload !== "object") return fallback;
     const record = payload as Record<string, unknown>;
+    const message = messagePayload(record.message);
     return {
       id: envelope.id || fallback.id,
-      label: typeof record.type === "string" ? record.type : event.type,
-      detail: eventDetail(record),
+      label: typeof message?.role === "string" ? `codex.${message.role}` : typeof record.type === "string" ? record.type : event.type,
+      detail: message?.text || eventDetail(record),
+      messageId: message?.id,
       timestamp: typeof envelope.timestamp === "number" ? envelope.timestamp : Date.now(),
     };
   } catch {
@@ -77,4 +79,10 @@ function eventDetail(record: Record<string, unknown>) {
     return typeof type === "string" ? type : undefined;
   }
   return undefined;
+}
+
+function messagePayload(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return typeof record.text === "string" ? { id: typeof record.id === "string" ? record.id : undefined, role: record.role, text: record.text } : null;
 }
