@@ -124,6 +124,7 @@ export function Sidebar({
           activeSessionId={activeSessionId}
           onProjectDelete={onProjectDelete}
           onProjectSelect={onProjectSelect}
+          onSessionDelete={onSessionDelete}
           onSessionSelect={onSessionSelect}
         />
         <AddProjectDialog defaultProjectsDir={settings?.defaultProjectsDir} onProjectSelect={onProjectSelect} onSessionSelect={onSessionSelect} sessions={sessions} />

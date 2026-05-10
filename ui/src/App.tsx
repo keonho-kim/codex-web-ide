@@ -68,9 +68,7 @@ export function App() {
             }}
             onProjectSelect={app.selectProject}
             onSessionSelect={app.setActiveSessionId}
-            onSessionDelete={(id) => {
-              if (confirm("Delete this session?")) app.deleteSession(id);
-            }}
+            onSessionDelete={app.deleteSession}
             settings={app.settings}
             onSettingsSave={app.updateSettings}
             settingsPending={app.settingsPending}
@@ -93,9 +91,7 @@ export function App() {
               }}
               onProjectSelect={app.selectProject}
               onSessionSelect={app.setActiveSessionId}
-              onSessionDelete={(id) => {
-                if (confirm("Delete this session?")) app.deleteSession(id);
-              }}
+              onSessionDelete={app.deleteSession}
               settings={app.settings}
               onSettingsSave={app.updateSettings}
               settingsPending={app.settingsPending}

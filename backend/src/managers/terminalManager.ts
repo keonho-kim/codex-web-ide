@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import fs from "node:fs";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
@@ -170,7 +171,8 @@ export class TerminalManager {
 
 function defaultShell() {
   if (process.platform === "win32") return process.env.COMSPEC || "cmd.exe";
-  return process.env.SHELL || (os.platform() === "darwin" ? "/bin/zsh" : "/bin/bash");
+  const fallback = os.platform() === "darwin" ? "/bin/zsh" : "/bin/bash";
+  return resolveShell(process.env.SHELL, fallback);
 }
 
 function shellArgs(shell: string) {
@@ -185,6 +187,18 @@ function processEnv() {
 
 function nodeBinary() {
   return process.env.CODEX_WEB_NODE || "node";
+}
+
+function resolveShell(candidate: string | undefined, fallback: string) {
+  for (const shell of [candidate, fallback, "/bin/bash", "/bin/sh"].filter((value): value is string => Boolean(value))) {
+    try {
+      fs.accessSync(shell, fs.constants.X_OK);
+      return shell;
+    } catch {
+      // Try the next shell candidate.
+    }
+  }
+  return fallback;
 }
 
 function writeHost(entry: TerminalEntry, message: Record<string, unknown>) {

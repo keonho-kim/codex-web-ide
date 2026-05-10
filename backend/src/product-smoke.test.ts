@@ -944,9 +944,11 @@ describe("product smoke coverage", () => {
     const home = await tempDir();
     const cwd = await tempDir();
     const previousHome = process.env.CODEX_WEB_HOME;
+    const previousShell = process.env.SHELL;
     let server: Awaited<ReturnType<typeof startServer>> | undefined;
     try {
       process.env.CODEX_WEB_HOME = home;
+      process.env.SHELL = path.join(home, "missing-shell");
       const port = await freePort();
       server = await startServer({ host: "127.0.0.1", port, previewPortStart: 24100, previewPortEnd: 24110 });
       const session = await fetch(`http://127.0.0.1:${port}/api/sessions`, {
@@ -965,6 +967,7 @@ describe("product smoke coverage", () => {
     } finally {
       await server?.close();
       restoreEnv("CODEX_WEB_HOME", previousHome);
+      restoreEnv("SHELL", previousShell);
     }
   });
 

@@ -1,8 +1,10 @@
 const readline = require("node:readline");
 const childProcess = require("node:child_process");
+const fs = require("node:fs");
 const { spawn } = require("node-pty");
 
 const options = JSON.parse(process.argv[2] || "{}");
+const shell = resolveShell(options.shell);
 const env = {
   ...process.env,
   ...(options.env || {}),
@@ -41,7 +43,7 @@ function send(message) {
 
 function createTerminal() {
   try {
-    const pty = spawn(options.shell, options.args || [], {
+    const pty = spawn(shell, shellArgs(shell), {
       name: "xterm-256color",
       cols: options.cols || 80,
       rows: options.rows || 24,
@@ -58,7 +60,7 @@ function createTerminal() {
       onExit: (handler) => pty.onExit(handler),
     };
   } catch (error) {
-    const child = childProcess.spawn(options.shell, options.args || [], {
+    const child = childProcess.spawn(shell, shellArgs(shell), {
       cwd: options.cwd,
       env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -70,14 +72,32 @@ function createTerminal() {
       resize: () => undefined,
       kill: () => child.kill(),
       onData: (handler) => {
-        const prefix = error instanceof Error ? `PTY unavailable: ${error.message}\n` : "PTY unavailable.\n";
-        handler(prefix);
         child.stdout.on("data", (chunk) => handler(String(chunk)));
         child.stderr.on("data", (chunk) => handler(String(chunk)));
+        child.on("error", (childError) => handler(`Terminal unavailable: ${childError.message}\n`));
       },
       onExit: (handler) => {
         child.on("exit", (exitCode, signal) => handler({ exitCode, signal }));
       },
     };
   }
+}
+
+function resolveShell(candidate) {
+  const shells = [candidate, process.env.SHELL, "/bin/zsh", "/bin/bash", "/bin/sh"].filter(Boolean);
+  for (const shellPath of shells) {
+    try {
+      fs.accessSync(shellPath, fs.constants.X_OK);
+      return shellPath;
+    } catch {
+      // Try the next known shell.
+    }
+  }
+  return process.platform === "win32" ? process.env.COMSPEC || "cmd.exe" : "/bin/sh";
+}
+
+function shellArgs(shellPath) {
+  if (process.platform === "win32") return [];
+  const name = String(shellPath).split(/[\\/]/).pop();
+  return name === "bash" || name === "zsh" || name === "sh" || name === "fish" ? ["-i"] : [];
 }

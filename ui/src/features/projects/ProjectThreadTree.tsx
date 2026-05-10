@@ -28,6 +28,7 @@ export function ProjectThreadTree({
   activeSessionId,
   onProjectDelete,
   onProjectSelect,
+  onSessionDelete,
   onSessionSelect,
   projects,
   sessions,
@@ -36,6 +37,7 @@ export function ProjectThreadTree({
   activeSessionId?: string;
   onProjectDelete(id: string): void;
   onProjectSelect(id: string): void;
+  onSessionDelete(id: string): void;
   onSessionSelect(id: string): void;
   projects: Project[];
   sessions: Session[];
@@ -103,7 +105,11 @@ export function ProjectThreadTree({
     mutationFn: async ({ entry, threadId }: { entry: SessionEntry; threadId: string }) => {
       return api<ThreadListResponse>(`/api/sessions/${entry.session.id}/codex/threads/${threadId}`, { method: "DELETE" });
     },
-    onSuccess: async (_result, { entry }) => {
+    onSuccess: async (result, { entry }) => {
+      if (result.threads.length === 0) {
+        onSessionDelete(entry.session.id);
+        return;
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["sessions"] }),
         queryClient.invalidateQueries({ queryKey: ["codex", entry.session.id] }),
@@ -213,7 +219,10 @@ export function ProjectThreadTree({
                           variant="ghost"
                           size="icon-xs"
                           disabled={deleteThread.isPending}
-                          onClick={() => deleteThread.mutate({ entry: sessionEntry, threadId: activeThread.id })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteThread.mutate({ entry: sessionEntry, threadId: activeThread.id });
+                          }}
                         >
                           <Trash2 data-icon="inline-start" />
                         </Button>
