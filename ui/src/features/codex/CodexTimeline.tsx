@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Activity, Bot, ChevronRight, UserRound } from "lucide-react";
 import { cn } from "../../lib/classes";
 import type { CodexMessage } from "../../lib/types";
 import { selectCodexEvents, type CodexEventSummary, useUiStore } from "../../store/uiStore";
 import { CommandSuggestion } from "./CommandSuggestion";
+
+const MarkdownContent = lazy(() => import("../../shared/markdown/MarkdownContent").then((module) => ({ default: module.MarkdownContent })));
 
 type TimelineEntry =
   | { kind: "message"; id: string; timestamp: number; message: CodexMessage }
@@ -71,7 +73,9 @@ function MessageEntry({ message, sessionId }: { message: CodexMessage; sessionId
           <strong className="text-xs text-primary capitalize">{message.role}</strong>
           <time className="shrink-0 text-[10px] text-muted">{formatTime(message.createdAt)}</time>
         </div>
-        <p className="m-0 text-[13px] leading-[1.55] whitespace-pre-wrap">{message.text}</p>
+        <Suspense fallback={<p className="m-0 text-[13px] leading-[1.55] whitespace-pre-wrap">{message.text}</p>}>
+          <MarkdownContent className="text-[13px] leading-[1.55] [&>p:first-child]:mt-0 [&>p:last-child]:mb-0" content={message.text} />
+        </Suspense>
         {isAssistant ? <CommandSuggestion sessionId={sessionId} text={message.text} /> : null}
       </div>
     </article>

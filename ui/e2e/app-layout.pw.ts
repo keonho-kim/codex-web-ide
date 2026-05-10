@@ -8,10 +8,17 @@ test("renders separated project panels across supported devices", async ({ page 
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Control", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open global configuration", exact: true })).toBeVisible();
   await expect(page.getByText("Threads")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
   await expect(page.getByTitle("Remove orch")).toHaveCount(1);
   await expect(page.getByRole("button", { name: /Start preview|Preview/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Open global configuration", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Global Configuration" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Runtime" })).toBeVisible();
+  await expect(page.getByText("Status line items")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog", { name: "Global Configuration" })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Control", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Git", exact: true })).toBeVisible();
@@ -91,7 +98,7 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
   await page.keyboard.type("/status");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toHaveAttribute("data-state", "active");
-  await expect(page.getByText("Slash Commands")).toBeVisible();
+  await expect(page.getByText("Native /status view for the active session.")).toBeVisible();
 
   await page.getByRole("tab", { name: "Chat", exact: true }).click();
   await page.locator('[contenteditable="true"]').click();
