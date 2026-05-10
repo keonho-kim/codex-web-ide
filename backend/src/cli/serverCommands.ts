@@ -12,7 +12,7 @@ export async function start(input: string[]) {
   const port = numberFlag(input, "--port");
   const previewPortStart = numberFlag(input, "--preview-port-start");
   const previewPortEnd = numberFlag(input, "--preview-port-end");
-  const auth = authFlag(input);
+  const auth = parseAuthFlag(input);
   if (previewPortStart && previewPortEnd && previewPortStart > previewPortEnd) {
     throw new Error("--preview-port-start must be less than or equal to --preview-port-end.");
   }
@@ -102,9 +102,9 @@ function numberFlag(input: string[], name: string) {
   return number;
 }
 
-function authFlag(input: string[]) {
+export function parseAuthFlag(input: string[]): "enable" | "disable" {
   const value = readFlag(input, "--auth");
-  if (!value) return undefined;
+  if (!value) return "disable";
   if (value === "enable" || value === "disable") return value;
   throw new Error("--auth must be either enable or disable.");
 }

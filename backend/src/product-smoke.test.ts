@@ -13,7 +13,7 @@ import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
 import { initProject } from "./cli/projectInit";
-import { createSignalShutdown } from "./cli/serverCommands";
+import { createSignalShutdown, parseAuthFlag } from "./cli/serverCommands";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -503,6 +503,13 @@ describe("product smoke coverage", () => {
     const settings = await workspace.updateSettings({ ...(await workspace.getSettings()), auth: { ...(await workspace.getSettings()).auth, enabled: true } });
 
     await expect(auth.applySettings(settings, true)).rejects.toThrow("Telegram auth is not configured");
+  });
+
+  test("defaults the CLI auth flag to disabled", () => {
+    expect(parseAuthFlag([])).toBe("disable");
+    expect(parseAuthFlag(["--auth", "enable"])).toBe("enable");
+    expect(parseAuthFlag(["--auth", "disable"])).toBe("disable");
+    expect(() => parseAuthFlag(["--auth", "invalid"])).toThrow("--auth must be either enable or disable.");
   });
 
   test("applies Telegram auth settings without issuing legacy auth tokens", async () => {

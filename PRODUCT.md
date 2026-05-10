@@ -1152,6 +1152,7 @@ LAN 공개 시 인증을 추가한다. 초기 placeholder였던 token 기반 인
 
 * `cw config telegram`으로 owner pairing
 * `cw start --auth enable`로 Telegram approval 활성화
+* `--auth`를 생략한 `cw start`는 인증을 비활성화한 상태로 실행
 * UI 접속 시 Telegram 승인 요구
 * HttpOnly session cookie와 CSRF token 사용
 
@@ -1181,7 +1182,7 @@ Codex Web은 로컬 파일시스템, Git, Codex 실행, shell command, preview, 
 
 * `cw start --auth enable`은 Telegram 승인 기반 인증을 활성화한다.
 * Telegram 인증을 사용하려면 사전에 `cw config telegram`으로 bot token 검증과 owner pairing을 완료해야 한다.
-* 외부 listen host 또는 명시적 auth 활성화 상태에서 인증 설정이 불완전하면 server start를 중단한다.
+* 명시적 auth 활성화 상태에서 인증 설정이 불완전하면 server start를 중단한다.
 * 웹 UI active browser session은 기본적으로 최대 1개만 허용한다.
 * 새 browser session은 Telegram에서 승인하거나 기존 session replacement를 승인받아야 한다.
 * 로그인 성공 시 backend가 HttpOnly, SameSite cookie 기반 session을 발급한다.

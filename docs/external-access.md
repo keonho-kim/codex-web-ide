@@ -1,6 +1,6 @@
 # External Access With Tailscale And Telegram Auth
 
-Codex Web IDE controls local files, Git, terminals, preview servers, and Codex sessions. Treat any network-exposed instance like a remote development shell. Prefer a private Tailscale network over direct public internet exposure, and keep Telegram approval authentication enabled for every non-loopback listener.
+Codex Web IDE controls local files, Git, terminals, preview servers, and Codex sessions. Treat any network-exposed instance like a remote development shell. Prefer a private Tailscale network over direct public internet exposure, and explicitly enable Telegram approval authentication for every non-loopback listener.
 
 ## Recommended Topology
 
@@ -57,7 +57,7 @@ Do not commit these values to a project repository.
 
 ## 3. Start Codex Web IDE For Tailscale Access
 
-Bind to all interfaces or to the Tailscale IP. Non-loopback hosts require authentication unless explicitly disabled.
+Bind to all interfaces or to the Tailscale IP. `cw start` defaults to authentication disabled, so external access must explicitly include `--auth enable`.
 
 ```bash
 cw start --host 0.0.0.0 --port 17321 --auth enable
@@ -101,7 +101,7 @@ Before exposing the app beyond `127.0.0.1`:
 
 - Tailscale is active on the server and client devices.
 - `cw config telegram` has completed successfully.
-- `cw start` uses `--auth enable` for external access.
+- The start command includes `--auth enable` for external access.
 - Browser access uses the Tailscale IP or MagicDNS name.
 - Direct router port forwarding is disabled.
 - Bot tokens and secrets are not stored in the project repository.
