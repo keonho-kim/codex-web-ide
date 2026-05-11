@@ -9,15 +9,22 @@ import { cn } from "../../lib/classes";
 import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
 import type { FileTreeNode, PreviewInstance } from "../../lib/types";
 import { useUiStore } from "../../store/uiStore";
-import { isHtmlPath, isPreviewablePath } from "./documentTypes";
-import { EditorTerminalPanel } from "./EditorTerminalPanel";
+import { isPreviewablePath } from "./documentTypes";
+import { registerEditorActions } from "./editorActions";
 import { PreviewSuggestionToast } from "./PreviewSuggestionToast";
+import { getSuggestedPreviewCommand, sameCommand } from "./previewCommands";
+import { QuickOpen } from "./QuickOpen";
+import { filterFiles, flattenFiles } from "./quickOpenFiles";
 
 type EditorMode = "raw" | "preview";
 type MonacoEditor = Parameters<OnMount>[0];
-type MonacoInstance = Parameters<OnMount>[1];
 
 const DocumentPreview = lazy(() => import("./DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
+const EditorTerminalPanel = lazy(() => import("./EditorTerminalPanel").then((module) => ({ default: module.EditorTerminalPanel })));
+
+function preloadEditorTerminalPanel() {
+  return import("./EditorTerminalPanel");
+}
 
 loader.config({ monaco });
 
@@ -42,7 +49,9 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   const setSelectedPreviewId = useUiStore((state) => state.setSelectedPreviewId);
   const setEditorBottomPanelOpen = useUiStore((state) => state.setEditorBottomPanelOpen);
   const toggleTerminalPanel = useCallback(() => {
-    setEditorBottomPanelOpen(!useUiStore.getState().editorBottomPanelOpen);
+    const nextOpen = !useUiStore.getState().editorBottomPanelOpen;
+    if (nextOpen) void preloadEditorTerminalPanel();
+    setEditorBottomPanelOpen(nextOpen);
   }, [setEditorBottomPanelOpen]);
 
   const file = useQuery({
@@ -109,6 +118,23 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   useEffect(() => {
     if (selectedPreviewId && previews.data?.some((preview) => preview.id === selectedPreviewId)) setActivePreviewTabId(selectedPreviewId);
   }, [previews.data, selectedPreviewId]);
+
+  useEffect(() => {
+    if (editorBottomPanelOpen) {
+      void preloadEditorTerminalPanel();
+      return;
+    }
+    const idleWindow = window as Window & {
+      cancelIdleCallback?: (handle: number) => void;
+      requestIdleCallback?: (callback: IdleRequestCallback) => number;
+    };
+    if (!idleWindow.requestIdleCallback || !idleWindow.cancelIdleCallback) {
+      const timeout = window.setTimeout(() => void preloadEditorTerminalPanel(), 1);
+      return () => window.clearTimeout(timeout);
+    }
+    const idleId = idleWindow.requestIdleCallback(() => void preloadEditorTerminalPanel());
+    return () => idleWindow.cancelIdleCallback?.(idleId);
+  }, [editorBottomPanelOpen]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -185,7 +211,16 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
               </button>
             </div>
           ) : null}
-          <Button aria-label="Open terminal" title="Open terminal (Ctrl/Cmd+J)" type="button" variant="outline" size="icon-sm" onClick={() => setEditorBottomPanelOpen(!editorBottomPanelOpen)}>
+          <Button
+            aria-label="Open terminal"
+            title="Open terminal (Ctrl/Cmd+J)"
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            onFocus={() => void preloadEditorTerminalPanel()}
+            onMouseEnter={() => void preloadEditorTerminalPanel()}
+            onClick={toggleTerminalPanel}
+          >
             <Terminal data-icon="inline-start" />
           </Button>
           <Button title="Quick open" type="button" variant="outline" size="icon-sm" onClick={() => setQuickOpen(true)}>
@@ -291,133 +326,13 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
         ) : null}
       </div>
       {editorBottomPanelOpen ? (
-        <EditorTerminalPanel
-          onClose={() => setEditorBottomPanelOpen(false)}
-          sessionId={sessionId}
-        />
+        <Suspense fallback={<div className="flex h-64 items-center justify-center border-t border-hairline bg-panel text-xs text-muted">Loading terminal.</div>}>
+          <EditorTerminalPanel
+            onClose={() => setEditorBottomPanelOpen(false)}
+            sessionId={sessionId}
+          />
+        </Suspense>
       ) : null}
     </section>
   );
-}
-
-function registerEditorActions(editor: MonacoEditor, monacoInstance: MonacoInstance, toggleTerminal: () => void) {
-  editor.addAction({
-    id: "codex-web.toggle-terminal",
-    label: "Toggle Terminal",
-    keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyJ],
-    contextMenuGroupId: "navigation",
-    contextMenuOrder: 1,
-    run: () => toggleTerminal(),
-  });
-  editor.addAction({
-    id: "codex-web.select-all-occurrences",
-    label: "Select All Occurrences",
-    keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyL],
-    contextMenuGroupId: "9_selection",
-    contextMenuOrder: 1,
-    run: (target) => target.trigger("contextmenu", "editor.action.selectHighlights", null),
-  });
-}
-
-function QuickOpen({
-  matches,
-  onClose,
-  onOpen,
-  onQueryChange,
-  query,
-}: {
-  matches: string[];
-  onClose(): void;
-  onOpen(path: string): void;
-  onQueryChange(query: string): void;
-  query: string;
-}) {
-  return (
-    <div className="absolute inset-0 z-30 bg-canvas/70 p-6 backdrop-blur-[1px]">
-      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-hairline bg-panel shadow-sm">
-        <input
-          autoFocus
-          className="h-11 w-full border-b border-hairline bg-canvas px-4 text-sm outline-none"
-          placeholder="Quick open file"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") onClose();
-            if (event.key === "Enter" && matches[0]) onOpen(matches[0]);
-          }}
-        />
-        <div className="max-h-80 overflow-auto p-2">
-          {matches.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-muted">No files found.</p>
-          ) : (
-            matches.map((path) => (
-              <button
-                className="block w-full rounded-md px-2 py-2 text-left font-mono text-xs text-ink hover:bg-page"
-                key={path}
-                type="button"
-                onClick={() => onOpen(path)}
-              >
-                {path}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function getSuggestedPreviewCommand(path: string | undefined, content: string) {
-  if (!path) return undefined;
-  if (isHtmlPath(path)) return htmlPreviewCommand(path);
-  if (!/(^|\/)package\.json$/i.test(path)) return undefined;
-  try {
-    const parsed = JSON.parse(content) as { scripts?: Record<string, unknown> };
-    if (typeof parsed.scripts?.dev !== "string") return undefined;
-  } catch {
-    return ["bun", "run", "dev"];
-  }
-  return ["bun", "run", "dev"];
-}
-
-function htmlPreviewCommand(path: string) {
-  const script = [
-    `const path = require("node:path");`,
-    `const root = process.cwd();`,
-    `const target = ${JSON.stringify(path)};`,
-    `const port = Number(process.env.PORT || 3000);`,
-    `Bun.serve({`,
-    `  hostname: "127.0.0.1",`,
-    `  port,`,
-    `  async fetch(req) {`,
-    `    const url = new URL(req.url);`,
-    `    const rel = decodeURIComponent(url.pathname.slice(1)) || target;`,
-    `    const full = path.resolve(root, rel);`,
-    `    if (full !== root && !full.startsWith(root + path.sep)) return new Response("Forbidden", { status: 403 });`,
-    `    return new Response(Bun.file(full));`,
-    `  },`,
-    `});`,
-    `console.log("HTML preview listening on", port);`,
-  ].join("\n");
-  return ["bun", "--eval", script];
-}
-
-function flattenFiles(nodes: FileTreeNode[]) {
-  const files: string[] = [];
-  const visit = (node: FileTreeNode) => {
-    if (!node.isDirectory) files.push(node.path);
-    for (const child of node.children ?? []) visit(child);
-  };
-  for (const node of nodes) visit(node);
-  return files;
-}
-
-function filterFiles(files: string[], query: string) {
-  const value = query.trim().toLowerCase();
-  if (!value) return files;
-  return files.filter((path) => path.toLowerCase().includes(value));
-}
-
-function sameCommand(left: string[], right: string[]) {
-  return left.length === right.length && left.every((part, index) => part === right[index]);
 }

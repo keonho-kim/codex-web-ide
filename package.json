@@ -23,7 +23,7 @@
     "start": "bun run backend/src/cli/cw.ts start",
     "dev:web": "bunx vite --host 127.0.0.1 --port 17322 ui",
     "build": "bun run build:web && bun run build:package && bun run typecheck",
-    "build:web": "bunx vite build ui",
+    "build:web": "bunx --bun vite build ui",
     "build:package": "bun run scripts/build-package.ts",
     "pack:local": "bun run build && bun pm pack --destination dist",
     "test": "bun test backend/src ui/src",

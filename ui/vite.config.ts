@@ -16,14 +16,16 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          diff: ["diff2html"],
-          editor: ["@monaco-editor/react"],
-          interaction: ["react-arborist", "react-resizable-panels", "lucide-react"],
-          markdown: ["react-markdown", "remark-gfm", "remark-math", "rehype-raw", "rehype-sanitize", "rehype-katex", "katex"],
-          tiptap: ["@tiptap/react", "@tiptap/starter-kit"],
-          primitives: ["radix-ui", "class-variance-authority", "clsx", "tailwind-merge"],
-          vendor: ["react", "react-dom", "react-router-dom", "@tanstack/react-query", "zustand"],
+        manualChunks(id) {
+          if (!id.includes("/node_modules/")) return;
+          if (id.includes("/node_modules/monaco-editor/") || id.includes("/node_modules/@monaco-editor/")) return "monaco";
+          if (id.includes("/node_modules/@xterm/")) return "terminal";
+          if (id.includes("/node_modules/diff2html/")) return "diff";
+          if (["react-markdown", "remark-gfm", "remark-math", "rehype-raw", "rehype-sanitize", "rehype-katex", "katex"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) return "markdown";
+          if (id.includes("/node_modules/@tiptap/") || id.includes("/node_modules/prosemirror-")) return "tiptap";
+          if (["react-arborist", "react-resizable-panels", "lucide-react"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) return "interaction";
+          if (["radix-ui", "class-variance-authority", "clsx", "tailwind-merge"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) return "primitives";
+          if (["react", "react-dom", "react-router-dom", "@tanstack/react-query", "zustand"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) return "vendor";
         },
       },
     },

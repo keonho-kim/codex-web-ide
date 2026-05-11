@@ -186,7 +186,7 @@ function processEnv() {
 }
 
 function nodeBinary() {
-  return process.env.CODEX_WEB_NODE || "node";
+  return process.env.CODEX_WEB_NODE || process.execPath || "node";
 }
 
 function resolveShell(candidate: string | undefined, fallback: string) {

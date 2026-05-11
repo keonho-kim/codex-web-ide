@@ -13,7 +13,8 @@ import type { AppServices } from "./api/context";
 import { checkPreviewPorts } from "./cli/doctor/ports";
 import { executeManagedCommand } from "./cli/managedCommands";
 import { initProject } from "./cli/projectInit";
-import { createSignalShutdown, parseAuthFlag } from "./cli/serverCommands";
+import { createSignalShutdown, parseAuthFlag, sendStartupAccessTelegram } from "./cli/serverCommands";
+import { collectStartupAccessInfo, formatStartupAccessInfo, formatStartupTelegramMessage } from "./cli/startupAccess";
 import { EventBus } from "./events/eventBus";
 import { JsonStore } from "./managers/storage";
 import { WorkspaceManager } from "./managers/workspaceManager";
@@ -632,6 +633,67 @@ describe("product smoke coverage", () => {
     expect(() => parseAuthFlag(["--auth", "invalid"])).toThrow("--auth must be either enable or disable.");
   });
 
+  test("reports startup access URLs with local, internal, external, and auth state", async () => {
+    const info = await collectStartupAccessInfo("0.0.0.0", 17321, async () => "203.0.113.10");
+
+    expect(info.localUrls).toContain("http://127.0.0.1:17321");
+    expect(info.externalUrl).toBe("http://203.0.113.10:17321");
+    expect(formatStartupAccessInfo(info, true)).toContain("Auth:    Telegram approval enabled");
+    expect(formatStartupTelegramMessage(info, true)).toContain("Browser login requests still require inline approval");
+  });
+
+  test("sends startup access information to the configured Telegram chat", async () => {
+    const home = await tempDir();
+    const previousHome = process.env.CODEX_WEB_HOME;
+    const previousTelegramBase = process.env.CW_TELEGRAM_API_BASE;
+    const telegramPort = await freePort();
+    let sentMessage = "";
+    const telegram = Bun.serve({
+      hostname: "127.0.0.1",
+      port: telegramPort,
+      async fetch(req) {
+        const url = new URL(req.url);
+        const body = req.method === "POST" ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {};
+        if (url.pathname.endsWith("/sendMessage")) {
+          sentMessage = String(body.text ?? "");
+          return Response.json({ ok: true, result: { message_id: 1 } });
+        }
+        return Response.json({ ok: true, result: true });
+      },
+    });
+    try {
+      process.env.CODEX_WEB_HOME = home;
+      process.env.CW_TELEGRAM_API_BASE = `http://127.0.0.1:${telegramPort}`;
+      const store = new JsonStore(home);
+      await store.ensure();
+      const workspace = new WorkspaceManager(store);
+      const settings = await workspace.getSettings();
+      await workspace.updateSettings({
+        ...settings,
+        telegram: { allowedTelegramUserId: 123, allowedChatId: 456, ownerDisplayName: "Owner", botUsername: "codex_test_bot", remoteControlEnabled: false },
+      });
+      await new SecretsStore(store).write({ telegram: { botToken: "telegram-token" }, auth: { sessionSecret: "session-secret", csrfSecret: "csrf-secret" } });
+
+      await sendStartupAccessTelegram({
+        host: "0.0.0.0",
+        port: 17321,
+        boundUrl: "http://0.0.0.0:17321",
+        localUrls: ["http://127.0.0.1:17321"],
+        internalUrls: ["http://192.168.1.20:17321"],
+        externalUrl: "http://203.0.113.10:17321",
+        loopbackOnly: false,
+      });
+
+      expect(sentMessage).toContain("Codex Web IDE started");
+      expect(sentMessage).toContain("http://192.168.1.20:17321");
+      expect(sentMessage).toContain("http://203.0.113.10:17321");
+    } finally {
+      telegram.stop(true);
+      restoreEnv("CODEX_WEB_HOME", previousHome);
+      restoreEnv("CW_TELEGRAM_API_BASE", previousTelegramBase);
+    }
+  });
+
   test("applies Telegram auth settings without issuing legacy auth tokens", async () => {
     const store = new JsonStore(await tempDir());
     const workspace = new WorkspaceManager(store);
@@ -1018,7 +1080,7 @@ describe("product smoke coverage", () => {
   test("starts, reports, and stops through the CLI", async () => {
     const home = await tempDir();
     const port = await freePort();
-    const env = { CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0" };
+    const env = { CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0", CODEX_WEB_SKIP_EXTERNAL_IP: "1" };
     const server = startCli(["start", "--host", "127.0.0.1", "--port", String(port), "--preview-port-start", "25000", "--preview-port-end", "25010"], env);
     try {
       await waitForHealth(`http://127.0.0.1:${port}/api/health`);
@@ -1046,7 +1108,7 @@ describe("product smoke coverage", () => {
     const port = await freePort();
     const child = execa("bun", ["run", "cw", "start", "--host", "127.0.0.1", "--port", String(port), "--preview-port-start", "25020", "--preview-port-end", "25030"], {
       cwd: path.resolve("."),
-      env: { ...process.env, CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0" },
+      env: { ...process.env, CODEX_WEB_HOME: home, CODEX_WEB_AUTH: "0", CODEX_WEB_SKIP_EXTERNAL_IP: "1" },
       reject: false,
     });
     try {

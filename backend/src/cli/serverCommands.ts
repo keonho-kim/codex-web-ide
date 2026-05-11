@@ -7,6 +7,10 @@ import { collectStartupDoctorWarnings } from "./doctor/checks";
 import { readPidFile, removePidFile, writePidFile } from "./pidFile";
 import { initProject } from "./projectInit";
 import { createRuntimeSupervisor, type RuntimeSupervisorOptions } from "./runtimeSupervisor";
+import { collectStartupAccessInfo, formatStartupAccessInfo } from "./startupAccess";
+import { sendStartupAccessTelegram } from "./startupTelegram";
+
+export { sendStartupAccessTelegram };
 
 export async function start(input: string[]) {
   const host = readFlag(input, "--host") || undefined;
@@ -34,10 +38,9 @@ export async function start(input: string[]) {
   });
   await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
   await writePidFile(server.port, server.host);
-  console.log(`Codex Web IDE listening on http://${server.host}:${server.port}`);
-  if (server.auth?.enabled) {
-    console.log("Auth: Telegram approval enabled");
-  }
+  const access = await collectStartupAccessInfo(server.host, server.port);
+  console.log(formatStartupAccessInfo(access, Boolean(server.auth?.enabled)));
+  if (server.auth?.enabled) await sendStartupAccessTelegram(access).catch((error) => console.warn(`Telegram startup notice failed: ${error instanceof Error ? error.message : String(error)}`));
   shutdown = createSignalShutdown(server.close);
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
