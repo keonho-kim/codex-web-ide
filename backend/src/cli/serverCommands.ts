@@ -94,7 +94,7 @@ export async function init(input: string[]) {
 
 export async function update() {
   console.log("Use Bun to update the installed package:");
-  console.log("  bun update -g @local/codex-web");
+  console.log("  bun update -g codex-web-ide");
 }
 
 async function printStartupDoctorWarnings({

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@local/codex-web",
+      "name": "codex-web-ide",
       "dependencies": {
         "@monaco-editor/react": "^4.7.0",
         "@openai/codex-sdk": "^0.129.0",

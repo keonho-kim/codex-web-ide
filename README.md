@@ -1,23 +1,36 @@
 # Codex Web IDE
 
-Codex Web IDE is a local-first development environment for running Codex workflows from a web UI. It is designed for Termux first, while keeping macOS, Linux, and WSL support practical.
+Local-first Codex development environment with a focused web UI for projects, files, conversations, previews, jobs, services, terminals, and Git workflows.
+
+Codex Web IDE is designed for Termux first, with the same Bun-based runtime kept practical on macOS, Linux, and WSL.
+
+## Highlights
+
+- **Installable CLI**: run the app with `cw start` or `codex-web start`.
+- **Local runtime**: files, Git, Codex sessions, terminals, jobs, previews, and services stay on your machine.
+- **Web UI for real work**: project/session navigation, file tree, Monaco editor, Codex chat, managed commands, preview panel, and Git controls.
+- **Managed execution**: use `cw job`, `cw preview`, and `cw service` so the backend can track processes, logs, ports, and lifecycle.
+- **Termux-first remote access**: pair Tailscale with Telegram approval auth when exposing the app beyond loopback.
 
 ## Requirements
 
-- Bun
+- Bun 1.1+
 - Git
 - Codex CLI or SDK access
-- Optional project runtimes such as Python, Go, and Rust
+- Optional project runtimes such as Python, Go, Rust, or Node.js, depending on the projects you open
 
-Run the environment check before starting work:
+## Install
+
+Install the latest release tarball directly from GitHub:
+
+```bash
+bun install -g https://github.com/keonho-kim/codex-web-ide/releases/download/v0.1.0/codex-web-ide-0.1.0.tgz
+```
+
+Verify the CLI:
 
 ```bash
 cw doctor
-```
-
-## Start The App
-
-```bash
 cw start
 ```
 
@@ -27,31 +40,71 @@ The default app URL is:
 http://127.0.0.1:17321
 ```
 
-To listen on another host or port:
+The release artifact follows this URL shape:
 
 ```bash
-cw start --host 0.0.0.0 --port 17321
+bun install -g https://github.com/<owner>/<repo>/releases/download/v0.1.0/codex-web-ide-0.1.0.tgz
 ```
 
-`cw start` defaults to authentication disabled. Configure Telegram and pass `--auth enable` before exposing the app on a non-loopback host:
+## Manual Installation
+
+Use this path when you are building the installable package from a local checkout.
+
+Build the web UI, prepare the install launcher, and pack the repository into an installable tarball:
 
 ```bash
-cw config telegram
-cw start --host 0.0.0.0 --auth enable
+bun install
+bun run pack:local
 ```
 
-For remote access, prefer Tailscale over public port forwarding:
+Install the built package globally:
 
 ```bash
-tailscale ip -4
-cw start --host 0.0.0.0 --port 17321 --auth enable
+bun install -g ./dist/codex-web-ide-0.1.0.tgz
 ```
 
-Then open `http://<tailscale-ip>:17321` from another device in the same tailnet and approve the browser session from Telegram. See [External Access With Tailscale And Telegram Auth](docs/external-access.md) for the full setup and security checklist.
+Registry installs use the same CLI after publication:
+
+```bash
+bun install -g codex-web-ide
+```
+
+## Release Workflow
+
+GitHub Releases are built from version tags. To publish `v0.1.0`, push a tag that matches `package.json`:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The GitHub Actions release workflow runs tests, builds the package, creates `dist/codex-web-ide-0.1.0.tgz`, and uploads it to the matching GitHub Release.
+
+## Quick Start
+
+```bash
+cw init /path/to/project
+cw start
+```
+
+Open the app:
+
+```text
+http://127.0.0.1:17321
+```
+
+Useful runtime commands:
+
+```bash
+cw status
+cw open
+cw stop
+cw restart
+```
 
 ## Managed Commands
 
-Use managed commands so the backend can track process state, logs, ports, and previews.
+Run project commands through Codex Web IDE so process state, logs, ports, and previews remain visible in the UI.
 
 ```bash
 cw job bun run build
@@ -59,7 +112,11 @@ cw preview bun run dev
 cw service python bot.py
 ```
 
-Use `cw job` for commands expected to finish, `cw preview` for browser-viewable web servers, and `cw service` for long-running background processes.
+Use:
+
+- `cw job` for commands expected to finish.
+- `cw preview` for browser-viewable development servers.
+- `cw service` for long-running background processes.
 
 Dangerous commands are blocked unless explicitly approved:
 
@@ -67,34 +124,59 @@ Dangerous commands are blocked unless explicitly approved:
 cw job --approve-dangerous git reset --hard
 ```
 
-## Project Workflow
+## External Access
+
+`cw start` defaults to authentication disabled and should stay on loopback for local use.
+
+For remote access, prefer Tailscale over public port forwarding:
 
 ```bash
-cw init /path/to/project
-cw open
-cw status
-cw stop
+cw config telegram
+tailscale ip -4
+cw start --host 0.0.0.0 --port 17321 --auth enable
 ```
 
-`cw init` registers the project and creates an `AGENTS.md` runtime policy when one does not already exist.
+Then open `http://<tailscale-ip>:17321` from another device in the same tailnet and approve the browser session from Telegram.
 
-The web UI supports project/session selection, file tree browsing, Monaco editing, Codex chat, file and skill mentions, jobs, previews, services, and Git state/status/diff/stage/unstage/commit workflows.
+See [External Access With Tailscale And Telegram Auth](docs/external-access.md) for the full setup and security checklist.
 
-## Termux Notes
+## Architecture
 
-For long-running sessions on Android, prevent Termux from being suspended:
+```text
+Browser / WebView
+  -> React Web UI
+  -> Express Backend
+  -> Local runtime: Codex, Git, Bun, shell, filesystem, project tools
+```
+
+The backend owns filesystem access, command execution, previews, services, terminals, Git state, project sessions, and Codex sessions. The browser UI stays a client of those local services.
+
+## Development
 
 ```bash
-termux-wake-lock
+bun install
+bun run build
+bun test
 ```
 
-If projects live in shared storage, grant storage access first:
+Start the app from source:
 
 ```bash
-termux-setup-storage
+bun run cw start
 ```
 
-Android battery optimization may still stop background work. Keep Termux visible or exempt it from battery optimization when running long jobs, previews, or services.
+Run the frontend dev server:
+
+```bash
+bun run dev:web
+```
+
+Browser validation:
+
+```bash
+bun run setup:e2e
+bun run test:e2e
+```
 
 ## Environment
 
@@ -110,3 +192,7 @@ CW_CSRF_SECRET                 CSRF secret override
 CODEX_WEB_PREVIEW_PORT_START   Preview port range start, default 17330
 CODEX_WEB_PREVIEW_PORT_END     Preview port range end, default 17399
 ```
+
+## Project Status
+
+This repository is early-stage and intentionally local-first. The implementation follows [PRODUCT.md](PRODUCT.md) for product scope and [DESIGN.md](DESIGN.md) for UI direction.

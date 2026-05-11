@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and upload release tarball
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify release tag
+        run: |
+          PACKAGE_VERSION="$(bun -e "const pkg = await Bun.file('package.json').json(); console.log(pkg.version)")"
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+          if [ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package version ${PACKAGE_VERSION}."
+            echo "Expected ${EXPECTED_TAG}."
+            exit 1
+          fi
+
+      - name: Test
+        run: bun test backend/src ui/src
+
+      - name: Build package tarball
+        run: bun run pack:local
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TARBALL="dist/codex-web-ide-${GITHUB_REF_NAME#v}.tgz"
+          if [ ! -f "${TARBALL}" ]; then
+            echo "Expected tarball not found: ${TARBALL}"
+            exit 1
+          fi
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" --title "${GITHUB_REF_NAME}" --generate-notes
+          fi

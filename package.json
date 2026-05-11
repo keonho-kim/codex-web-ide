@@ -1,17 +1,31 @@
 {
-  "name": "@local/codex-web",
+  "name": "codex-web-ide",
   "version": "0.1.0",
-  "private": true,
+  "description": "Local-first Codex development environment with a web UI.",
   "type": "module",
   "bin": {
-    "cw": "./bin/cw.ts",
-    "codex-web": "./bin/cw.ts"
+    "cw": "./dist/bin/cw",
+    "codex-web": "./dist/bin/cw"
+  },
+  "files": [
+    "backend/src",
+    "dist/bin",
+    "docs",
+    "ui/dist",
+    "DESIGN.md",
+    "PRODUCT.md",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
   },
   "scripts": {
     "start": "bun run backend/src/cli/cw.ts start",
     "dev:web": "bunx vite --host 127.0.0.1 --port 17322 ui",
-    "build": "bun run build:web && bun run typecheck",
+    "build": "bun run build:web && bun run build:package && bun run typecheck",
     "build:web": "bunx vite build ui",
+    "build:package": "bun run scripts/build-package.ts",
+    "pack:local": "bun run build && bun pm pack --destination dist",
     "test": "bun test backend/src ui/src",
     "setup:e2e": "bun run scripts/setup-playwright.ts",
     "test:e2e": "env -u FORCE_COLOR -u NO_COLOR LD_LIBRARY_PATH=.cache/playwright-libs/root/usr/lib/x86_64-linux-gnu playwright test",
