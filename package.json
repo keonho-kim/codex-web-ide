@@ -11,6 +11,7 @@
     "backend/src",
     "dist/bin",
     "docs",
+    "install.sh",
     "ui/dist",
     "DESIGN.md",
     "PRODUCT.md",

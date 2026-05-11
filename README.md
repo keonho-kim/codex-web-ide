@@ -21,10 +21,10 @@ Codex Web IDE is designed for Termux first, with the same Bun-based runtime kept
 
 ## Install
 
-Install the latest release tarball directly from GitHub:
+Install the latest release with the installer script:
 
 ```bash
-bun install -g https://github.com/keonho-kim/codex-web-ide/releases/download/v0.1.0/codex-web-ide-0.1.0.tgz
+curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | sh
 ```
 
 Verify the CLI:
@@ -40,7 +40,13 @@ The default app URL is:
 http://127.0.0.1:17321
 ```
 
-The release artifact follows this URL shape:
+The installer detects Termux, Linux, WSL, proot-based Linux, and macOS on `arm64` and `x64`. To pin a version, pass `CW_VERSION` to the shell that runs the installer:
+
+```bash
+curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.0 sh
+```
+
+The installer wraps this release artifact URL shape:
 
 ```bash
 bun install -g https://github.com/<owner>/<repo>/releases/download/v0.1.0/codex-web-ide-0.1.0.tgz

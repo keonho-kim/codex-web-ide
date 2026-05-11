@@ -51,8 +51,13 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f install.sh ]; then
+            echo "Expected installer not found: install.sh"
+            exit 1
+          fi
+
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" --clobber
+            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" install.sh --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" --title "${GITHUB_REF_NAME}" --generate-notes
+            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" install.sh --title "${GITHUB_REF_NAME}" --generate-notes
           fi
