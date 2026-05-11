@@ -79,7 +79,7 @@ print_prereq_hint() {
 
   case "$target" in
     termux)
-      info "Install prerequisites with: pkg install -y curl git bun"
+      info "Install prerequisites with Termux packages where available, then install Bun manually if needed."
       ;;
     macos)
       info "Install prerequisites with Homebrew or the official Bun installer."
@@ -99,15 +99,6 @@ ensure_curl() {
   die "curl is required to install ${package_name}."
 }
 
-install_bun_with_termux_pkg() {
-  if [ "$target" != "termux" ] || ! has_cmd pkg; then
-    return 1
-  fi
-
-  info "Bun was not found. Installing Bun with Termux pkg..."
-  pkg install -y bun
-}
-
 install_bun_with_official_installer() {
   info "Bun was not found. Installing Bun from ${bun_install_url}..."
   if has_cmd bash; then
@@ -122,9 +113,11 @@ ensure_bun() {
     return
   fi
 
-  if ! install_bun_with_termux_pkg; then
-    install_bun_with_official_installer
+  if [ "$target" = "termux" ]; then
+    die "Bun is required on Termux. Install Bun first, then rerun this installer."
   fi
+
+  install_bun_with_official_installer
 
   if [ -d "$HOME/.bun/bin" ]; then
     PATH="$HOME/.bun/bin:$PATH"
