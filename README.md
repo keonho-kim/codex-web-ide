@@ -46,34 +46,26 @@ The installer detects Termux, Linux, WSL, proot-based Linux, and macOS on `arm64
 curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.3 sh
 ```
 
-The installer wraps this release artifact URL shape:
+The installer downloads a production release archive that already contains the built web UI and runtime dependencies:
 
 ```bash
-bun install -g https://github.com/<owner>/<repo>/releases/download/v0.1.3/codex-web-ide-0.1.3.tgz
+https://github.com/<owner>/<repo>/releases/download/v0.1.3/codex-web-ide-0.1.3-linux-arm64.tgz
 ```
 
-## Manual Installation
+The installer does not run `bun install -g`, so native dependencies such as `node-pty` are built in GitHub Actions instead of on the target Termux/proot/macOS machine.
 
-Use this path when you are building the installable package from a local checkout.
+## Local Package Development
 
-Build the web UI, prepare the install launcher, and pack the repository into an installable tarball:
+Use this path only when you are developing the release package from a local checkout on a machine that can run builds.
+
+Build the web UI, prepare the install launcher, and pack a portable production archive:
 
 ```bash
 bun install
-bun run pack:local
+bun run pack:production
 ```
 
-Install the built package globally:
-
-```bash
-bun install -g ./dist/codex-web-ide-0.1.3.tgz
-```
-
-Registry installs use the same CLI after publication:
-
-```bash
-bun install -g codex-web-ide
-```
+The normal install path should use the GitHub Release artifact instead, so Termux/proot/macOS users do not need to run `bun run build` locally.
 
 ## Release Workflow
 
@@ -84,7 +76,7 @@ git tag v0.1.3
 git push origin v0.1.3
 ```
 
-The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates `dist/codex-web-ide-0.1.3.tgz`, and uploads it with `install.sh` to the matching GitHub Release.
+The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.3-linux-arm64.tgz` and `dist/codex-web-ide-0.1.3-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
 
 ## Quick Start
 

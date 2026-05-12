@@ -27,6 +27,7 @@
     "build:web": "bunx --bun vite build ui",
     "build:package": "bun run scripts/build-package.ts",
     "pack:local": "bun run build && bun pm pack --destination dist",
+    "pack:production": "bun run build && bun run scripts/pack-production.ts",
     "test": "bun test backend/src ui/src",
     "setup:e2e": "bun run scripts/setup-playwright.ts",
     "test:e2e": "env -u FORCE_COLOR -u NO_COLOR LD_LIBRARY_PATH=.cache/playwright-libs/root/usr/lib/x86_64-linux-gnu playwright test",

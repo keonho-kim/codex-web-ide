@@ -9,9 +9,21 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and upload release tarball
-    runs-on: ubuntu-latest
+  build:
+    name: Build production archive (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: macos-x64
+            runner: macos-15-intel
+          - target: macos-arm64
+            runner: macos-15
 
     steps:
       - name: Checkout
@@ -21,6 +33,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Install native build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -41,25 +57,50 @@ jobs:
           bun test ui/src
 
       - name: Build package tarball
-        run: bun run pack:local
+        run: bun run pack:production
+        env:
+          CW_RELEASE_TARGET: ${{ matrix.target }}
+
+      - name: Upload production archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-web-ide-${{ matrix.target }}
+          path: dist/codex-web-ide-*-${{ matrix.target }}.tgz
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download production archives
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/artifacts
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TARBALL="dist/codex-web-ide-${GITHUB_REF_NAME#v}.tgz"
-          if [ ! -f "${TARBALL}" ]; then
-            echo "Expected tarball not found: ${TARBALL}"
-            exit 1
-          fi
+          set -eu
 
           if [ ! -f install.sh ]; then
             echo "Expected installer not found: install.sh"
             exit 1
           fi
 
+          RELEASE_FILES="$(find dist/artifacts -type f -name 'codex-web-ide-*.tgz' | sort)"
+          if [ -z "${RELEASE_FILES}" ]; then
+            echo "Expected production release archives under dist/artifacts"
+            exit 1
+          fi
+
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" install.sh --clobber
+            gh release upload "${GITHUB_REF_NAME}" ${RELEASE_FILES} install.sh --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" install.sh --title "${GITHUB_REF_NAME}" --generate-notes
+            gh release create "${GITHUB_REF_NAME}" ${RELEASE_FILES} install.sh --title "${GITHUB_REF_NAME}" --generate-notes
           fi

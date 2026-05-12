@@ -99,6 +99,15 @@ ensure_curl() {
   die "curl is required to install ${package_name}."
 }
 
+ensure_tar() {
+  if has_cmd tar; then
+    return
+  fi
+
+  print_prereq_hint "$target"
+  die "tar is required to install ${package_name}."
+}
+
 install_bun_with_official_installer() {
   info "Bun was not found. Installing Bun from ${bun_install_url}..."
   if has_cmd bash; then
@@ -157,6 +166,20 @@ resolve_global_bin_dir() {
   printf '%s/.bun/bin' "$HOME"
 }
 
+resolve_release_platform() {
+  case "$target" in
+    termux | proot | wsl | linux) printf 'linux' ;;
+    macos) printf 'macos' ;;
+    *) die "Production release archives are currently published for Linux, WSL, Termux, proot, and macOS only." ;;
+  esac
+}
+
+cleanup_tmp_dir() {
+  if [ -n "${tmp_dir:-}" ] && [ -d "$tmp_dir" ]; then
+    rm -rf "$tmp_dir"
+  fi
+}
+
 target="$(detect_target)"
 arch="$(detect_arch)"
 
@@ -173,16 +196,44 @@ esac
 info "Installing ${package_name} for ${target}/${arch}..."
 
 ensure_curl
+ensure_tar
+release_platform="$(resolve_release_platform)"
 ensure_bun
 
 tag="$(normalize_version "$version")"
 tarball_version="${tag#v}"
-tarball_url="${CW_TARBALL_URL:-https://github.com/${repo}/releases/download/${tag}/${package_name}-${tarball_version}.tgz}"
+release_target="${release_platform}-${arch}"
+artifact_name="${package_name}-${tarball_version}-${release_target}.tgz"
+tarball_url="${CW_TARBALL_URL:-https://github.com/${repo}/releases/download/${tag}/${artifact_name}}"
+install_root="${CW_INSTALL_ROOT:-${HOME}/.local/share/${package_name}}"
+install_dir="${install_root}/${tag}-${release_target}"
 
-info "Installing release package: ${tarball_url}"
-bun install -g "$tarball_url"
+tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t "${package_name}")"
+trap cleanup_tmp_dir EXIT INT TERM
+
+archive_path="${tmp_dir}/${artifact_name}"
+extract_dir="${tmp_dir}/extract"
+stage_dir="${tmp_dir}/stage"
+
+info "Installing production release package: ${tarball_url}"
+curl -fL "$tarball_url" -o "$archive_path"
+
+mkdir -p "$extract_dir" "$stage_dir" "$install_root"
+tar -xzf "$archive_path" -C "$extract_dir"
+
+if [ ! -x "${extract_dir}/${package_name}/dist/bin/cw" ]; then
+  die "Release package is missing executable dist/bin/cw."
+fi
+
+mv "${extract_dir}/${package_name}" "${stage_dir}/${package_name}"
+rm -rf "$install_dir"
+mv "${stage_dir}/${package_name}" "$install_dir"
 
 global_bin_dir="$(resolve_global_bin_dir)"
+mkdir -p "$global_bin_dir"
+ln -sfn "${install_dir}/dist/bin/cw" "${global_bin_dir}/cw"
+ln -sfn "${install_dir}/dist/bin/cw" "${global_bin_dir}/codex-web"
+
 if [ -x "${global_bin_dir}/cw" ]; then
   info "Installed ${package_name}."
 else
