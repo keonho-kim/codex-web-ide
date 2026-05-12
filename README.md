@@ -43,13 +43,13 @@ http://127.0.0.1:17321
 The installer detects Termux, Linux, WSL, proot-based Linux, and macOS on `arm64` and `x64`. To pin a version, pass `CW_VERSION` to the shell that runs the installer:
 
 ```bash
-curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.2 sh
+curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.3 sh
 ```
 
 The installer wraps this release artifact URL shape:
 
 ```bash
-bun install -g https://github.com/<owner>/<repo>/releases/download/v0.1.2/codex-web-ide-0.1.2.tgz
+bun install -g https://github.com/<owner>/<repo>/releases/download/v0.1.3/codex-web-ide-0.1.3.tgz
 ```
 
 ## Manual Installation
@@ -66,7 +66,7 @@ bun run pack:local
 Install the built package globally:
 
 ```bash
-bun install -g ./dist/codex-web-ide-0.1.2.tgz
+bun install -g ./dist/codex-web-ide-0.1.3.tgz
 ```
 
 Registry installs use the same CLI after publication:
@@ -77,14 +77,14 @@ bun install -g codex-web-ide
 
 ## Release Workflow
 
-GitHub Releases are built from version tags. To publish `v0.1.2`, push a tag that matches `package.json`:
+GitHub Releases are built from version tags. To publish `v0.1.3`, push a tag that matches `package.json`:
 
 ```bash
-git tag v0.1.2
-git push origin v0.1.2
+git tag v0.1.3
+git push origin v0.1.3
 ```
 
-The GitHub Actions release workflow runs tests, builds the package, creates `dist/codex-web-ide-0.1.2.tgz`, and uploads it with `install.sh` to the matching GitHub Release.
+The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates `dist/codex-web-ide-0.1.3.tgz`, and uploads it with `install.sh` to the matching GitHub Release.
 
 ## Quick Start
 

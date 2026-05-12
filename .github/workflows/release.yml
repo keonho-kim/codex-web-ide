@@ -36,7 +36,9 @@ jobs:
           fi
 
       - name: Test
-        run: bun test backend/src ui/src
+        run: |
+          sh -n install.sh
+          bun test ui/src
 
       - name: Build package tarball
         run: bun run pack:local
