@@ -43,13 +43,13 @@ http://127.0.0.1:17321
 The installer detects Termux, Linux, WSL, proot-based Linux, and macOS on `arm64` and `x64`. To pin a version, pass `CW_VERSION` to the shell that runs the installer:
 
 ```bash
-curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.3 sh
+curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.4 sh
 ```
 
 The installer downloads a production release archive that already contains the built web UI and runtime dependencies:
 
 ```bash
-https://github.com/<owner>/<repo>/releases/download/v0.1.3/codex-web-ide-0.1.3-linux-arm64.tgz
+https://github.com/<owner>/<repo>/releases/download/v0.1.4/codex-web-ide-0.1.4-linux-arm64.tgz
 ```
 
 The installer does not run `bun install -g`, so target Termux/proot/macOS machines do not need to build native runtime dependencies locally.
@@ -69,14 +69,14 @@ The normal install path should use the GitHub Release artifact instead, so Termu
 
 ## Release Workflow
 
-GitHub Releases are built from version tags. To publish `v0.1.3`, push a tag that matches `package.json`:
+GitHub Releases are built from version tags. To publish `v0.1.4`, push a tag that matches `package.json`:
 
 ```bash
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
-The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.3-linux-arm64.tgz` and `dist/codex-web-ide-0.1.3-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
+The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.4-linux-arm64.tgz` and `dist/codex-web-ide-0.1.4-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
 
 ## Quick Start
 
