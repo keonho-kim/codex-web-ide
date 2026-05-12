@@ -52,7 +52,7 @@ The installer downloads a production release archive that already contains the b
 https://github.com/<owner>/<repo>/releases/download/v0.1.3/codex-web-ide-0.1.3-linux-arm64.tgz
 ```
 
-The installer does not run `bun install -g`, so native dependencies such as `node-pty` are built in GitHub Actions instead of on the target Termux/proot/macOS machine.
+The installer does not run `bun install -g`, so target Termux/proot/macOS machines do not need to build native runtime dependencies locally.
 
 ## Local Package Development
 

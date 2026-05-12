@@ -1,9 +1,5 @@
 import os from "node:os";
-import path from "node:path";
-import readline from "node:readline";
 import fs from "node:fs";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import type { Session, TerminalSession } from "@backend/shared/types";
 
@@ -13,13 +9,14 @@ export type TerminalClient = {
 
 type TerminalEntry = {
   record: TerminalSession;
-  process: ChildProcessWithoutNullStreams;
+  process: Bun.Subprocess;
+  terminal: Bun.Terminal;
+  decoder: TextDecoder;
   clients: Map<string, TerminalClient>;
   scrollback: string[];
 };
 
 const MAX_SCROLLBACK_CHUNKS = 400;
-const PTY_HOST = path.join(path.dirname(fileURLToPath(import.meta.url)), "terminals/ptyHost.cjs");
 
 export class TerminalManager {
   private terminals = new Map<string, TerminalEntry>();
@@ -33,25 +30,32 @@ export class TerminalManager {
     const cols = clampDimension(options.cols, 80, 20, 240);
     const rows = clampDimension(options.rows, 24, 6, 80);
     const shell = options.shell || defaultShell();
-    const host = spawn(nodeBinary(), [
-      PTY_HOST,
-      JSON.stringify({
-        shell,
-        args: shellArgs(shell),
+    let entry: TerminalEntry | undefined;
+    const pendingOutput: string[] = [];
+    const decoder = new TextDecoder();
+    const process = Bun.spawn([shell, ...shellArgs(shell)], {
+      cwd: session.cwd,
+      env: {
+        ...processEnv(),
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+      },
+      terminal: {
+        name: "xterm-256color",
         cols,
         rows,
-        cwd: session.cwd,
-        env: {
-          TERM: "xterm-256color",
-          COLORTERM: "truecolor",
+        data: (_terminal, data) => {
+          const output = decoder.decode(data, { stream: true });
+          if (entry) this.handleOutput(entry, output);
+          else pendingOutput.push(output);
         },
-      }),
-    ], {
-      cwd: session.cwd,
-      env: processEnv(),
+      },
     });
-    const entry: TerminalEntry = {
-      process: host,
+    if (!process.terminal) throw new Error("Bun PTY terminal was not created");
+    const createdEntry: TerminalEntry = {
+      process,
+      terminal: process.terminal,
+      decoder,
       clients: new Map(),
       scrollback: [],
       record: {
@@ -59,23 +63,29 @@ export class TerminalManager {
         sessionId: session.id,
         cwd: session.cwd,
         shell,
-        pid: host.pid ?? 0,
+        pid: process.pid,
         cols,
         rows,
         status: "running",
         createdAt: Date.now(),
       },
     };
-    const lines = readline.createInterface({ input: host.stdout, crlfDelay: Infinity });
-    lines.on("line", (line) => this.handleHostMessage(entry, line));
-    host.stderr.on("data", (chunk) => this.handleOutput(entry, String(chunk)));
-    host.on("exit", (exitCode) => {
-      if (entry.record.status === "exited") return;
-      entry.record = { ...entry.record, status: "exited", exitCode: exitCode ?? undefined, exitedAt: Date.now() };
-      this.broadcast(entry, { type: "exit", exitCode });
+    entry = createdEntry;
+    for (const output of pendingOutput) this.handleOutput(createdEntry, output);
+    process.exited.then((exitCode) => {
+      if (createdEntry.record.status === "exited") return;
+      const tail = createdEntry.decoder.decode();
+      if (tail) this.handleOutput(createdEntry, tail);
+      createdEntry.record = { ...createdEntry.record, status: "exited", exitCode: exitCode ?? undefined, exitedAt: Date.now() };
+      this.broadcast(createdEntry, { type: "exit", exitCode });
+    }).catch((error) => {
+      if (createdEntry.record.status === "exited") return;
+      this.handleOutput(createdEntry, `Terminal exited with error: ${error instanceof Error ? error.message : String(error)}\n`);
+      createdEntry.record = { ...createdEntry.record, status: "exited", exitedAt: Date.now() };
+      this.broadcast(createdEntry, { type: "exit" });
     });
-    this.terminals.set(id, entry);
-    return entry.record;
+    this.terminals.set(id, createdEntry);
+    return createdEntry.record;
   }
 
   attach(sessionId: string, terminalId: string, client: TerminalClient) {
@@ -97,7 +107,7 @@ export class TerminalManager {
   write(sessionId: string, terminalId: string, data: string) {
     const entry = this.require(sessionId, terminalId);
     if (entry.record.status !== "running") return;
-    writeHost(entry, { type: "input", data });
+    entry.terminal.write(data);
   }
 
   resize(sessionId: string, terminalId: string, cols: number, rows: number) {
@@ -105,7 +115,7 @@ export class TerminalManager {
     if (entry.record.status !== "running") return entry.record;
     const nextCols = clampDimension(cols, entry.record.cols, 20, 240);
     const nextRows = clampDimension(rows, entry.record.rows, 6, 80);
-    writeHost(entry, { type: "resize", cols: nextCols, rows: nextRows });
+    entry.terminal.resize(nextCols, nextRows);
     entry.record = { ...entry.record, cols: nextCols, rows: nextRows };
     this.broadcast(entry, { type: "resize", cols: nextCols, rows: nextRows });
     return entry.record;
@@ -113,7 +123,7 @@ export class TerminalManager {
 
   close(sessionId: string, terminalId: string) {
     const entry = this.require(sessionId, terminalId);
-    writeHost(entry, { type: "kill" });
+    entry.terminal.close();
     entry.process.kill();
     entry.clients.clear();
     this.terminals.delete(terminalId);
@@ -127,7 +137,7 @@ export class TerminalManager {
 
   shutdown() {
     for (const entry of [...this.terminals.values()]) {
-      writeHost(entry, { type: "kill" });
+      entry.terminal.close();
       entry.process.kill();
     }
     this.terminals.clear();
@@ -144,25 +154,8 @@ export class TerminalManager {
     for (const client of entry.clients.values()) client.send(message);
   }
 
-  private handleHostMessage(entry: TerminalEntry, line: string) {
-    const message = parseHostMessage(line);
-    if (!message) return;
-    if (message.type === "ready" && typeof message.pid === "number") {
-      entry.record = { ...entry.record, pid: message.pid };
-      return;
-    }
-    if (message.type === "output" && typeof message.data === "string") {
-      this.handleOutput(entry, message.data);
-      return;
-    }
-    if (message.type === "exit") {
-      const exitCode = typeof message.exitCode === "number" ? message.exitCode : undefined;
-      entry.record = { ...entry.record, status: "exited", exitCode, exitedAt: Date.now() };
-      this.broadcast(entry, { type: "exit", exitCode });
-    }
-  }
-
   private handleOutput(entry: TerminalEntry, data: string) {
+    if (!data) return;
     entry.scrollback.push(data);
     if (entry.scrollback.length > MAX_SCROLLBACK_CHUNKS) entry.scrollback.splice(0, entry.scrollback.length - MAX_SCROLLBACK_CHUNKS);
     this.broadcast(entry, { type: "output", data });
@@ -185,10 +178,6 @@ function processEnv() {
   return Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
 }
 
-function nodeBinary() {
-  return process.env.CODEX_WEB_NODE || process.execPath || "node";
-}
-
 function resolveShell(candidate: string | undefined, fallback: string) {
   for (const shell of [candidate, fallback, "/bin/bash", "/bin/sh"].filter((value): value is string => Boolean(value))) {
     try {
@@ -199,19 +188,6 @@ function resolveShell(candidate: string | undefined, fallback: string) {
     }
   }
   return fallback;
-}
-
-function writeHost(entry: TerminalEntry, message: Record<string, unknown>) {
-  if (!entry.process.stdin.writable) return;
-  entry.process.stdin.write(`${JSON.stringify(message)}\n`);
-}
-
-function parseHostMessage(line: string) {
-  try {
-    return JSON.parse(line) as { type?: string; data?: unknown; pid?: unknown; exitCode?: unknown };
-  } catch {
-    return undefined;
-  }
 }
 
 function clampDimension(value: number | undefined, fallback: number, min: number, max: number) {

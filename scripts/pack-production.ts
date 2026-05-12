@@ -22,7 +22,6 @@ const outputPath = path.join(root, "dist", `${pkg.name}-${pkg.version}-${target}
 await assertExists(path.join(root, "ui", "dist", "index.html"), "Built UI output is required. Run bun run build before packaging.");
 await assertExists(path.join(root, "backend", "src", "cli", "cw.ts"), "Backend CLI source is required.");
 await assertExists(path.join(root, "node_modules"), "node_modules is required. Run bun install before packaging.");
-await assertExists(path.join(root, "node_modules", "node-pty"), "node-pty must be installed before packaging.");
 
 await rm(packageRoot, { recursive: true, force: true });
 await rm(outputPath, { force: true });

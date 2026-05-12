@@ -56,7 +56,6 @@
     "katex": "^0.16.45",
     "lucide-react": "^0.468.0",
     "nanoid": "^5.1.6",
-    "node-pty": "^1.1.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.1",
     "react-arborist": "^3.4.3",
