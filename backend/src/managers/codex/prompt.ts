@@ -1,4 +1,4 @@
-import type { ComposerMention } from "../../shared/types";
+import type { ComposerMention } from "@backend/shared/types";
 
 export function buildCodexPrompt(prompt: string, mentions: ComposerMention[], mentionContext = "") {
   const mentionText = mentions

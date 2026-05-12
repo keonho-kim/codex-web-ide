@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { ComposerMention } from "../shared/types";
-import { safeFsPath } from "./files/path";
+import type { ComposerMention } from "@backend/shared/types";
+import { safeFsPath } from "@backend/managers/files/path";
 
 type SkillCandidate = Extract<ComposerMention, { type: "skill" }>;
 export type SkillDocument = SkillCandidate & { markdown: string };

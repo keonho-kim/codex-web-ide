@@ -1,6 +1,6 @@
 import type { Express } from "express";
-import { codexRunSchema, codexSlashCommandSchema, createCodexThreadSchema } from "../shared/schemas";
-import { asyncHandler, type AppServices, withSession } from "./context";
+import { codexRunSchema, codexSlashCommandSchema, createCodexThreadSchema } from "@backend/shared/schemas";
+import { asyncHandler, type AppServices, withSession } from "@backend/api/context";
 
 export function registerCodexRoutes(app: Express, { codex, sessions }: AppServices) {
   app.get("/api/codex/slash-commands", asyncHandler(async (_req, res) => {

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { FileTreeNode } from "../../shared/types";
-import { isIgnoredPath, isVisibleFileName } from "./ignore";
-import { safeFsPath } from "./path";
+import type { FileTreeNode } from "@backend/shared/types";
+import { isIgnoredPath, isVisibleFileName } from "@backend/managers/files/ignore";
+import { safeFsPath } from "@backend/managers/files/path";
 
 export async function readFileTree(root: string, input = ".", depth = 12): Promise<FileTreeNode[]> {
   const base = await safeFsPath(root, input);

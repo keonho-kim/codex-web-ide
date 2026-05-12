@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
-import type { AppServices } from "../../api/context";
-import { frontProxyWebSocketHandlers } from "./bridge";
-import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "./http";
-import { previewWebSocketTarget } from "./target";
-import type { BunServe } from "./types";
+import type { AppServices } from "@backend/api/context";
+import { frontProxyWebSocketHandlers } from "@backend/proxy/bunFrontProxy/bridge";
+import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "@backend/proxy/bunFrontProxy/http";
+import { previewWebSocketTarget } from "@backend/proxy/bunFrontProxy/target";
+import type { BunServe } from "@backend/proxy/bunFrontProxy/types";
 
 const FRONT_PROXY_IDLE_TIMEOUT_SECONDS = 255;
 

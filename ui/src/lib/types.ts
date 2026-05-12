@@ -17,7 +17,7 @@ export type {
   Session,
   TerminalSession,
   WorkspaceSettings,
-} from "../../../backend/src/shared/types";
+} from "@backend/shared/types";
 
 export type MentionPopupState = {
   trigger: "@" | "$";

@@ -1,7 +1,7 @@
 import { Codex, type Thread } from "@openai/codex-sdk";
-import type { CodexThreadRecord, Session } from "../../shared/types";
-import type { SessionManager } from "../sessionManager";
-import type { CodexHistoryStore } from "./historyStore";
+import type { CodexThreadRecord, Session } from "@backend/shared/types";
+import type { SessionManager } from "@backend/managers/sessionManager";
+import type { CodexHistoryStore } from "@backend/managers/codex/historyStore";
 
 export class CodexThreadManager {
   private codex = new Codex();

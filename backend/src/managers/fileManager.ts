@@ -1,13 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, { type FSWatcher } from "chokidar";
-import type { EventBus } from "../events/eventBus";
-import { isIgnoredPath } from "./files/ignore";
-import { safeFsPath } from "./files/path";
-import { searchFiles } from "./files/search";
-import { readFileTree } from "./files/tree";
-import { assertSupportedProjectRootSync } from "./projects/pathPolicy";
-export { safePath } from "./files/path";
+import type { EventBus } from "@backend/events/eventBus";
+import { isIgnoredPath } from "@backend/managers/files/ignore";
+import { safeFsPath } from "@backend/managers/files/path";
+import { searchFiles } from "@backend/managers/files/search";
+import { readFileTree } from "@backend/managers/files/tree";
+import { assertSupportedProjectRootSync } from "@backend/managers/projects/pathPolicy";
+export { safePath } from "@backend/managers/files/path";
 
 const DEFAULT_FILE_TREE_DEPTH = 12;
 

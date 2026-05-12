@@ -2,11 +2,11 @@ import { execa } from "execa";
 import path from "node:path";
 import fs from "node:fs";
 import chokidar, { type FSWatcher } from "chokidar";
-import type { GitFileStatus, GitState } from "../shared/types";
-import type { EventBus } from "../events/eventBus";
-import { safeFsPath } from "./files/path";
-import { parsePorcelainV2, parseStatus } from "./git/porcelain";
-import { assertSupportedProjectRootSync } from "./projects/pathPolicy";
+import type { GitFileStatus, GitState } from "@backend/shared/types";
+import type { EventBus } from "@backend/events/eventBus";
+import { safeFsPath } from "@backend/managers/files/path";
+import { parsePorcelainV2, parseStatus } from "@backend/managers/git/porcelain";
+import { assertSupportedProjectRootSync } from "@backend/managers/projects/pathPolicy";
 
 export class GitManager {
   private watchers = new Map<string, FSWatcher>();

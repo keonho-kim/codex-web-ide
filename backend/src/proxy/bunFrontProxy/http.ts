@@ -1,4 +1,4 @@
-import type { BunUpgradeServer } from "./types";
+import type { BunUpgradeServer } from "@backend/proxy/bunFrontProxy/types";
 
 export function proxyHttpRequest(req: Request, internalPort: number, server: BunUpgradeServer) {
   const url = new URL(req.url);

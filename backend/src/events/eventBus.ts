@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import type { Envelope, SessionEvent } from "../shared/types";
+import type { Envelope, SessionEvent } from "@backend/shared/types";
 
 type Listener = (event: Envelope) => void;
 

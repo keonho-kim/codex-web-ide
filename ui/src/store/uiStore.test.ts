@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems } from "../lib/statusline";
-import { normalizeCollapsedMainPanels, normalizeControlTab, normalizeWorkbenchTab, selectCodexEvents, useUiStore } from "./uiStore";
+import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems } from "@/lib/statusline";
+import { normalizeCollapsedMainPanels, normalizeControlTab, normalizeWorkbenchTab, selectCodexEvents, useUiStore } from "@/store/uiStore";
 
 test("returns stable empty Codex event snapshots", () => {
   const state = useUiStore.getState();

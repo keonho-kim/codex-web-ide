@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
-import { safeFsPath } from "../files/path";
+import { safeFsPath } from "@backend/managers/files/path";
 
 export async function resolveCommandCwd(sessionCwd: string, input?: string) {
   const cwd = input ? await safeFsPath(sessionCwd, path.isAbsolute(input) ? path.relative(sessionCwd, input) : input) : await safeFsPath(sessionCwd);

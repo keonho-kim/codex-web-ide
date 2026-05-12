@@ -1,14 +1,14 @@
 import { EditorContent } from "@tiptap/react";
 import { ArrowUp, CircleStop } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "../../lib/classes";
-import { useUiStore } from "../../store/uiStore";
-import { CodexStatusLine } from "./CodexStatusLine";
-import { ComposerMentions } from "./ComposerMentions";
-import { MentionSuggestions } from "./MentionSuggestions";
-import { SlashCommandDialog } from "./SlashCommandDialog";
-import { SlashCommandSuggestions } from "./SlashCommandSuggestions";
-import { useComposer } from "./useComposer";
+import { cn } from "@/lib/classes";
+import { useUiStore } from "@/store/uiStore";
+import { CodexStatusLine } from "@/features/codex/CodexStatusLine";
+import { ComposerMentions } from "@/features/codex/ComposerMentions";
+import { MentionSuggestions } from "@/features/codex/MentionSuggestions";
+import { SlashCommandDialog } from "@/features/codex/SlashCommandDialog";
+import { SlashCommandSuggestions } from "@/features/codex/SlashCommandSuggestions";
+import { useComposer } from "@/features/codex/useComposer";
 
 export function Composer({
   activeProjectId,

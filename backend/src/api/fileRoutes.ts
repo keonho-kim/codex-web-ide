@@ -5,8 +5,8 @@ import {
   relativePathSchema,
   renameFileSchema,
   writeFileSchema,
-} from "../shared/schemas";
-import { type AppServices, withSession } from "./context";
+} from "@backend/shared/schemas";
+import { type AppServices, withSession } from "@backend/api/context";
 
 export function registerFileRoutes(app: Express, { events, files, sessions }: AppServices) {
   app.get("/api/sessions/:id/files/tree", withSession(sessions, async (req, res, session) => {

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import type { Project, Session, WorkspaceSettings } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
+import { api } from "@/lib/api";
+import type { Project, Session, WorkspaceSettings } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
 
 export function useAppData() {
   const queryClient = useQueryClient();

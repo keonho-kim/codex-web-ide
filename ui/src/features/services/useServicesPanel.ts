@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, splitCommand } from "../../lib/api";
-import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
-import { getErrorMessage } from "../../lib/errors";
-import type { ServiceInstance } from "../../lib/types";
+import { api, splitCommand } from "@/lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "@/lib/commandSafety";
+import { getErrorMessage } from "@/lib/errors";
+import type { ServiceInstance } from "@/lib/types";
 
 export function useServicesPanel(sessionId?: string) {
   const queryClient = useQueryClient();

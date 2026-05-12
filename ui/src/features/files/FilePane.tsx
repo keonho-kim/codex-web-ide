@@ -2,11 +2,11 @@ import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tree, type NodeRendererProps } from "react-arborist";
 import { FileCode2, Folder } from "lucide-react";
-import { SectionTitle } from "../../components/SectionTitle";
-import { api } from "../../lib/api";
-import type { FileTreeNode } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
-import { FileActions } from "./FileActions";
+import { SectionTitle } from "@/components/SectionTitle";
+import { api } from "@/lib/api";
+import type { FileTreeNode } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
+import { FileActions } from "@/features/files/FileActions";
 
 export function FilePane({ sessionId }: { sessionId?: string }) {
   const treeHost = useRef<HTMLDivElement>(null);

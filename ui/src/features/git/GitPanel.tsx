@@ -1,6 +1,6 @@
-import { GitChanges } from "./GitChanges";
-import { GitControls } from "./GitControls";
-import { useGitPanel } from "./useGitPanel";
+import { GitChanges } from "@/features/git/GitChanges";
+import { GitControls } from "@/features/git/GitControls";
+import { useGitPanel } from "@/features/git/useGitPanel";
 
 export function GitPanel({ sessionId }: { sessionId?: string }) {
   const git = useGitPanel(sessionId);

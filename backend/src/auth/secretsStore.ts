@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonStore } from "../managers/storage";
+import type { JsonStore } from "@backend/managers/storage";
 
 export type AuthSecrets = {
   telegram?: {

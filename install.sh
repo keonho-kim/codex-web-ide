@@ -166,6 +166,23 @@ resolve_global_bin_dir() {
   printf '%s/.bun/bin' "$HOME"
 }
 
+quote_shell_single() {
+  printf "%s" "$1" | sed "s/'/'\\\\''/g"
+}
+
+write_global_launcher() {
+  launcher_path="${global_bin_dir}/$1"
+  cli_path="$(quote_shell_single "${install_dir}/backend/src/cli/cw.ts")"
+
+  rm -f "$launcher_path"
+  {
+    printf '%s\n' '#!/bin/sh'
+    printf '%s\n' 'set -eu'
+    printf "exec bun '%s' \"\$@\"\n" "$cli_path"
+  } >"$launcher_path"
+  chmod 755 "$launcher_path"
+}
+
 resolve_release_platform() {
   case "$target" in
     termux | proot | wsl | linux) printf 'linux' ;;
@@ -231,8 +248,8 @@ mv "${stage_dir}/${package_name}" "$install_dir"
 
 global_bin_dir="$(resolve_global_bin_dir)"
 mkdir -p "$global_bin_dir"
-ln -sfn "${install_dir}/dist/bin/cw" "${global_bin_dir}/cw"
-ln -sfn "${install_dir}/dist/bin/cw" "${global_bin_dir}/codex-web"
+write_global_launcher "cw"
+write_global_launcher "codex-web"
 
 if [ -x "${global_bin_dir}/cw" ]; then
   info "Installed ${package_name}."

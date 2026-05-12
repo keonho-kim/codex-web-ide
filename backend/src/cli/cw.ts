@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
-import { runDoctor } from "./doctor";
-import { runManagedCommand, type ManagedCommandKind } from "./managedCommands";
-import { configureTelegram } from "./telegramConfig";
-import { init, open, start, status, stop, update } from "./serverCommands";
+import { runDoctor } from "@backend/cli/doctor";
+import { runManagedCommand, type ManagedCommandKind } from "@backend/cli/managedCommands";
+import { configureTelegram } from "@backend/cli/telegramConfig";
+import { init, open, start, status, stop, update } from "@backend/cli/serverCommands";
 
 const args = process.argv.slice(2);
 const command = args[0] || "start";

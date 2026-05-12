@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import type { GitFileStatus } from "../../lib/types";
-import { GitDiffView } from "./GitDiffView";
+import type { GitFileStatus } from "@/lib/types";
+import { GitDiffView } from "@/features/git/GitDiffView";
 
 type GitChangesProps = {
   files: GitFileStatus[];

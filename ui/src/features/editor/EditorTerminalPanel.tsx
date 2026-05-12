@@ -5,9 +5,9 @@ import "@xterm/xterm/css/xterm.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Circle, Plus, Square, Terminal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import type { TerminalSession } from "../../lib/types";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import type { TerminalSession } from "@/lib/types";
 
 export function EditorTerminalPanel({ onClose, sessionId }: { onClose(): void; sessionId?: string }) {
   const queryClient = useQueryClient();

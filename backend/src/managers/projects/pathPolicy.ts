@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { expandUserPath } from "../files/path";
+import { expandUserPath } from "@backend/managers/files/path";
 
 const FORBIDDEN_ROOTS = ["/dev", "/proc", "/sys", "/run", "/System", "/Network"];
 const FORBIDDEN_EXACT_ROOTS = ["/Volumes"];

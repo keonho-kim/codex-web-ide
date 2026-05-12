@@ -1,4 +1,4 @@
-import { removePidFile } from "./pidFile";
+import { removePidFile } from "@backend/cli/pidFile";
 
 export type RuntimeSupervisorOptions = {
   timeoutMs?: number;

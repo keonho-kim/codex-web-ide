@@ -1,8 +1,8 @@
 import { RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import type { CodexStatusSnapshot } from "../../lib/types";
+import { api } from "@/lib/api";
+import type { CodexStatusSnapshot } from "@/lib/types";
 
 export function CodexUsagePane({ sessionId }: { sessionId?: string }) {
   const status = useQuery({

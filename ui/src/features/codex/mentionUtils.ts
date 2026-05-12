@@ -1,4 +1,4 @@
-import type { ComposerMention, MentionPopupState } from "../../lib/types";
+import type { ComposerMention, MentionPopupState } from "@/lib/types";
 
 export function parseMentionSearch(value: string): MentionPopupState | null {
   const match = /(^|\s)([@$])([^\s@$]*)$/.exec(value);

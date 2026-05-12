@@ -1,4 +1,4 @@
-import type { FileTreeNode } from "../../lib/types";
+import type { FileTreeNode } from "@/lib/types";
 
 export function flattenFiles(nodes: FileTreeNode[]) {
   const files: string[] = [];

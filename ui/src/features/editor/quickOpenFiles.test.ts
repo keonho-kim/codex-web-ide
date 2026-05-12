@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import type { FileTreeNode } from "../../lib/types";
-import { filterFiles, flattenFiles } from "./quickOpenFiles";
+import type { FileTreeNode } from "@/lib/types";
+import { filterFiles, flattenFiles } from "@/features/editor/quickOpenFiles";
 
 test("flattens file tree nodes into file paths", () => {
   const nodes: FileTreeNode[] = [

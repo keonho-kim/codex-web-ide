@@ -4,26 +4,26 @@ import * as monaco from "monaco-editor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, FileText, Play, Save, Search, Terminal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
-import type { FileTreeNode, PreviewInstance } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
-import { isPreviewablePath } from "./documentTypes";
-import { registerEditorActions } from "./editorActions";
-import { PreviewSuggestionToast } from "./PreviewSuggestionToast";
-import { getSuggestedPreviewCommand, sameCommand } from "./previewCommands";
-import { QuickOpen } from "./QuickOpen";
-import { filterFiles, flattenFiles } from "./quickOpenFiles";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import { confirmDangerousCommand, requiresDangerousApproval } from "@/lib/commandSafety";
+import type { FileTreeNode, PreviewInstance } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
+import { isPreviewablePath } from "@/features/editor/documentTypes";
+import { registerEditorActions } from "@/features/editor/editorActions";
+import { PreviewSuggestionToast } from "@/features/editor/PreviewSuggestionToast";
+import { getSuggestedPreviewCommand, sameCommand } from "@/features/editor/previewCommands";
+import { QuickOpen } from "@/features/editor/QuickOpen";
+import { filterFiles, flattenFiles } from "@/features/editor/quickOpenFiles";
 
 type EditorMode = "raw" | "preview";
 type MonacoEditor = Parameters<OnMount>[0];
 
-const DocumentPreview = lazy(() => import("./DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
-const EditorTerminalPanel = lazy(() => import("./EditorTerminalPanel").then((module) => ({ default: module.EditorTerminalPanel })));
+const DocumentPreview = lazy(() => import("@/features/editor/DocumentPreview").then((module) => ({ default: module.DocumentPreview })));
+const EditorTerminalPanel = lazy(() => import("@/features/editor/EditorTerminalPanel").then((module) => ({ default: module.EditorTerminalPanel })));
 
 function preloadEditorTerminalPanel() {
-  return import("./EditorTerminalPanel");
+  return import("@/features/editor/EditorTerminalPanel");
 }
 
 loader.config({ monaco });

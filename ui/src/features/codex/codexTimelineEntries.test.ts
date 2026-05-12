@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import type { CodexMessage } from "../../lib/types";
-import type { CodexEventSummary } from "../../store/uiStore";
-import { buildCodexTimelineEntries, codexTimelineScrollKey } from "./codexTimelineEntries";
+import type { CodexMessage } from "@/lib/types";
+import type { CodexEventSummary } from "@/store/uiStore";
+import { buildCodexTimelineEntries, codexTimelineScrollKey } from "@/features/codex/codexTimelineEntries";
 
 test("renders SSE agent messages as transient assistant entries", () => {
   const entries = buildCodexTimelineEntries([], [

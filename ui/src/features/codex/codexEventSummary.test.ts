@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { summarizeCodexEvent } from "./codexEventSummary";
+import { summarizeCodexEvent } from "@/features/codex/codexEventSummary";
 
 test("summarizes Codex agent_message items as assistant text", () => {
   const summary = summarizeCodexEvent(messageEvent({

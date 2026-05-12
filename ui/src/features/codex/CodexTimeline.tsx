@@ -15,13 +15,13 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "../../lib/classes";
-import type { CodexMessage } from "../../lib/types";
-import { selectCodexEvents, type CodexEventSummary, useUiStore } from "../../store/uiStore";
-import { CommandSuggestion } from "./CommandSuggestion";
-import { buildCodexTimelineEntries, codexTimelineScrollKey } from "./codexTimelineEntries";
+import { cn } from "@/lib/classes";
+import type { CodexMessage } from "@/lib/types";
+import { selectCodexEvents, type CodexEventSummary, useUiStore } from "@/store/uiStore";
+import { CommandSuggestion } from "@/features/codex/CommandSuggestion";
+import { buildCodexTimelineEntries, codexTimelineScrollKey } from "@/features/codex/codexTimelineEntries";
 
-const MarkdownContent = lazy(() => import("../../shared/markdown/MarkdownContent").then((module) => ({ default: module.MarkdownContent })));
+const MarkdownContent = lazy(() => import("@/shared/markdown/MarkdownContent").then((module) => ({ default: module.MarkdownContent })));
 
 export function CodexTimeline({ messages, running, sessionId }: { messages: CodexMessage[]; running: boolean; sessionId?: string }) {
   const events = useUiStore((state) => selectCodexEvents(state, sessionId));

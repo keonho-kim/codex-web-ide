@@ -1,12 +1,12 @@
 import { spawn } from "node:child_process";
 import { nanoid } from "nanoid";
-import type { EventBus } from "../../events/eventBus";
-import type { ServiceInstance, Session } from "../../shared/types";
-import type { CommandHistoryStore } from "./historyStore";
-import { pipeProcessOutput } from "./output";
-import { resolveCommandCwd } from "./path";
-import { restoreDetachedProcess } from "./processHydration";
-import { ProcessRegistry } from "./processRegistry";
+import type { EventBus } from "@backend/events/eventBus";
+import type { ServiceInstance, Session } from "@backend/shared/types";
+import type { CommandHistoryStore } from "@backend/managers/commands/historyStore";
+import { pipeProcessOutput } from "@backend/managers/commands/output";
+import { resolveCommandCwd } from "@backend/managers/commands/path";
+import { restoreDetachedProcess } from "@backend/managers/commands/processHydration";
+import { ProcessRegistry } from "@backend/managers/commands/processRegistry";
 
 export class ServiceRunner {
   private services = new Map<string, ServiceInstance>();

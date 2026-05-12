@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { isIgnoredPath, isVisibleFileName } from "./ignore";
+import { isIgnoredPath, isVisibleFileName } from "@backend/managers/files/ignore";
 
 const DEFAULT_SEARCH_DEPTH = 12;
 const MAX_RESULTS = 50;

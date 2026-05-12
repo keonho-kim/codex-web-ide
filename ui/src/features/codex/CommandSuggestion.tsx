@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api, splitCommand } from "../../lib/api";
-import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
-import { getErrorMessage } from "../../lib/errors";
-import { useUiStore, type ControlTab } from "../../store/uiStore";
+import { api, splitCommand } from "@/lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "@/lib/commandSafety";
+import { getErrorMessage } from "@/lib/errors";
+import { useUiStore, type ControlTab } from "@/store/uiStore";
 
 type ManagedKind = "job" | "preview" | "service";
 

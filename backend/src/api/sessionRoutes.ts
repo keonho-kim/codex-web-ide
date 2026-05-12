@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
-import { createSessionSchema } from "../shared/schemas";
-import { asyncHandler, type AppServices } from "./context";
+import { createSessionSchema } from "@backend/shared/schemas";
+import { asyncHandler, type AppServices } from "@backend/api/context";
 
 export function registerSessionRoutes(app: Express, { codex, commands, events, files, git, sessions, terminals }: AppServices) {
   app.get("/api/sessions", asyncHandler(async (_req, res) => {

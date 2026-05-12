@@ -1,5 +1,5 @@
-import type { UiState } from "../../store/uiStore";
-import { STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "../../lib/statusline";
+import type { UiState } from "@/store/uiStore";
+import { STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "@/lib/statusline";
 
 export type CodexCommandSettings = UiState["codexCommandSettings"];
 export type CodexSettingsPatch = Partial<CodexCommandSettings>;

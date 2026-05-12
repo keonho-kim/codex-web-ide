@@ -1,10 +1,10 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
-import type { Session } from "../shared/types";
-import type { WorkspaceManager } from "./workspaceManager";
-import { JsonStore } from "./storage";
-import { expandUserPath, safeFsPath } from "./files/path";
-import { resolveProjectRoot } from "./projects/pathPolicy";
+import type { Session } from "@backend/shared/types";
+import type { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { JsonStore } from "@backend/managers/storage";
+import { expandUserPath, safeFsPath } from "@backend/managers/files/path";
+import { resolveProjectRoot } from "@backend/managers/projects/pathPolicy";
 
 export class SessionManager {
   constructor(

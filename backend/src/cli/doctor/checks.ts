@@ -1,9 +1,9 @@
-import { JsonStore } from "../../managers/storage";
-import { WorkspaceManager } from "../../managers/workspaceManager";
-import { createPlatformAdapter } from "../../platform/adapter";
-import { checkBinaries, defaultBinaryChecks, type BinaryResult } from "./binaries";
-import { checkPreviewPorts, isPortAvailable, type PreviewPortReport } from "./ports";
-import { buildDoctorWarnings } from "./warnings";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { createPlatformAdapter } from "@backend/platform/adapter";
+import { checkBinaries, defaultBinaryChecks, type BinaryResult } from "@backend/cli/doctor/binaries";
+import { checkPreviewPorts, isPortAvailable, type PreviewPortReport } from "@backend/cli/doctor/ports";
+import { buildDoctorWarnings } from "@backend/cli/doctor/warnings";
 
 export type DoctorReport = {
   platform: string;

@@ -12,6 +12,7 @@
     "dist/bin",
     "docs",
     "install.sh",
+    "tsconfig.json",
     "ui/dist",
     "DESIGN.md",
     "PRODUCT.md",

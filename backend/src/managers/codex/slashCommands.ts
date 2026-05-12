@@ -1,4 +1,4 @@
-import type { CodexSlashCommandDefinition } from "../../shared/types";
+import type { CodexSlashCommandDefinition } from "@backend/shared/types";
 
 // Source: OpenAI Codex TUI SlashCommand enum, checked against codex-cli 0.129.0.
 export const CODEX_SLASH_COMMANDS: CodexSlashCommandDefinition[] = [

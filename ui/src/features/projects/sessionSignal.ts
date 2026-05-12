@@ -1,5 +1,5 @@
-import type { CodexEventSummary } from "../../store/uiStore";
-import type { Session } from "../../lib/types";
+import type { CodexEventSummary } from "@/store/uiStore";
+import type { Session } from "@/lib/types";
 
 export type CodexSessionSignal =
   | { kind: "running"; label: "진행 중" }

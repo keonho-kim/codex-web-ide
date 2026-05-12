@@ -1,6 +1,6 @@
-import { JobList } from "./JobList";
-import { JobToolbar } from "./JobToolbar";
-import { useJobsPanel } from "./useJobsPanel";
+import { JobList } from "@/features/jobs/JobList";
+import { JobToolbar } from "@/features/jobs/JobToolbar";
+import { useJobsPanel } from "@/features/jobs/useJobsPanel";
 
 export function JobsPanel({ sessionId }: { sessionId?: string }) {
   const jobs = useJobsPanel(sessionId);

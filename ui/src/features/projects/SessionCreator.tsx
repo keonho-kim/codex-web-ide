@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import type { Session } from "../../lib/types";
+import { api } from "@/lib/api";
+import type { Session } from "@/lib/types";
 
 export function SessionCreator({ projectId, onCreated }: { projectId?: string; onCreated(session: Session): void }) {
   const queryClient = useQueryClient();

@@ -1,4 +1,4 @@
-import type { CodexEventSummary } from "../../store/uiStore";
+import type { CodexEventSummary } from "@/store/uiStore";
 
 type Envelope = {
   id?: string;

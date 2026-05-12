@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import type { Project } from "../../lib/types";
+import { api } from "@/lib/api";
+import type { Project } from "@/lib/types";
 
 export function ProjectCreator({ defaultProjectsDir, onCreated }: { defaultProjectsDir?: string; onCreated(project: Project): void }) {
   const queryClient = useQueryClient();

@@ -1,7 +1,7 @@
 import type { Express } from "express";
-import { browsePathSchema, createBrowseFolderSchema, createProjectSchema, workspaceSettingsSchema } from "../shared/schemas";
-import { authRequired } from "../auth/authManager";
-import { asyncHandler, type AppServices } from "./context";
+import { browsePathSchema, createBrowseFolderSchema, createProjectSchema, workspaceSettingsSchema } from "@backend/shared/schemas";
+import { authRequired } from "@backend/auth/authManager";
+import { asyncHandler, type AppServices } from "@backend/api/context";
 
 export function registerWorkspaceRoutes(app: Express, { auth, workspace }: AppServices) {
   app.get("/api/workspace/settings", asyncHandler(async (_req, res) => {

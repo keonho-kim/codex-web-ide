@@ -4,44 +4,44 @@ import express from "express";
 import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
-import { AuthManager, authRequired } from "./auth/authManager";
-import { SecretsStore } from "./auth/secretsStore";
-import { registerFileRoutes } from "./api/fileRoutes";
-import { registerGitRoutes } from "./api/gitRoutes";
-import { registerSessionRoutes } from "./api/sessionRoutes";
-import type { AppServices } from "./api/context";
-import { checkPreviewPorts } from "./cli/doctor/ports";
-import { executeManagedCommand } from "./cli/managedCommands";
-import { initProject } from "./cli/projectInit";
-import { createSignalShutdown, parseAuthFlag, sendStartupAccessTelegram } from "./cli/serverCommands";
-import { collectStartupAccessInfo, formatStartupAccessInfo, formatStartupTelegramMessage } from "./cli/startupAccess";
-import { EventBus } from "./events/eventBus";
-import { JsonStore } from "./managers/storage";
-import { WorkspaceManager } from "./managers/workspaceManager";
-import { CodexManager } from "./managers/codexManager";
-import { consumeCodexEvents } from "./managers/codex/events";
-import { CodexHistoryStore } from "./managers/codex/historyStore";
-import { buildCodexMentionContext } from "./managers/codex/mentions";
-import { buildCodexPrompt } from "./managers/codex/prompt";
-import { CODEX_SLASH_COMMANDS } from "./managers/codex/slashCommands";
-import { CodexThreadManager } from "./managers/codex/threads";
-import { CommandManager } from "./managers/commandManager";
-import { JobRunner } from "./managers/commands/jobRunner";
-import { resolveCommandCwd } from "./managers/commands/path";
-import { PortAllocator } from "./managers/commands/portAllocator";
-import { PreviewRunner } from "./managers/commands/previewRunner";
-import { ProcessRegistry } from "./managers/commands/processRegistry";
-import { preparePreviewLaunch } from "./managers/commands/runtimeAdapter";
-import { assertCommandAllowed } from "./managers/commands/safety";
-import { ServiceRunner } from "./managers/commands/serviceRunner";
-import { FileManager } from "./managers/fileManager";
-import { safeFsPath } from "./managers/files/path";
-import { isForbiddenProjectEntry, resolveProjectRoot } from "./managers/projects/pathPolicy";
-import { GitManager } from "./managers/gitManager";
-import { SessionManager } from "./managers/sessionManager";
-import { SkillManager } from "./managers/skillManager";
-import { isLongLivedHttpRequest, startBunFrontProxy } from "./proxy/bunFrontProxy";
-import { startServer } from "./server";
+import { AuthManager, authRequired } from "@backend/auth/authManager";
+import { SecretsStore } from "@backend/auth/secretsStore";
+import { registerFileRoutes } from "@backend/api/fileRoutes";
+import { registerGitRoutes } from "@backend/api/gitRoutes";
+import { registerSessionRoutes } from "@backend/api/sessionRoutes";
+import type { AppServices } from "@backend/api/context";
+import { checkPreviewPorts } from "@backend/cli/doctor/ports";
+import { executeManagedCommand } from "@backend/cli/managedCommands";
+import { initProject } from "@backend/cli/projectInit";
+import { createSignalShutdown, parseAuthFlag, sendStartupAccessTelegram } from "@backend/cli/serverCommands";
+import { collectStartupAccessInfo, formatStartupAccessInfo, formatStartupTelegramMessage } from "@backend/cli/startupAccess";
+import { EventBus } from "@backend/events/eventBus";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { CodexManager } from "@backend/managers/codexManager";
+import { consumeCodexEvents } from "@backend/managers/codex/events";
+import { CodexHistoryStore } from "@backend/managers/codex/historyStore";
+import { buildCodexMentionContext } from "@backend/managers/codex/mentions";
+import { buildCodexPrompt } from "@backend/managers/codex/prompt";
+import { CODEX_SLASH_COMMANDS } from "@backend/managers/codex/slashCommands";
+import { CodexThreadManager } from "@backend/managers/codex/threads";
+import { CommandManager } from "@backend/managers/commandManager";
+import { JobRunner } from "@backend/managers/commands/jobRunner";
+import { resolveCommandCwd } from "@backend/managers/commands/path";
+import { PortAllocator } from "@backend/managers/commands/portAllocator";
+import { PreviewRunner } from "@backend/managers/commands/previewRunner";
+import { ProcessRegistry } from "@backend/managers/commands/processRegistry";
+import { preparePreviewLaunch } from "@backend/managers/commands/runtimeAdapter";
+import { assertCommandAllowed } from "@backend/managers/commands/safety";
+import { ServiceRunner } from "@backend/managers/commands/serviceRunner";
+import { FileManager } from "@backend/managers/fileManager";
+import { safeFsPath } from "@backend/managers/files/path";
+import { isForbiddenProjectEntry, resolveProjectRoot } from "@backend/managers/projects/pathPolicy";
+import { GitManager } from "@backend/managers/gitManager";
+import { SessionManager } from "@backend/managers/sessionManager";
+import { SkillManager } from "@backend/managers/skillManager";
+import { isLongLivedHttpRequest, startBunFrontProxy } from "@backend/proxy/bunFrontProxy";
+import { startServer } from "@backend/server";
 import {
   cleanupTempRoots,
   closeServer,
@@ -60,7 +60,7 @@ import {
   waitForPreview,
   waitForService,
   webSocketRoundTrip,
-} from "./testing/productSmoke";
+} from "@backend/testing/productSmoke";
 
 afterEach(async () => {
   await cleanupTempRoots();

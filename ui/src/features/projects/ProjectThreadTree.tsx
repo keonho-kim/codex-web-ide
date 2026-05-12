@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Circle, CircleAlert, Folder, Loader2, MessageSquare, MessageSquarePlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import { EMPTY_CODEX_EVENTS, useUiStore } from "../../store/uiStore";
-import type { CodexThreadRecord, Project, Session } from "../../lib/types";
-import { codexSessionSignal } from "./sessionSignal";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import { EMPTY_CODEX_EVENTS, useUiStore } from "@/store/uiStore";
+import type { CodexThreadRecord, Project, Session } from "@/lib/types";
+import { codexSessionSignal } from "@/features/projects/sessionSignal";
 
 type ThreadListResponse = {
   threads: CodexThreadRecord[];

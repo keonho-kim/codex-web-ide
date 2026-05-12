@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { WorkspaceSettings } from "../../lib/types";
+import type { WorkspaceSettings } from "@/lib/types";
 
 export function WorkspaceSettingsPanel({
   settings,

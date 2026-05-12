@@ -1,13 +1,13 @@
 import { spawn } from "node:child_process";
 import { nanoid } from "nanoid";
-import type { EventBus } from "../../events/eventBus";
-import type { Job, Session } from "../../shared/types";
-import type { GitManager } from "../gitManager";
-import type { CommandHistoryStore } from "./historyStore";
-import { jobTimeoutMs } from "./jobTimeout";
-import { pipeProcessOutput } from "./output";
-import { resolveCommandCwd } from "./path";
-import { ProcessRegistry } from "./processRegistry";
+import type { EventBus } from "@backend/events/eventBus";
+import type { Job, Session } from "@backend/shared/types";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { CommandHistoryStore } from "@backend/managers/commands/historyStore";
+import { jobTimeoutMs } from "@backend/managers/commands/jobTimeout";
+import { pipeProcessOutput } from "@backend/managers/commands/output";
+import { resolveCommandCwd } from "@backend/managers/commands/path";
+import { ProcessRegistry } from "@backend/managers/commands/processRegistry";
 
 export class JobRunner {
   private jobs = new Map<string, Job>();

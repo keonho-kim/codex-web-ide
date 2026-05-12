@@ -1,4 +1,4 @@
-import { collectDoctorReport } from "./doctor/checks";
+import { collectDoctorReport } from "@backend/cli/doctor/checks";
 
 export async function runDoctor() {
   const report = await collectDoctorReport();

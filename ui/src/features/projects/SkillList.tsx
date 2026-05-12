@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { api } from "../../lib/api";
-import type { ComposerMention } from "../../lib/types";
+import { api } from "@/lib/api";
+import type { ComposerMention } from "@/lib/types";
 
 type SkillMention = Extract<ComposerMention, { type: "skill" }>;
 

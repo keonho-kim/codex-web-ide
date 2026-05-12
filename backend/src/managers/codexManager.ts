@@ -2,17 +2,17 @@ import type { ThreadEvent } from "@openai/codex-sdk";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
-import type { EventBus } from "../events/eventBus";
-import type { GitManager } from "./gitManager";
-import type { SessionManager } from "./sessionManager";
-import type { SkillManager } from "./skillManager";
-import type { CodexMessage, CodexSlashCommandResult, CodexStatusSnapshot, ComposerMention, Session } from "../shared/types";
-import type { CodexHistoryStore } from "./codex/historyStore";
-import { consumeCodexEvents, createAssistantMessage } from "./codex/events";
-import { buildCodexMentionContext, validateCodexMentions } from "./codex/mentions";
-import { buildCodexPrompt } from "./codex/prompt";
-import { CODEX_SLASH_COMMANDS, findCodexSlashCommand, normalizeSlashCommand } from "./codex/slashCommands";
-import { CodexThreadManager } from "./codex/threads";
+import type { EventBus } from "@backend/events/eventBus";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { SessionManager } from "@backend/managers/sessionManager";
+import type { SkillManager } from "@backend/managers/skillManager";
+import type { CodexMessage, CodexSlashCommandResult, CodexStatusSnapshot, ComposerMention, Session } from "@backend/shared/types";
+import type { CodexHistoryStore } from "@backend/managers/codex/historyStore";
+import { consumeCodexEvents, createAssistantMessage } from "@backend/managers/codex/events";
+import { buildCodexMentionContext, validateCodexMentions } from "@backend/managers/codex/mentions";
+import { buildCodexPrompt } from "@backend/managers/codex/prompt";
+import { CODEX_SLASH_COMMANDS, findCodexSlashCommand, normalizeSlashCommand } from "@backend/managers/codex/slashCommands";
+import { CodexThreadManager } from "@backend/managers/codex/threads";
 
 type RunningTurn = {
   controller: AbortController;

@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, splitCommand } from "../../lib/api";
-import { confirmDangerousCommand, requiresDangerousApproval } from "../../lib/commandSafety";
-import { getErrorMessage } from "../../lib/errors";
-import type { PreviewInstance } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
+import { api, splitCommand } from "@/lib/api";
+import { confirmDangerousCommand, requiresDangerousApproval } from "@/lib/commandSafety";
+import { getErrorMessage } from "@/lib/errors";
+import type { PreviewInstance } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
 
 export function usePreviewPanel(sessionId?: string) {
   const queryClient = useQueryClient();

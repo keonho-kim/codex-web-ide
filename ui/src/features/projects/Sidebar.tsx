@@ -1,10 +1,10 @@
 import { ListFilter, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "../../lib/classes";
-import { SectionTitle } from "../../components/SectionTitle";
-import type { Project, Session, WorkspaceSettings } from "../../lib/types";
-import { AddProjectDialog } from "./AddProjectDialog";
-import { ProjectThreadTree } from "./ProjectThreadTree";
+import { cn } from "@/lib/classes";
+import { SectionTitle } from "@/components/SectionTitle";
+import type { Project, Session, WorkspaceSettings } from "@/lib/types";
+import { AddProjectDialog } from "@/features/projects/AddProjectDialog";
+import { ProjectThreadTree } from "@/features/projects/ProjectThreadTree";
 
 export function Sidebar({
   projects,

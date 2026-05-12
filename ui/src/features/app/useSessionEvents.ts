@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import type { useQueryClient } from "@tanstack/react-query";
-import { useUiStore } from "../../store/uiStore";
-import type { Envelope } from "../../lib/types";
-import { summarizeCodexEvent } from "../codex/codexEventSummary";
+import { useUiStore } from "@/store/uiStore";
+import type { Envelope } from "@/lib/types";
+import { summarizeCodexEvent } from "@/features/codex/codexEventSummary";
 
 export function useSessionEvents(sessionIds: string[] | string | undefined, queryClient: ReturnType<typeof useQueryClient>) {
   const appendCodexEvent = useUiStore((state) => state.appendCodexEvent);

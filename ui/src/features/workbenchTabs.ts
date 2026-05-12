@@ -1,5 +1,5 @@
 import { BarChart3, Code2, GitBranch, MessageSquare, type LucideIcon } from "lucide-react";
-import type { WorkbenchTab } from "../store/uiStore";
+import type { WorkbenchTab } from "@/store/uiStore";
 
 export const workbenchTabs: Array<{ id: WorkbenchTab; label: string; icon: LucideIcon }> = [
   { id: "chat", label: "Chat", icon: MessageSquare },

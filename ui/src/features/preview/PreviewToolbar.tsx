@@ -1,6 +1,6 @@
 import { ExternalLink, Play, RefreshCw, RotateCw, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PreviewInstance } from "../../lib/types";
+import type { PreviewInstance } from "@/lib/types";
 
 type PreviewToolbarProps = {
   activePreview?: PreviewInstance;

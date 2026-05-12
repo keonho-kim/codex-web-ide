@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import type { Response } from "express";
-import { gitBranchSchema, gitCommitSchema, gitPathSchema } from "../shared/schemas";
-import type { EventBus } from "../events/eventBus";
-import type { GitManager } from "../managers/gitManager";
-import type { Session } from "../shared/types";
-import { type AppServices, withSession, zodFileList } from "./context";
+import { gitBranchSchema, gitCommitSchema, gitPathSchema } from "@backend/shared/schemas";
+import type { EventBus } from "@backend/events/eventBus";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { Session } from "@backend/shared/types";
+import { type AppServices, withSession, zodFileList } from "@backend/api/context";
 
 export function registerGitRoutes(app: Express, { events, git, sessions }: AppServices) {
   app.get("/api/sessions/:id/git/state", withSession(sessions, async (_req, res, session) => {

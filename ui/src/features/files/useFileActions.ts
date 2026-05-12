@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { useUiStore } from "../../store/uiStore";
+import { api } from "@/lib/api";
+import { useUiStore } from "@/store/uiStore";
 
 export function useFileActions(sessionId?: string) {
   const queryClient = useQueryClient();

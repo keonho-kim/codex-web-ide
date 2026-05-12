@@ -1,5 +1,5 @@
-import type { Job, PreviewInstance, ServiceInstance } from "../../shared/types";
-import type { JsonStore } from "../storage";
+import type { Job, PreviewInstance, ServiceInstance } from "@backend/shared/types";
+import type { JsonStore } from "@backend/managers/storage";
 
 export class CommandHistoryStore {
   constructor(private store: JsonStore) {}

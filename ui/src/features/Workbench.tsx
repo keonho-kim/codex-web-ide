@@ -3,14 +3,14 @@ import { Files, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen } fro
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "../store/uiStore";
-import { workbenchTabs } from "./workbenchTabs";
-import { CodexPane } from "./codex/CodexPane";
-import { CodexUsagePane } from "./codex/CodexUsagePane";
-import { FilePane } from "./files/FilePane";
+import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "@/store/uiStore";
+import { workbenchTabs } from "@/features/workbenchTabs";
+import { CodexPane } from "@/features/codex/CodexPane";
+import { CodexUsagePane } from "@/features/codex/CodexUsagePane";
+import { FilePane } from "@/features/files/FilePane";
 
-const ControlPane = lazy(() => import("./control/ControlPane").then((module) => ({ default: module.ControlPane })));
-const EditorPane = lazy(() => import("./editor/EditorPane").then((module) => ({ default: module.EditorPane })));
+const ControlPane = lazy(() => import("@/features/control/ControlPane").then((module) => ({ default: module.ControlPane })));
+const EditorPane = lazy(() => import("@/features/editor/EditorPane").then((module) => ({ default: module.EditorPane })));
 
 export function Workbench({
   activeProjectId,

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { isForbiddenProjectEntry } from "../projects/pathPolicy";
+import { isForbiddenProjectEntry } from "@backend/managers/projects/pathPolicy";
 
 export const ignoredPathPattern = /(^|[/\\])(\.git|node_modules|dist|build|target|\.next|\.venv)([/\\]|$)/;
 

@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
 import type { Thread, ThreadEvent } from "@openai/codex-sdk";
-import type { EventBus } from "../../events/eventBus";
-import type { CodexStatusSnapshot, Session } from "../../shared/types";
-import type { GitManager } from "../gitManager";
-import type { SessionManager } from "../sessionManager";
+import type { EventBus } from "@backend/events/eventBus";
+import type { CodexStatusSnapshot, Session } from "@backend/shared/types";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { SessionManager } from "@backend/managers/sessionManager";
 
 export async function consumeCodexEvents({
   events,

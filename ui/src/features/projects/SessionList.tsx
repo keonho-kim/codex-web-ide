@@ -1,7 +1,7 @@
 import { FileCode2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "../../lib/classes";
-import type { Session } from "../../lib/types";
+import { cn } from "@/lib/classes";
+import type { Session } from "@/lib/types";
 
 export function SessionList({
   sessions,

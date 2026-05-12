@@ -1,10 +1,10 @@
 import { Bug, GitBranch, MonitorPlay, Server } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { normalizeControlTab, useUiStore, type ControlTab } from "../../store/uiStore";
-import { GitPanel } from "../git/GitPanel";
-import { JobsPanel } from "../jobs/JobsPanel";
-import { PreviewPanel } from "../preview/PreviewPanel";
-import { ServicesPanel } from "../services/ServicesPanel";
+import { normalizeControlTab, useUiStore, type ControlTab } from "@/store/uiStore";
+import { GitPanel } from "@/features/git/GitPanel";
+import { JobsPanel } from "@/features/jobs/JobsPanel";
+import { PreviewPanel } from "@/features/preview/PreviewPanel";
+import { ServicesPanel } from "@/features/services/ServicesPanel";
 
 const controlTabs: Array<{ id: ControlTab; label: string; icon: typeof GitBranch }> = [
   { id: "git", label: "Git", icon: GitBranch },

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import type { Session } from "../../lib/types";
-import { codexSessionSignal } from "./sessionSignal";
+import type { Session } from "@/lib/types";
+import { codexSessionSignal } from "@/features/projects/sessionSignal";
 
 const session: Session = {
   id: "session",

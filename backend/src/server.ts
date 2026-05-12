@@ -1,22 +1,22 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { registerApiRoutes } from "./api";
-import type { AppServices } from "./api/context";
-import { AuthManager, authRequired, isLoopbackRequest, type AuthState } from "./auth/authManager";
-import { EventBus } from "./events/eventBus";
-import { CodexManager } from "./managers/codexManager";
-import { CodexHistoryStore } from "./managers/codex/historyStore";
-import { CommandManager } from "./managers/commandManager";
-import { FileManager } from "./managers/fileManager";
-import { GitManager } from "./managers/gitManager";
-import { SessionManager } from "./managers/sessionManager";
-import { SkillManager } from "./managers/skillManager";
-import { JsonStore } from "./managers/storage";
-import { TerminalManager } from "./managers/terminalManager";
-import { WorkspaceManager } from "./managers/workspaceManager";
-import { createPlatformAdapter } from "./platform/adapter";
-import { canUseBunFrontProxy, startBunFrontProxy } from "./proxy/bunFrontProxy";
+import { registerApiRoutes } from "@backend/api";
+import type { AppServices } from "@backend/api/context";
+import { AuthManager, authRequired, isLoopbackRequest, type AuthState } from "@backend/auth/authManager";
+import { EventBus } from "@backend/events/eventBus";
+import { CodexManager } from "@backend/managers/codexManager";
+import { CodexHistoryStore } from "@backend/managers/codex/historyStore";
+import { CommandManager } from "@backend/managers/commandManager";
+import { FileManager } from "@backend/managers/fileManager";
+import { GitManager } from "@backend/managers/gitManager";
+import { SessionManager } from "@backend/managers/sessionManager";
+import { SkillManager } from "@backend/managers/skillManager";
+import { JsonStore } from "@backend/managers/storage";
+import { TerminalManager } from "@backend/managers/terminalManager";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { createPlatformAdapter } from "@backend/platform/adapter";
+import { canUseBunFrontProxy, startBunFrontProxy } from "@backend/proxy/bunFrontProxy";
 
 export type ServerOptions = {
   host?: string;

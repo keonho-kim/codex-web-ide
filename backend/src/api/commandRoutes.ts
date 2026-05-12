@@ -1,6 +1,6 @@
 import type { Express } from "express";
-import { commandRequestSchema } from "../shared/schemas";
-import { type AppServices, withSession } from "./context";
+import { commandRequestSchema } from "@backend/shared/schemas";
+import { type AppServices, withSession } from "@backend/api/context";
 
 export function registerCommandRoutes(app: Express, { commands, sessions }: AppServices) {
   app.post("/api/sessions/:id/commands/job", withSession(sessions, async (req, res, session) => {

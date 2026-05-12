@@ -3,8 +3,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import type { JobRunner } from "../managers/commands/jobRunner";
-import type { Session } from "../shared/types";
+import type { JobRunner } from "@backend/managers/commands/jobRunner";
+import type { Session } from "@backend/shared/types";
 
 const tempRoots: string[] = [];
 

@@ -1,9 +1,9 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { AuthManager } from "../auth/authManager";
-import { TelegramClient, telegramDisplayName } from "../auth/telegramClient";
-import { JsonStore } from "../managers/storage";
-import { WorkspaceManager } from "../managers/workspaceManager";
+import { AuthManager } from "@backend/auth/authManager";
+import { TelegramClient, telegramDisplayName } from "@backend/auth/telegramClient";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
 
 export async function configureTelegram() {
   const terminal = createInterface({ input, output });

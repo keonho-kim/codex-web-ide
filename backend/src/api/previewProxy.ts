@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import type { AppServices } from "./context";
+import type { AppServices } from "@backend/api/context";
 
 export function registerPreviewProxy(app: Express, { commands }: AppServices) {
   const previewAssetProxy = createProxyMiddleware({

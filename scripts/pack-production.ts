@@ -37,6 +37,7 @@ await copyDirectory("node_modules");
 await copyFile("README.md");
 await copyFile("DESIGN.md");
 await copyFile("PRODUCT.md");
+await copyFile("tsconfig.json");
 
 await writeFile(path.join(packageRoot, "package.json"), JSON.stringify(productionPackageJson(), null, 2) + "\n");
 await writeFile(

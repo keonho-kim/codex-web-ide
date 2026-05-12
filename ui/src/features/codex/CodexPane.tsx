@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { SectionTitle } from "../../components/SectionTitle";
-import { api } from "../../lib/api";
-import type { CodexMessage, CodexThreadRecord } from "../../lib/types";
-import { CodexTimeline } from "./CodexTimeline";
-import { Composer } from "./Composer";
+import { SectionTitle } from "@/components/SectionTitle";
+import { api } from "@/lib/api";
+import type { CodexMessage, CodexThreadRecord } from "@/lib/types";
+import { CodexTimeline } from "@/features/codex/CodexTimeline";
+import { Composer } from "@/features/codex/Composer";
 
 export function CodexPane({
   activeProjectId,

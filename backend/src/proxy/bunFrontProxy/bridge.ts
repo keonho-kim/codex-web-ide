@@ -1,4 +1,4 @@
-import type { ServerSocket, SocketData } from "./types";
+import type { ServerSocket, SocketData } from "@backend/proxy/bunFrontProxy/types";
 
 const CLIENT_WS_CLOSING = 2;
 

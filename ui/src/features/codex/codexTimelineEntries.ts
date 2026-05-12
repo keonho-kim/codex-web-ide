@@ -1,5 +1,5 @@
-import type { CodexMessage } from "../../lib/types";
-import type { CodexEventSummary } from "../../store/uiStore";
+import type { CodexMessage } from "@/lib/types";
+import type { CodexEventSummary } from "@/store/uiStore";
 
 export type CodexTimelineEntry =
   | { kind: "message"; id: string; timestamp: number; message: CodexMessage; transient?: boolean }

@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Runtime } from "../../shared/types";
+import type { Runtime } from "@backend/shared/types";
 
 export type LaunchSpec = {
   command: string[];

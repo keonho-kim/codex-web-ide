@@ -1,14 +1,14 @@
 import type { Express } from "express";
-import type { AppServices } from "./context";
-import { registerCodexRoutes } from "./codexRoutes";
-import { registerCommandRoutes } from "./commandRoutes";
-import { registerFileRoutes } from "./fileRoutes";
-import { registerGitRoutes } from "./gitRoutes";
-import { registerMentionRoutes } from "./mentionRoutes";
-import { registerPreviewProxy } from "./previewProxy";
-import { registerSessionRoutes } from "./sessionRoutes";
-import { registerTerminalRoutes } from "./terminalRoutes";
-import { registerWorkspaceRoutes } from "./workspaceRoutes";
+import type { AppServices } from "@backend/api/context";
+import { registerCodexRoutes } from "@backend/api/codexRoutes";
+import { registerCommandRoutes } from "@backend/api/commandRoutes";
+import { registerFileRoutes } from "@backend/api/fileRoutes";
+import { registerGitRoutes } from "@backend/api/gitRoutes";
+import { registerMentionRoutes } from "@backend/api/mentionRoutes";
+import { registerPreviewProxy } from "@backend/api/previewProxy";
+import { registerSessionRoutes } from "@backend/api/sessionRoutes";
+import { registerTerminalRoutes } from "@backend/api/terminalRoutes";
+import { registerWorkspaceRoutes } from "@backend/api/workspaceRoutes";
 
 export function registerApiRoutes(app: Express, services: AppServices) {
   services.auth.registerRoutes(app);

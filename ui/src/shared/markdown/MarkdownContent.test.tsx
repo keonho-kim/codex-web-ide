@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "bun:test";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "@/shared/markdown/MarkdownContent";
 
 test("renders markdown, sanitized html, and katex content", () => {
   const html = renderToStaticMarkup(<MarkdownContent content={"# Title\n\n<strong>bold</strong>\n\n<script>alert(1)</script>\n\n$E=mc^2$"} />);

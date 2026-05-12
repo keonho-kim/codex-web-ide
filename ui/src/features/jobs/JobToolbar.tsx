@@ -1,6 +1,6 @@
 import { Play, RefreshCw, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Job } from "../../lib/types";
+import type { Job } from "@/lib/types";
 
 export function JobToolbar({
   cancelPending,

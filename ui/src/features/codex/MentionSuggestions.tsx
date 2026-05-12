@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { cn } from "../../lib/classes";
-import type { ComposerMention, MentionPopupState } from "../../lib/types";
-import { mentionKey, mentionLabel } from "./mentionUtils";
+import { cn } from "@/lib/classes";
+import type { ComposerMention, MentionPopupState } from "@/lib/types";
+import { mentionKey, mentionLabel } from "@/features/codex/mentionUtils";
 
 export function MentionSuggestions({
   mentionSearch,

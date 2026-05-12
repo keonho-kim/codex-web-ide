@@ -1,5 +1,5 @@
-import type { BinaryResult } from "./binaries";
-import { hasSharedStorageAccess } from "./storage";
+import type { BinaryResult } from "@backend/cli/doctor/binaries";
+import { hasSharedStorageAccess } from "@backend/cli/doctor/storage";
 
 export async function buildDoctorWarnings({
   appPort,

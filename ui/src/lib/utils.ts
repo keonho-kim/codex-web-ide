@@ -1,1 +1,1 @@
-export { cn } from "./classes";
+export { cn } from "@/lib/classes";

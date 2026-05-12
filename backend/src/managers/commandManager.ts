@@ -1,15 +1,15 @@
-import type { EventBus } from "../events/eventBus";
-import type { Session } from "../shared/types";
-import type { GitManager } from "./gitManager";
-import type { JsonStore } from "./storage";
-import { CommandHistoryStore } from "./commands/historyStore";
-import { JobRunner } from "./commands/jobRunner";
-import { PortAllocator } from "./commands/portAllocator";
-import { PreviewRunner } from "./commands/previewRunner";
-import { ProcessRegistry } from "./commands/processRegistry";
-import { assertCommandAllowed } from "./commands/safety";
-import { ServiceRunner } from "./commands/serviceRunner";
-export { detectRuntime } from "./commands/runtimeAdapter";
+import type { EventBus } from "@backend/events/eventBus";
+import type { Session } from "@backend/shared/types";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { JsonStore } from "@backend/managers/storage";
+import { CommandHistoryStore } from "@backend/managers/commands/historyStore";
+import { JobRunner } from "@backend/managers/commands/jobRunner";
+import { PortAllocator } from "@backend/managers/commands/portAllocator";
+import { PreviewRunner } from "@backend/managers/commands/previewRunner";
+import { ProcessRegistry } from "@backend/managers/commands/processRegistry";
+import { assertCommandAllowed } from "@backend/managers/commands/safety";
+import { ServiceRunner } from "@backend/managers/commands/serviceRunner";
+export { detectRuntime } from "@backend/managers/commands/runtimeAdapter";
 
 export class CommandManager {
   private processes = new ProcessRegistry();

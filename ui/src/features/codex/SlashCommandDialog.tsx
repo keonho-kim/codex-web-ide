@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { Check, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { normalizeStatuslineItems } from "../../lib/statusline";
-import type { CodexSlashCommandDefinition } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
-import { CommandSettingsBody } from "./CodexSettingsForm";
+import { normalizeStatuslineItems } from "@/lib/statusline";
+import type { CodexSlashCommandDefinition } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
+import { CommandSettingsBody } from "@/features/codex/CodexSettingsForm";
 
 type Options = Record<string, unknown>;
 

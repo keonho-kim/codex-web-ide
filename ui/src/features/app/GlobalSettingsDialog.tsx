@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Check, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CodexSettingsForm, type CodexSettingsPatch } from "../codex/CodexSettingsForm";
-import { useUiStore } from "../../store/uiStore";
+import { CodexSettingsForm, type CodexSettingsPatch } from "@/features/codex/CodexSettingsForm";
+import { useUiStore } from "@/store/uiStore";
 
 export function GlobalSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange(open: boolean): void }) {
   const settings = useUiStore((state) => state.codexCommandSettings);

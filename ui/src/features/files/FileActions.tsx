@@ -1,6 +1,6 @@
 import { FilePlus2, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFileActions } from "./useFileActions";
+import { useFileActions } from "@/features/files/useFileActions";
 
 export function FileActions({ sessionId }: { sessionId?: string }) {
   const files = useFileActions(sessionId);

@@ -1,14 +1,14 @@
-import { startServer } from "../server";
-import { createPlatformAdapter } from "../platform/adapter";
-import { JsonStore } from "../managers/storage";
-import { WorkspaceManager } from "../managers/workspaceManager";
-import { serverBaseUrl } from "./apiClient";
-import { collectStartupDoctorWarnings } from "./doctor/checks";
-import { readPidFile, removePidFile, writePidFile } from "./pidFile";
-import { initProject } from "./projectInit";
-import { createRuntimeSupervisor, type RuntimeSupervisorOptions } from "./runtimeSupervisor";
-import { collectStartupAccessInfo, formatStartupAccessInfo } from "./startupAccess";
-import { sendStartupAccessTelegram } from "./startupTelegram";
+import { startServer } from "@backend/server";
+import { createPlatformAdapter } from "@backend/platform/adapter";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { serverBaseUrl } from "@backend/cli/apiClient";
+import { collectStartupDoctorWarnings } from "@backend/cli/doctor/checks";
+import { readPidFile, removePidFile, writePidFile } from "@backend/cli/pidFile";
+import { initProject } from "@backend/cli/projectInit";
+import { createRuntimeSupervisor, type RuntimeSupervisorOptions } from "@backend/cli/runtimeSupervisor";
+import { collectStartupAccessInfo, formatStartupAccessInfo } from "@backend/cli/startupAccess";
+import { sendStartupAccessTelegram } from "@backend/cli/startupTelegram";
 
 export { sendStartupAccessTelegram };
 

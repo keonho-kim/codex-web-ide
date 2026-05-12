@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { setCsrfToken } from "../../lib/api";
+import { setCsrfToken } from "@/lib/api";
 
 type AuthStatus = {
   enabled: boolean;

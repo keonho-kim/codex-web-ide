@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
-import { workspaceSettingsSchema } from "../shared/schemas";
-import type { LocalPathListing, Project, Session, WorkspaceSettings } from "../shared/types";
-import { createPlatformAdapter } from "../platform/adapter";
-import { expandUserPath } from "./files/path";
-import { isForbiddenProjectEntry, isInsideRoot, resolveProjectRoot } from "./projects/pathPolicy";
-import { JsonStore } from "./storage";
+import { workspaceSettingsSchema } from "@backend/shared/schemas";
+import type { LocalPathListing, Project, Session, WorkspaceSettings } from "@backend/shared/types";
+import { createPlatformAdapter } from "@backend/platform/adapter";
+import { expandUserPath } from "@backend/managers/files/path";
+import { isForbiddenProjectEntry, isInsideRoot, resolveProjectRoot } from "@backend/managers/projects/pathPolicy";
+import { JsonStore } from "@backend/managers/storage";
 
 export class WorkspaceManager {
   private adapter = createPlatformAdapter();

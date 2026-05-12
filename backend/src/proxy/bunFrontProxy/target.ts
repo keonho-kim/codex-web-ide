@@ -1,4 +1,4 @@
-import type { AppServices } from "../../api/context";
+import type { AppServices } from "@backend/api/context";
 
 export function previewWebSocketTarget(req: Request, { commands }: AppServices) {
   const url = new URL(req.url);

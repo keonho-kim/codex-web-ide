@@ -1,5 +1,5 @@
-import type { ComposerMention } from "../../lib/types";
-import { mentionKey, mentionLabel } from "./mentionUtils";
+import type { ComposerMention } from "@/lib/types";
+import { mentionKey, mentionLabel } from "@/features/codex/mentionUtils";
 
 export function ComposerMentions({ mentions, onRemove }: { mentions: ComposerMention[]; onRemove(mention: ComposerMention): void }) {
   if (mentions.length === 0) return null;

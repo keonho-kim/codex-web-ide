@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
-import type { Session, TerminalSession } from "../shared/types";
+import type { Session, TerminalSession } from "@backend/shared/types";
 
 export type TerminalClient = {
   send(message: string): void;

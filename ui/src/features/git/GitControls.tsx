@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { GitState } from "../../lib/types";
+import type { GitState } from "@/lib/types";
 
 type GitControlsProps = {
   branchName: string;

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import type { CodexMessage, CodexThreadRecord, Session } from "../../shared/types";
-import type { JsonStore } from "../storage";
+import type { CodexMessage, CodexThreadRecord, Session } from "@backend/shared/types";
+import type { JsonStore } from "@backend/managers/storage";
 
 export class CodexHistoryStore {
   constructor(private store: JsonStore) {}

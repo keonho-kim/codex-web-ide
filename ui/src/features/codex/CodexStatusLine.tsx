@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import { normalizeStatuslineItems, type CodexStatusLineItem } from "../../lib/statusline";
-import type { CodexStatusSnapshot, Job, ServiceInstance } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import { normalizeStatuslineItems, type CodexStatusLineItem } from "@/lib/statusline";
+import type { CodexStatusSnapshot, Job, ServiceInstance } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
 
 export function CodexStatusLine({ running, sessionId }: { running?: boolean; sessionId?: string }) {
   const settings = useUiStore((state) => state.codexCommandSettings);

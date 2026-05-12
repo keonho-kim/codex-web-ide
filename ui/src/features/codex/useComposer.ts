@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { getErrorMessage } from "../../lib/errors";
-import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention, Session } from "../../lib/types";
-import { useUiStore } from "../../store/uiStore";
-import { mentionKey, parseMentionSearch } from "./mentionUtils";
+import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errors";
+import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention, Session } from "@/lib/types";
+import { useUiStore } from "@/store/uiStore";
+import { mentionKey, parseMentionSearch } from "@/features/codex/mentionUtils";
 
 export function useComposer({
   activeProjectId,

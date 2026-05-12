@@ -1,15 +1,15 @@
 import type { NextFunction, Request, Response } from "express";
-import type { EventBus } from "../events/eventBus";
-import type { CodexManager } from "../managers/codexManager";
-import type { CommandManager } from "../managers/commandManager";
-import type { FileManager } from "../managers/fileManager";
-import type { GitManager } from "../managers/gitManager";
-import type { SessionManager } from "../managers/sessionManager";
-import type { SkillManager } from "../managers/skillManager";
-import type { TerminalManager } from "../managers/terminalManager";
-import type { WorkspaceManager } from "../managers/workspaceManager";
-import type { PlatformAdapter } from "../platform/adapter";
-import type { AuthManager } from "../auth/authManager";
+import type { EventBus } from "@backend/events/eventBus";
+import type { CodexManager } from "@backend/managers/codexManager";
+import type { CommandManager } from "@backend/managers/commandManager";
+import type { FileManager } from "@backend/managers/fileManager";
+import type { GitManager } from "@backend/managers/gitManager";
+import type { SessionManager } from "@backend/managers/sessionManager";
+import type { SkillManager } from "@backend/managers/skillManager";
+import type { TerminalManager } from "@backend/managers/terminalManager";
+import type { WorkspaceManager } from "@backend/managers/workspaceManager";
+import type { PlatformAdapter } from "@backend/platform/adapter";
+import type { AuthManager } from "@backend/auth/authManager";
 
 export type AppServices = {
   events: EventBus;

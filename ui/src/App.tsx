@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { AuthGate } from "./features/auth/AuthGate";
-import { Sidebar } from "./features/projects/Sidebar";
-import { Topbar } from "./features/app/Topbar";
-import { Workbench } from "./features/Workbench";
-import { useAppData } from "./features/app/useAppData";
-import { useSessionEvents } from "./features/app/useSessionEvents";
-import { cn } from "./lib/classes";
-import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "./store/uiStore";
+import { AuthGate } from "@/features/auth/AuthGate";
+import { Sidebar } from "@/features/projects/Sidebar";
+import { Topbar } from "@/features/app/Topbar";
+import { Workbench } from "@/features/Workbench";
+import { useAppData } from "@/features/app/useAppData";
+import { useSessionEvents } from "@/features/app/useSessionEvents";
+import { cn } from "@/lib/classes";
+import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "@/store/uiStore";
 
 export function App() {
   const queryClient = useQueryClient();

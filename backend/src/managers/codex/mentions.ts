@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ComposerMention } from "../../shared/types";
-import type { SkillDocument } from "../skillManager";
-import { safeFsPath } from "../files/path";
+import type { ComposerMention } from "@backend/shared/types";
+import type { SkillDocument } from "@backend/managers/skillManager";
+import { safeFsPath } from "@backend/managers/files/path";
 
 const MAX_FILE_CHARS = 20_000;
 const MAX_SKILL_CHARS = 12_000;

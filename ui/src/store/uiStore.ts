@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "../lib/statusline";
-import type { ComposerMention, MentionPopupState } from "../lib/types";
+import { DEFAULT_STATUSLINE_ITEMS, normalizeStatuslineItems, type CodexStatusLineItem } from "@/lib/statusline";
+import type { ComposerMention, MentionPopupState } from "@/lib/types";
 
 export type CodexEventSummary = {
   id: string;

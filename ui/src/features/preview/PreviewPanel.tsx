@@ -1,6 +1,6 @@
-import { PreviewFrame } from "./PreviewFrame";
-import { PreviewToolbar } from "./PreviewToolbar";
-import { usePreviewPanel } from "./usePreviewPanel";
+import { PreviewFrame } from "@/features/preview/PreviewFrame";
+import { PreviewToolbar } from "@/features/preview/PreviewToolbar";
+import { usePreviewPanel } from "@/features/preview/usePreviewPanel";
 
 export function PreviewPanel({ sessionId }: { sessionId?: string }) {
   const preview = usePreviewPanel(sessionId);

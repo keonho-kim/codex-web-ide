@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { getSuggestedPreviewCommand, sameCommand } from "./previewCommands";
+import { getSuggestedPreviewCommand, sameCommand } from "@/features/editor/previewCommands";
 
 test("suggests a Bun dev preview for package.json with a dev script", () => {
   expect(getSuggestedPreviewCommand("package.json", JSON.stringify({ scripts: { dev: "vite" } }))).toEqual(["bun", "run", "dev"]);

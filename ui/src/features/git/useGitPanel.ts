@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { getErrorMessage } from "../../lib/errors";
-import type { GitFileStatus, GitState } from "../../lib/types";
+import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errors";
+import type { GitFileStatus, GitState } from "@/lib/types";
 
 export function useGitPanel(sessionId?: string) {
   const queryClient = useQueryClient();

@@ -1,4 +1,4 @@
-import type { AppServices } from "../../api/context";
+import type { AppServices } from "@backend/api/context";
 
 export type BunServer = {
   stop(force?: boolean): void;

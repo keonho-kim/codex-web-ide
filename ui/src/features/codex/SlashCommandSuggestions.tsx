@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Settings2, TerminalSquare } from "lucide-react";
-import { cn } from "../../lib/classes";
-import type { CodexSlashCommandDefinition } from "../../lib/types";
+import { cn } from "@/lib/classes";
+import type { CodexSlashCommandDefinition } from "@/lib/types";
 
 export function SlashCommandSuggestions({
   commands,

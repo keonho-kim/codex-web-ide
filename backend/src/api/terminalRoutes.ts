@@ -1,6 +1,6 @@
 import type { Express } from "express";
-import { createTerminalSchema, resizeTerminalSchema } from "../shared/schemas";
-import { type AppServices, withSession } from "./context";
+import { createTerminalSchema, resizeTerminalSchema } from "@backend/shared/schemas";
+import { type AppServices, withSession } from "@backend/api/context";
 
 export function registerTerminalRoutes(app: Express, { sessions, terminals }: AppServices) {
   app.get("/api/sessions/:id/terminals", withSession(sessions, async (_req, res, session) => {

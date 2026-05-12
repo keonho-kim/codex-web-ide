@@ -3,9 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, FileText, Folder, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import type { LocalPathListing, Project } from "../../lib/types";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import type { LocalPathListing, Project } from "@/lib/types";
 
 const DEFAULT_BROWSE_PATH = "~";
 

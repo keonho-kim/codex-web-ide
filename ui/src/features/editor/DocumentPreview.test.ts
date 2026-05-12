@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isHtmlPath, isMarkdownPath, isPreviewablePath } from "./documentTypes";
+import { isHtmlPath, isMarkdownPath, isPreviewablePath } from "@/features/editor/documentTypes";
 
 test("detects previewable markdown and html files", () => {
   expect(isMarkdownPath("README.md")).toBe(true);

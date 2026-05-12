@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { expandUserPath } from "../managers/files/path";
-import { JsonStore } from "../managers/storage";
-import { WorkspaceManager } from "../managers/workspaceManager";
+import { expandUserPath } from "@backend/managers/files/path";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
 
 const runtimeAgents = `# Codex Web Runtime Policy
 

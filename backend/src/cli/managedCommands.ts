@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import { api as defaultApi } from "./apiClient";
-import type { Job, PreviewInstance, ServiceInstance, Session } from "../shared/types";
+import { api as defaultApi } from "@backend/cli/apiClient";
+import type { Job, PreviewInstance, ServiceInstance, Session } from "@backend/shared/types";
 
 export type ManagedCommandKind = "job" | "preview" | "service";
 type ApiClient = <T>(pathName: string, options?: { method?: string; body?: unknown }) => Promise<T>;

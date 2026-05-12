@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { cn } from "../../lib/classes";
-import type { Job } from "../../lib/types";
-import { formatDuration } from "./useJobsPanel";
+import { cn } from "@/lib/classes";
+import type { Job } from "@/lib/types";
+import { formatDuration } from "@/features/jobs/useJobsPanel";
 
 export function JobList({
   jobs,

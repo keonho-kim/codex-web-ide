@@ -1,4 +1,4 @@
-import type { GitFileStatus, GitState } from "../../shared/types";
+import type { GitFileStatus, GitState } from "@backend/shared/types";
 
 export function parsePorcelainV2(stdout: string): GitState {
   const state: GitState = {

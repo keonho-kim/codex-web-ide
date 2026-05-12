@@ -1,6 +1,6 @@
-import { ServiceList } from "./ServiceList";
-import { ServiceToolbar } from "./ServiceToolbar";
-import { useServicesPanel } from "./useServicesPanel";
+import { ServiceList } from "@/features/services/ServiceList";
+import { ServiceToolbar } from "@/features/services/ServiceToolbar";
+import { useServicesPanel } from "@/features/services/useServicesPanel";
 
 export function ServicesPanel({ sessionId }: { sessionId?: string }) {
   const services = useServicesPanel(sessionId);

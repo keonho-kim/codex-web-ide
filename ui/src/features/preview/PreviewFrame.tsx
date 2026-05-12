@@ -1,4 +1,4 @@
-import type { PreviewInstance } from "../../lib/types";
+import type { PreviewInstance } from "@/lib/types";
 
 export function PreviewFrame({ iframeVersion, preview }: { iframeVersion: number; preview?: PreviewInstance }) {
   if (!preview) return <p className="text-xs text-muted">No preview selected.</p>;

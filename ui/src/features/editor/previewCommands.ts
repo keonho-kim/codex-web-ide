@@ -1,4 +1,4 @@
-import { isHtmlPath } from "./documentTypes";
+import { isHtmlPath } from "@/features/editor/documentTypes";
 
 const PACKAGE_JSON_PATH = /(^|\/)package\.json$/i;
 

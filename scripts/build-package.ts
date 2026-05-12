@@ -8,8 +8,21 @@ const launcherPath = path.join(binDir, "cw");
 await mkdir(binDir, { recursive: true });
 await writeFile(
   launcherPath,
-  `#!/usr/bin/env bun
-import "../../backend/src/cli/cw.ts";
+  `#!/bin/sh
+set -eu
+
+script="$0"
+while [ -L "$script" ]; do
+  script_dir="$(CDPATH= cd -- "$(dirname -- "$script")" && pwd -P)"
+  link_target="$(readlink "$script")"
+  case "$link_target" in
+    /*) script="$link_target" ;;
+    *) script="$script_dir/$link_target" ;;
+  esac
+done
+
+script_dir="$(CDPATH= cd -- "$(dirname -- "$script")" && pwd -P)"
+exec bun "$script_dir/../../backend/src/cli/cw.ts" "$@"
 `,
 );
 await chmod(launcherPath, 0o755);

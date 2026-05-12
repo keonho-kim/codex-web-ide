@@ -13,7 +13,10 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./ui/src/*"]
+      "@/*": ["./ui/src/*"],
+      "@backend/*": ["./backend/src/*"],
+      "@bin/*": ["./bin/*"],
+      "@scripts/*": ["./scripts/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

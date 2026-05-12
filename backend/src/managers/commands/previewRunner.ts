@@ -1,15 +1,15 @@
 import { spawn } from "node:child_process";
 import { nanoid } from "nanoid";
-import type { EventBus } from "../../events/eventBus";
-import type { PreviewInstance, Session } from "../../shared/types";
-import { waitForPreviewHealth } from "./health";
-import type { CommandHistoryStore } from "./historyStore";
-import { pipeProcessOutput } from "./output";
-import { resolveCommandCwd } from "./path";
-import { PortAllocator } from "./portAllocator";
-import { preparePreviewLaunch } from "./runtimeAdapter";
-import { restoreDetachedProcess } from "./processHydration";
-import { ProcessRegistry } from "./processRegistry";
+import type { EventBus } from "@backend/events/eventBus";
+import type { PreviewInstance, Session } from "@backend/shared/types";
+import { waitForPreviewHealth } from "@backend/managers/commands/health";
+import type { CommandHistoryStore } from "@backend/managers/commands/historyStore";
+import { pipeProcessOutput } from "@backend/managers/commands/output";
+import { resolveCommandCwd } from "@backend/managers/commands/path";
+import { PortAllocator } from "@backend/managers/commands/portAllocator";
+import { preparePreviewLaunch } from "@backend/managers/commands/runtimeAdapter";
+import { restoreDetachedProcess } from "@backend/managers/commands/processHydration";
+import { ProcessRegistry } from "@backend/managers/commands/processRegistry";
 
 export class PreviewRunner {
   private previews = new Map<string, PreviewInstance>();

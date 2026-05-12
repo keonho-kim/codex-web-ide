@@ -1,7 +1,7 @@
 import { Folder, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "../../lib/classes";
-import type { Project } from "../../lib/types";
+import { cn } from "@/lib/classes";
+import type { Project } from "@/lib/types";
 
 export function ProjectList({
   projects,

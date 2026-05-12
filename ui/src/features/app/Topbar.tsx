@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, GitBranch, Menu, Server, Settings, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { api } from "../../lib/api";
-import { cn } from "../../lib/classes";
-import type { GitState, Job, ServiceInstance, Session } from "../../lib/types";
-import type { WorkbenchTab } from "../../store/uiStore";
-import { workbenchTabs } from "../workbenchTabs";
-import { GlobalSettingsDialog } from "./GlobalSettingsDialog";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/classes";
+import type { GitState, Job, ServiceInstance, Session } from "@/lib/types";
+import type { WorkbenchTab } from "@/store/uiStore";
+import { workbenchTabs } from "@/features/workbenchTabs";
+import { GlobalSettingsDialog } from "@/features/app/GlobalSettingsDialog";
 
 export function Topbar({
   activeSession,

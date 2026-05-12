@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Express, NextFunction, Request, Response } from "express";
-import type { JsonStore } from "../managers/storage";
-import type { WorkspaceManager } from "../managers/workspaceManager";
-import type { WorkspaceSettings } from "../shared/types";
-import { AuditLogger } from "./auditLogger";
-import { SecretsStore, type AuthSecrets } from "./secretsStore";
-import { TelegramClient, telegramDisplayName, type TelegramUpdate } from "./telegramClient";
+import type { JsonStore } from "@backend/managers/storage";
+import type { WorkspaceManager } from "@backend/managers/workspaceManager";
+import type { WorkspaceSettings } from "@backend/shared/types";
+import { AuditLogger } from "@backend/auth/auditLogger";
+import { SecretsStore, type AuthSecrets } from "@backend/auth/secretsStore";
+import { TelegramClient, telegramDisplayName, type TelegramUpdate } from "@backend/auth/telegramClient";
 
 export type AuthState = {
   enabled: boolean;

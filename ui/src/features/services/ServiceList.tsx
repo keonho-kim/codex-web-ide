@@ -1,6 +1,6 @@
 import { RefreshCw, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ServiceInstance } from "../../lib/types";
+import type { ServiceInstance } from "@/lib/types";
 
 export function ServiceList({
   restartPending,

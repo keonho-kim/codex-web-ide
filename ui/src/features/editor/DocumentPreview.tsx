@@ -1,5 +1,5 @@
-import { MarkdownContent } from "../../shared/markdown/MarkdownContent";
-import { isHtmlPath } from "./documentTypes";
+import { MarkdownContent } from "@/shared/markdown/MarkdownContent";
+import { isHtmlPath } from "@/features/editor/documentTypes";
 
 export function DocumentPreview({ content, path }: { content: string; path: string }) {
   if (isHtmlPath(path)) {

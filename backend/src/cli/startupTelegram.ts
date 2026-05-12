@@ -1,8 +1,8 @@
-import { SecretsStore } from "../auth/secretsStore";
-import { TelegramClient } from "../auth/telegramClient";
-import { JsonStore } from "../managers/storage";
-import { WorkspaceManager } from "../managers/workspaceManager";
-import { formatStartupTelegramMessage, type StartupAccessInfo } from "./startupAccess";
+import { SecretsStore } from "@backend/auth/secretsStore";
+import { TelegramClient } from "@backend/auth/telegramClient";
+import { JsonStore } from "@backend/managers/storage";
+import { WorkspaceManager } from "@backend/managers/workspaceManager";
+import { formatStartupTelegramMessage, type StartupAccessInfo } from "@backend/cli/startupAccess";
 
 export async function sendStartupAccessTelegram(access: StartupAccessInfo) {
   const store = new JsonStore();
