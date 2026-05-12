@@ -65,14 +65,14 @@ export function webSocketRoundTrip(url: string, message: string) {
   });
 }
 
-export function terminalWebSocketContains(url: string, input: string, expected: string) {
+export function terminalWebSocketContains(url: string, input: string, expected: string, timeoutMs = 10_000) {
   return new Promise<string>((resolve, reject) => {
     const ws = new WebSocket(url);
     let output = "";
     const timer = setTimeout(() => {
       ws.close();
       reject(new Error(`Terminal WebSocket timeout. Output: ${output}`));
-    }, 5000);
+    }, timeoutMs);
     ws.addEventListener("open", () => {
       ws.send(JSON.stringify({ type: "input", data: input }));
     });

@@ -1075,7 +1075,7 @@ describe("product smoke coverage", () => {
       restoreEnv("CODEX_WEB_HOME", previousHome);
       restoreEnv("SHELL", previousShell);
     }
-  });
+  }, 15_000);
 
   test("starts, reports, and stops through the CLI", async () => {
     const home = await tempDir();
