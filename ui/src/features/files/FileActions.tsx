@@ -13,9 +13,9 @@ export function FileActions({ sessionId }: { sessionId?: string }) {
         if (sessionId && files.trimmedPath) files.actions.createFile();
       }}
     >
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_repeat(4,28px)] items-center gap-1 max-[480px]:grid-cols-4">
         <input
-          className="h-7 min-w-0 flex-1 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink"
+          className="h-7 min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1 text-xs text-ink max-[480px]:col-span-4"
           value={files.pathInput}
           onChange={(event) => files.setPathInput(event.target.value)}
           placeholder="path/to/file.ts"

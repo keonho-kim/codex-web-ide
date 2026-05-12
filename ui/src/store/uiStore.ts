@@ -23,8 +23,8 @@ export const DEFAULT_WORKBENCH_LAYOUT = [18, 52, 30];
 export const EMPTY_CODEX_EVENTS: CodexEventSummary[] = [];
 export type MainPanelKey = "files" | "editor" | "codex" | "bottom";
 export type CollapsedMainPanels = Record<MainPanelKey, boolean>;
-export type WorkbenchTab = "chat" | "editor" | "control" | "usage";
-export type ControlTab = "git" | "jobs" | "previews" | "services";
+export type WorkbenchTab = "chat" | "editor" | "system";
+export type ControlTab = "git" | "runtime" | "usage";
 export const DEFAULT_COLLAPSED_MAIN_PANELS: CollapsedMainPanels = {
   files: false,
   editor: false,
@@ -318,9 +318,11 @@ export function normalizeCollapsedMainPanels(value?: Partial<CollapsedMainPanels
 }
 
 export function normalizeWorkbenchTab(value?: string): WorkbenchTab {
-  return value === "editor" || value === "control" || value === "usage" ? value : "chat";
+  if (value === "control" || value === "usage" || value === "system") return "system";
+  return value === "editor" ? value : "chat";
 }
 
 export function normalizeControlTab(value?: string): ControlTab {
-  return value === "jobs" || value === "previews" || value === "services" ? value : "git";
+  if (value === "jobs" || value === "previews" || value === "services" || value === "runtime") return "runtime";
+  return value === "usage" ? value : "git";
 }

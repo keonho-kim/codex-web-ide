@@ -25,6 +25,7 @@ export function useComposer({
   const setMentionSearch = useUiStore((state) => state.setMentionPopup);
   const setSelectedMentions = useUiStore((state) => state.setComposerMentions);
   const clearComposer = useUiStore((state) => state.clearComposer);
+  const setControlTab = useUiStore((state) => state.setControlTab);
   const setWorkbenchTab = useUiStore((state) => state.setWorkbenchTab);
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [activeSlashCommand, setActiveSlashCommand] = useState<CodexSlashCommandDefinition | null>(null);
@@ -103,7 +104,10 @@ export function useComposer({
         editor?.commands.clearContent();
         clearComposer();
       }
-      if (result.status || result.command === "status") setWorkbenchTab("usage");
+      if (result.status || result.command === "status") {
+        setWorkbenchTab("system");
+        setControlTab("usage");
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["codex", sessionId] }),
         queryClient.invalidateQueries({ queryKey: ["codex", sessionId, "status"] }),
@@ -169,7 +173,8 @@ export function useComposer({
     if (command.nativeSurface === "tab") {
       editor?.commands.clearContent();
       clearComposer();
-      setWorkbenchTab("usage");
+      setWorkbenchTab("system");
+      setControlTab("usage");
     }
     slashCommand.mutate({ command: command.command });
   };
@@ -196,7 +201,8 @@ export function useComposer({
         if (parsed.command.nativeSurface === "tab") {
           editor?.commands.clearContent();
           clearComposer();
-          setWorkbenchTab("usage");
+          setWorkbenchTab("system");
+          setControlTab("usage");
         }
         slashCommand.mutate({ command: parsed.command.command, args: parsed.args });
       }

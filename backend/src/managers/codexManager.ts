@@ -13,6 +13,7 @@ import { buildCodexMentionContext, validateCodexMentions } from "@backend/manage
 import { buildCodexPrompt } from "@backend/managers/codex/prompt";
 import { CODEX_SLASH_COMMANDS, findCodexSlashCommand, normalizeSlashCommand } from "@backend/managers/codex/slashCommands";
 import { CodexThreadManager } from "@backend/managers/codex/threads";
+import { codexThreadOptionsFromConfig, loadCodexCliConfig } from "@backend/managers/codex/config";
 
 type RunningTurn = {
   controller: AbortController;
@@ -63,20 +64,22 @@ export class CodexManager {
   async listMessages(session: Session) {
     const thread = await this.threadManager.current(session);
     if (!thread) return [];
-    return this.messages.get(thread.id) ?? [];
+    return visibleMessages(this.messages.get(thread.id) ?? []);
   }
 
   async resume(session: Session) {
     const thread = await this.threadManager.current(session);
     return {
       running: this.running.has(session.id),
-      messages: thread ? (this.messages.get(thread.id) ?? []) : [],
+      messages: thread ? visibleMessages(this.messages.get(thread.id) ?? []) : [],
       thread,
     };
   }
 
   async status(session: Session): Promise<CodexStatusSnapshot> {
     const thread = await this.threadManager.current(session);
+    const cliConfig = loadCodexCliConfig();
+    const threadOptions = codexThreadOptionsFromConfig(cliConfig);
     return {
       session: {
         id: session.id,
@@ -86,12 +89,12 @@ export class CodexManager {
       },
       thread,
       model: {
-        label: process.env.CODEX_MODEL || "Codex SDK default",
-        source: process.env.CODEX_MODEL ? "CODEX_MODEL" : "runtime default",
+        label: threadOptions.model || "Codex SDK default",
+        source: process.env.CODEX_MODEL ? "CODEX_MODEL" : cliConfig.model ? "Codex CLI config" : "runtime default",
       },
       permissions: {
-        sandbox: "workspace-write",
-        approvals: "on-request",
+        sandbox: threadOptions.sandboxMode ?? "workspace-write",
+        approvals: threadOptions.approvalPolicy ?? "on-request",
       },
       git: await this.git.state(session.cwd),
       usage: this.usage.get(session.id) ?? { note: "Token usage appears after Codex emits usage events for this session." },
@@ -178,7 +181,6 @@ export class CodexManager {
     }
 
     const message = nativeCommandMessage(command, options, args);
-    await this.append(session.id, (await this.threadManager.active(session)).id, systemMessage(message));
     return { command, handled: true, message };
   }
 
@@ -267,6 +269,14 @@ function systemMessage(text: string): CodexMessage {
   return { id: nanoid(), role: "system", text, createdAt: Date.now() };
 }
 
+function visibleMessages(messages: CodexMessage[]) {
+  return messages.filter((message) => !isNativeCommandNotice(message));
+}
+
+function isNativeCommandNotice(message: CodexMessage) {
+  return message.role === "system" && /^(Applied|Handled) \/[a-z0-9-]+ through the Codex Web native command surface\./.test(message.text);
+}
+
 function stringOption(options: Record<string, unknown>, key: string) {
   const value = options[key];
   return typeof value === "string" ? value : "";
@@ -291,10 +301,6 @@ Use \`cw job <command...>\`, \`cw preview <command...>\`, and \`cw service <comm
 }
 
 function nativeCommandMessage(command: string, options: Record<string, unknown>, args: string) {
-  const payload = Object.entries(options)
-    .filter(([, value]) => value !== undefined && value !== "")
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`)
-    .join("\n");
-  const details = [args ? `Args: ${args}` : "", payload].filter(Boolean).join("\n");
-  return details ? `Applied /${command} through the Codex Web native command surface.\n${details}` : `Handled /${command} through the Codex Web native command surface.`;
+  const changed = args || Object.values(options).some((value) => value !== undefined && value !== "");
+  return changed ? `Applied /${command}.` : `Handled /${command}.`;
 }

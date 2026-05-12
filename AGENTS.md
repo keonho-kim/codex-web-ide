@@ -92,5 +92,4 @@ Local skills live in `.agents/skills`.
 
 - Use `shadcn` for shadcn/ui work.
 - Use `design-md` when deriving or maintaining `DESIGN.md`.
-- Use `minimalist-ui` for restrained UI direction when it fits the current product.
 - Use `vercel-react-best-practices` for React performance-sensitive work.

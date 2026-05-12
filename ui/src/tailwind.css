@@ -47,10 +47,10 @@
 
   body {
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background:
-      radial-gradient(circle at 18% 12%, rgb(255 255 255 / 0.28), transparent 28rem),
-      radial-gradient(circle at 84% 8%, rgb(255 255 255 / 0.16), transparent 24rem),
+      linear-gradient(180deg, rgb(247 248 247 / 0.72), rgb(236 238 238 / 0) 18rem),
       var(--color-page);
     text-rendering: geometricPrecision;
   }

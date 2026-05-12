@@ -8,7 +8,7 @@ import type { FileTreeNode } from "@/lib/types";
 import { useUiStore } from "@/store/uiStore";
 import { FileActions } from "@/features/files/FileActions";
 
-export function FilePane({ sessionId }: { sessionId?: string }) {
+export function FilePane({ sessionId, showTitle = true }: { sessionId?: string; showTitle?: boolean }) {
   const treeHost = useRef<HTMLDivElement>(null);
   const size = useElementSize(treeHost);
   const setActiveFilePath = useUiStore((state) => state.setActiveFilePath);
@@ -19,8 +19,8 @@ export function FilePane({ sessionId }: { sessionId?: string }) {
   });
 
   return (
-    <section className="grid h-full min-w-0 grid-rows-[38px_auto_minmax(0,1fr)] gap-3 overflow-hidden bg-canvas p-4 max-[700px]:p-3" data-testid="file-pane">
-      <SectionTitle label="Files" />
+    <section className={`grid h-full min-w-0 ${showTitle ? "grid-rows-[38px_auto_minmax(0,1fr)]" : "grid-rows-[auto_minmax(0,1fr)]"} gap-3 overflow-hidden bg-canvas p-4 max-[700px]:p-3`} data-testid="file-pane">
+      {showTitle ? <SectionTitle label="Files" /> : null}
       <FileActions sessionId={sessionId} />
       <div ref={treeHost} className="min-h-0 overflow-hidden text-[13px]">
         <Tree<FileTreeNode>

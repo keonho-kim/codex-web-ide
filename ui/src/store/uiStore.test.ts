@@ -90,9 +90,12 @@ test("normalizes collapsed main panel state", () => {
 
 test("normalizes persisted workspace tab state", () => {
   expect(normalizeWorkbenchTab("editor")).toBe("editor");
+  expect(normalizeWorkbenchTab("control")).toBe("system");
+  expect(normalizeWorkbenchTab("usage")).toBe("system");
   expect(normalizeWorkbenchTab("preview")).toBe("chat");
-  expect(normalizeControlTab("previews")).toBe("previews");
-  expect(normalizeControlTab("services")).toBe("services");
+  expect(normalizeControlTab("previews")).toBe("runtime");
+  expect(normalizeControlTab("services")).toBe("runtime");
+  expect(normalizeControlTab("usage")).toBe("usage");
   expect(normalizeControlTab("preview")).toBe("git");
 });
 

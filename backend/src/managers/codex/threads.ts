@@ -2,6 +2,7 @@ import { Codex, type Thread } from "@openai/codex-sdk";
 import type { CodexThreadRecord, Session } from "@backend/shared/types";
 import type { SessionManager } from "@backend/managers/sessionManager";
 import type { CodexHistoryStore } from "@backend/managers/codex/historyStore";
+import { codexThreadOptionsFromConfig } from "@backend/managers/codex/config";
 
 export class CodexThreadManager {
   private codex = new Codex();
@@ -73,10 +74,13 @@ export class CodexThreadManager {
   sdkThreadFor(session: Session, threadRecord: CodexThreadRecord) {
     const existing = this.threads.get(threadRecord.id);
     if (existing) return existing;
+    const cliOptions = codexThreadOptionsFromConfig();
     const options = {
       workingDirectory: session.cwd,
-      sandboxMode: "workspace-write" as const,
-      approvalPolicy: "on-request" as const,
+      sandboxMode: cliOptions.sandboxMode ?? "workspace-write" as const,
+      approvalPolicy: cliOptions.approvalPolicy ?? "on-request" as const,
+      model: cliOptions.model,
+      modelReasoningEffort: cliOptions.modelReasoningEffort,
       skipGitRepoCheck: true,
     };
     const thread = threadRecord.codexThreadId ? this.codex.resumeThread(threadRecord.codexThreadId, options) : this.codex.startThread(options);

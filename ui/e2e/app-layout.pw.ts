@@ -27,6 +27,14 @@ type E2eSession = {
   projectId?: string;
 };
 
+function isCompactViewport(page: Page) {
+  return (page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) <= 1100;
+}
+
+function isNarrowViewport(page: Page) {
+  return (page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) <= 700;
+}
+
 async function ensureOrchProject(page: Page) {
   const cwd = "/Users/khkim/dev/orch";
   const projects = (await (await page.request.get("/api/projects")).json()) as E2eProject[];
@@ -110,14 +118,18 @@ async function installNoThreadProjectRoutes(page: Page) {
 
 test("renders separated project panels across supported devices", async ({ page }, testInfo) => {
   await openSeededApp(page);
+  const compact = isCompactViewport(page);
+  const narrow = isNarrowViewport(page);
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Control", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "System", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open global configuration", exact: true })).toBeVisible();
-  if (testInfo.project.name === "pixel-7") {
+  if (compact) {
+    await expect(page.getByRole("button", { name: "Open project navigator", exact: true })).toBeVisible();
+  }
+  if (narrow) {
     await expect(page.getByRole("button", { name: "Open navigation menu", exact: true })).toBeVisible();
     const statusBox = await page.getByTitle("Git branch").boundingBox();
     const tabsBox = await page.getByRole("tablist", { name: "Primary project views" }).boundingBox();
@@ -128,10 +140,17 @@ test("renders separated project panels across supported devices", async ({ page 
     await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute("data-state", "active");
     await page.getByRole("tab", { name: "Chat", exact: true }).click();
   }
-  await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
-  await expect(page.getByTitle("Remove orch")).toHaveCount(1);
-  await expect(page.getByTestId("project-chat-session").first()).toBeVisible();
+  if (!compact) {
+    await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
+    await expect(page.getByTitle("Remove orch")).toHaveCount(1);
+    await expect(page.getByTestId("project-chat-session").first()).toBeVisible();
+  } else {
+    await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Projects" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
   await expect(page.getByRole("button", { name: /Start preview|Preview/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Open global configuration", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Global Configuration" })).toBeVisible();
@@ -142,16 +161,15 @@ test("renders separated project panels across supported devices", async ({ page 
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("dialog", { name: "Global Configuration" })).toHaveCount(0);
 
-  await page.getByRole("tab", { name: "Control", exact: true }).click();
+  await page.getByRole("tab", { name: "System", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Git", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Jobs", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Previews", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Services", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Runtime", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Codex Usage", exact: true })).toBeVisible();
   const workbenchBox = await page.getByTestId("workbench").boundingBox();
-  if (testInfo.project.name === "pixel-7") {
-    const sidebarBox = await page.getByTestId("sidebar").boundingBox();
-    expect((workbenchBox?.y ?? 0) - (sidebarBox?.y ?? 0)).toBeGreaterThan(80);
+  if (narrow) {
     expect(workbenchBox?.height ?? 0).toBeGreaterThan((page.viewportSize()?.height ?? 0) * 0.3);
+  } else if (compact) {
+    expect(workbenchBox?.height ?? 0).toBeGreaterThan((page.viewportSize()?.height ?? 0) * 0.5);
   } else {
     expect(workbenchBox?.height ?? 0).toBeGreaterThan((page.viewportSize()?.height ?? 0) * 0.65);
   }
@@ -166,28 +184,32 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.getByText("No file open")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open terminal", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Hide files", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Show files", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Show files", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
+  const compact = isCompactViewport(page);
+  if (compact) {
+    await expect(page.getByRole("button", { name: "Open files", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Open files", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Files" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Files" })).toHaveCount(0);
+  } else {
+    await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Hide files", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Show files", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Show files", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
+  }
 
   await page.getByRole("tab", { name: "Chat", exact: true }).click();
   await expect(page.locator('[contenteditable="true"]')).toBeVisible();
-  const expandedSidebarBox = testInfo.project.name === "pixel-7" ? await page.getByTestId("sidebar").boundingBox() : null;
-  if (testInfo.project.name === "pixel-7") {
-    const sidebarBox = await page.getByTestId("sidebar").boundingBox();
-    const workbenchBox = await page.getByTestId("workbench").boundingBox();
-    expect((workbenchBox?.y ?? 0) - (sidebarBox?.y ?? 0)).toBeGreaterThan(80);
+  if (compact) {
+    await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Projects" })).toBeVisible();
   }
 
   await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
-  if (testInfo.project.name === "pixel-7") {
-    const collapsedSidebarBox = await page.getByTestId("sidebar").boundingBox();
-    expect(collapsedSidebarBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThan((expandedSidebarBox?.height ?? 0) * 0.6);
-  }
+  if (compact) await expect(page.getByRole("dialog", { name: "Projects" })).toHaveCount(0);
+  else await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
+  if (!compact) await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
   if (testInfo.project.name === "desktop") {
     const sidebarBox = await page.getByTestId("sidebar").boundingBox();
     expect(sidebarBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThan(100);
@@ -197,8 +219,10 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
     const centers = [expandBox, addProjectBox, projectBox].map((box) => (box ? box.x + box.width / 2 : Number.NaN));
     expect(Math.max(...centers) - Math.min(...centers)).toBeLessThan(1);
   }
-  await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
+  if (!compact) {
+    await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
+  }
 });
 
 test("starts a new chat from the composer when a project has no threads", async ({ page }, testInfo) => {
@@ -265,6 +289,9 @@ test("supports editor shortcuts and Monaco context actions", async ({ page }, te
 test("shows a React folder browser in the add project dialog", async ({ page }) => {
   await openSeededApp(page);
 
+  if (await page.getByRole("button", { name: "Open project navigator", exact: true }).isVisible()) {
+    await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
+  }
   await page.getByRole("button", { name: "Add project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add project" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to path", exact: true })).toHaveCount(0);
@@ -296,7 +323,7 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
   await expect(page.getByText("Status line items")).toBeVisible();
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByRole("dialog", { name: "/statusline" })).toHaveCount(0);
-  await expect(page.getByText(/Applied \/statusline through the Codex Web native command surface/).last()).toBeVisible();
+  await expect(page.getByText("Applied /statusline through the Codex Web native command surface.")).toHaveCount(0);
 });
 
 test("keeps chat visible as the primary small-screen project view", async ({ page }, testInfo) => {
@@ -306,4 +333,26 @@ test("keeps chat visible as the primary small-screen project view", async ({ pag
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
   await expect(page.locator('[contenteditable="true"]')).toBeVisible();
+});
+
+test("keeps responsive orientation layouts usable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "desktop", "Responsive orientation coverage is handled by tablet and mobile targets.");
+  await openSeededApp(page);
+
+  await expect(page.getByRole("button", { name: "Open project navigator", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "System", exact: true }).click();
+  await page.getByRole("tab", { name: "Runtime", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Previews" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Services" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Open files", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Open files", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Files" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Files" })).toHaveCount(0);
+
+  await page.screenshot({ path: testInfo.outputPath(`orientation-${testInfo.project.name}.png`), fullPage: true });
+  await expect(page.locator("body")).toHaveCSS("overflow-x", "hidden");
 });

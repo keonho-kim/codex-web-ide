@@ -16,8 +16,9 @@ type ManagedSuggestion = {
 };
 
 const controlTabByKind: Partial<Record<ManagedKind, ControlTab>> = {
-  job: "jobs",
-  service: "services",
+  job: "runtime",
+  preview: "runtime",
+  service: "runtime",
 };
 
 export function CommandSuggestion({ sessionId, text }: { sessionId?: string; text: string }) {
@@ -42,10 +43,9 @@ export function CommandSuggestion({ sessionId, text }: { sessionId?: string; tex
       if (!sessionId || !suggestion) return;
       if (suggestion.kind === "preview") {
         setPreviewOpen(true);
-      } else {
-        setWorkbenchTab("control");
-        setControlTab(controlTabByKind[suggestion.kind] ?? "jobs");
       }
+      setWorkbenchTab("system");
+      setControlTab(controlTabByKind[suggestion.kind] ?? "runtime");
       await queryClient.invalidateQueries({ queryKey: [`${suggestion.kind}s`, sessionId] });
     },
   });

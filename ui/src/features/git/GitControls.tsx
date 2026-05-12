@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import type { GitState } from "@/lib/types";
 
@@ -38,16 +39,20 @@ export function GitControls({
   onPush,
 }: GitControlsProps) {
   return (
-    <div className="grid content-start gap-2">
-      <strong>{state?.branch || "No Git branch"}</strong>
-      <p className="text-xs text-muted">
-        staged {state?.stagedCount ?? 0} / unstaged {state?.unstagedCount ?? 0} / untracked {state?.untrackedCount ?? 0}
-      </p>
-      <p className="text-xs text-muted">
-        {state?.dirty ? "dirty" : "clean"} · ahead {state?.ahead ?? 0} / behind {state?.behind ?? 0}
-        {state?.detached ? " · detached" : ""}
-      </p>
-      <div className="grid gap-2">
+    <section className="grid gap-3 rounded-md border border-subtle bg-canvas p-3 shadow-[0_10px_24px_rgb(32_38_39/0.05)] xl:grid-cols-[minmax(180px,260px)_minmax(0,1fr)_auto] xl:items-end">
+      <div className="min-w-0">
+        <strong className="block truncate text-sm">{state?.branch || "No Git branch"}</strong>
+        <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-muted">
+          <StatusPill>staged {state?.stagedCount ?? 0}</StatusPill>
+          <StatusPill>unstaged {state?.unstagedCount ?? 0}</StatusPill>
+          <StatusPill>untracked {state?.untrackedCount ?? 0}</StatusPill>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          {state?.dirty ? "dirty" : "clean"} · ahead {state?.ahead ?? 0} / behind {state?.behind ?? 0}
+          {state?.detached ? " · detached" : ""}
+        </p>
+      </div>
+      <div className="grid min-w-0 gap-2 md:grid-cols-[minmax(160px,0.8fr)_minmax(220px,1.2fr)]">
         <select
           className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
           value={state?.branch ?? ""}
@@ -63,7 +68,7 @@ export function GitControls({
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-2">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
           <input
             className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
             value={branchName}
@@ -74,6 +79,7 @@ export function GitControls({
             Create
           </Button>
         </div>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 md:col-span-2">
         <input
           className="min-w-0 rounded-md border border-control bg-canvas px-2.5 py-1.5 text-sm text-ink"
           value={commitMessage}
@@ -83,15 +89,20 @@ export function GitControls({
         <Button type="button" disabled={!sessionId || !commitMessage.trim() || pending.commit} onClick={onCommit} variant="outline" size="sm">
           Commit
         </Button>
-        <div className="flex items-center gap-2">
-          <Button type="button" disabled={!sessionId || pending.pull} onClick={onPull} variant="outline" size="sm">
-            Pull
-          </Button>
-          <Button type="button" disabled={!sessionId || pending.push} onClick={onPush} variant="outline" size="sm">
-            Push
-          </Button>
         </div>
       </div>
-    </div>
+      <div className="flex items-center gap-2 xl:justify-end">
+        <Button type="button" disabled={!sessionId || pending.pull} onClick={onPull} variant="outline" size="sm">
+          Pull
+        </Button>
+        <Button type="button" disabled={!sessionId || pending.push} onClick={onPush} variant="outline" size="sm">
+          Push
+        </Button>
+      </div>
+    </section>
   );
+}
+
+function StatusPill({ children }: { children: ReactNode }) {
+  return <span className="rounded-md border border-subtle bg-panel px-2 py-1">{children}</span>;
 }

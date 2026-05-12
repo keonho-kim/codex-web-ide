@@ -6,7 +6,7 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
   const git = useGitPanel(sessionId);
 
   return (
-    <div className="grid h-full grid-cols-[260px_minmax(0,1fr)] gap-5 overflow-auto p-4 max-[900px]:grid-cols-1">
+    <section className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-auto p-4 max-[700px]:p-3">
       {git.actions.error ? <p className="col-span-full m-0 text-xs text-destructive">{git.actions.error}</p> : null}
       <GitControls
         branchName={git.branchName}
@@ -32,6 +32,6 @@ export function GitPanel({ sessionId }: { sessionId?: string }) {
         onStage={git.actions.stage}
         onUnstage={git.actions.unstage}
       />
-    </div>
+    </section>
   );
 }

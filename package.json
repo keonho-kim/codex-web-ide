@@ -1,6 +1,6 @@
 {
   "name": "codex-web-ide",
-  "version": "0.1.4",
+  "version": "0.1.5-dev.0",
   "description": "Local-first Codex development environment with a web UI.",
   "type": "module",
   "bin": {
@@ -22,6 +22,7 @@
     "bun": ">=1.1.0"
   },
   "scripts": {
+    "dev": "bun run backend/src/cli/cw.ts start --auth disable",
     "start": "bun run backend/src/cli/cw.ts start",
     "dev:web": "bunx vite --host 127.0.0.1 --port 17322 ui",
     "build": "bun run build:web && bun run build:package && bun run typecheck",
@@ -46,6 +47,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
+    "bun-pty": "^0.4.8",
     "chokidar": "^4.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

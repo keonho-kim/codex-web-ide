@@ -1,5 +1,6 @@
 import os from "node:os";
 import fs from "node:fs";
+import { spawn as spawnPty, type IDisposable, type IPty } from "bun-pty";
 import { nanoid } from "nanoid";
 import type { Session, TerminalSession } from "@backend/shared/types";
 
@@ -9,9 +10,9 @@ export type TerminalClient = {
 
 type TerminalEntry = {
   record: TerminalSession;
-  process: Bun.Subprocess;
-  terminal: Bun.Terminal;
-  decoder: TextDecoder;
+  terminal: IPty;
+  dataSubscription: IDisposable;
+  exitSubscription: IDisposable;
   clients: Map<string, TerminalClient>;
   scrollback: string[];
 };
@@ -30,32 +31,21 @@ export class TerminalManager {
     const cols = clampDimension(options.cols, 80, 20, 240);
     const rows = clampDimension(options.rows, 24, 6, 80);
     const shell = options.shell || defaultShell();
-    let entry: TerminalEntry | undefined;
-    const pendingOutput: string[] = [];
-    const decoder = new TextDecoder();
-    const process = Bun.spawn([shell, ...shellArgs(shell)], {
+    const terminal = spawnPty(shell, shellArgs(shell), {
       cwd: session.cwd,
+      name: "xterm-256color",
+      cols,
+      rows,
       env: {
         ...processEnv(),
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
       },
-      terminal: {
-        name: "xterm-256color",
-        cols,
-        rows,
-        data: (_terminal, data) => {
-          const output = decoder.decode(data, { stream: true });
-          if (entry) this.handleOutput(entry, output);
-          else pendingOutput.push(output);
-        },
-      },
     });
-    if (!process.terminal) throw new Error("Bun PTY terminal was not created");
     const createdEntry: TerminalEntry = {
-      process,
-      terminal: process.terminal,
-      decoder,
+      terminal,
+      dataSubscription: { dispose() {} },
+      exitSubscription: { dispose() {} },
       clients: new Map(),
       scrollback: [],
       record: {
@@ -63,26 +53,20 @@ export class TerminalManager {
         sessionId: session.id,
         cwd: session.cwd,
         shell,
-        pid: process.pid,
+        pid: terminal.pid,
         cols,
         rows,
         status: "running",
         createdAt: Date.now(),
       },
     };
-    entry = createdEntry;
-    for (const output of pendingOutput) this.handleOutput(createdEntry, output);
-    process.exited.then((exitCode) => {
+    createdEntry.dataSubscription = terminal.onData((output) => {
+      this.handleOutput(createdEntry, output);
+    });
+    createdEntry.exitSubscription = terminal.onExit(({ exitCode }) => {
       if (createdEntry.record.status === "exited") return;
-      const tail = createdEntry.decoder.decode();
-      if (tail) this.handleOutput(createdEntry, tail);
       createdEntry.record = { ...createdEntry.record, status: "exited", exitCode: exitCode ?? undefined, exitedAt: Date.now() };
       this.broadcast(createdEntry, { type: "exit", exitCode });
-    }).catch((error) => {
-      if (createdEntry.record.status === "exited") return;
-      this.handleOutput(createdEntry, `Terminal exited with error: ${error instanceof Error ? error.message : String(error)}\n`);
-      createdEntry.record = { ...createdEntry.record, status: "exited", exitedAt: Date.now() };
-      this.broadcast(createdEntry, { type: "exit" });
     });
     this.terminals.set(id, createdEntry);
     return createdEntry.record;
@@ -123,8 +107,9 @@ export class TerminalManager {
 
   close(sessionId: string, terminalId: string) {
     const entry = this.require(sessionId, terminalId);
-    entry.terminal.close();
-    entry.process.kill();
+    entry.dataSubscription.dispose();
+    entry.exitSubscription.dispose();
+    entry.terminal.kill();
     entry.clients.clear();
     this.terminals.delete(terminalId);
   }
@@ -137,8 +122,9 @@ export class TerminalManager {
 
   shutdown() {
     for (const entry of [...this.terminals.values()]) {
-      entry.terminal.close();
-      entry.process.kill();
+      entry.dataSubscription.dispose();
+      entry.exitSubscription.dispose();
+      entry.terminal.kill();
     }
     this.terminals.clear();
   }

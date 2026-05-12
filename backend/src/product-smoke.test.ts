@@ -843,21 +843,49 @@ describe("product smoke coverage", () => {
 
   test("codex slash status and settings commands expose native results", async () => {
     const root = await tempDir();
+    const codexHome = path.join(root, ".codex-home");
+    const previousCodexHome = process.env.CODEX_HOME;
+    const previousCodexModel = process.env.CODEX_MODEL;
+    const previousCodexReasoning = process.env.CODEX_MODEL_REASONING_EFFORT;
+    const previousCodexSandbox = process.env.CODEX_SANDBOX_MODE;
+    const previousCodexApprovals = process.env.CODEX_APPROVAL_POLICY;
+    process.env.CODEX_HOME = codexHome;
+    delete process.env.CODEX_MODEL;
+    delete process.env.CODEX_MODEL_REASONING_EFFORT;
+    delete process.env.CODEX_SANDBOX_MODE;
+    delete process.env.CODEX_APPROVAL_POLICY;
+    await fs.mkdir(codexHome, { recursive: true });
+    await fs.writeFile(path.join(codexHome, "config.toml"), 'model = "gpt-test"\nmodel_reasoning_effort = "high"\nsandbox_mode = "danger-full-access"\napproval_policy = "never"\n');
     await execa("git", ["init"], { cwd: root });
-    const store = new JsonStore(path.join(root, ".store"));
-    await store.ensure();
-    const workspace = new WorkspaceManager(store);
-    const sessions = new SessionManager(store, workspace);
-    const session = await sessions.create({ cwd: root, name: "slash" });
-    const codex = new CodexManager(new EventBus(), new GitManager(), sessions, new SkillManager(), new CodexHistoryStore(store));
+    try {
+      const store = new JsonStore(path.join(root, ".store"));
+      await store.ensure();
+      const workspace = new WorkspaceManager(store);
+      const sessions = new SessionManager(store, workspace);
+      const session = await sessions.create({ cwd: root, name: "slash" });
+      const codex = new CodexManager(new EventBus(), new GitManager(), sessions, new SkillManager(), new CodexHistoryStore(store));
 
-    const status = await codex.runSlashCommand(session, { command: "status" });
-    expect(status.status?.session.name).toBe("slash");
-    expect(status.status?.commands.supported).toBe(CODEX_SLASH_COMMANDS.length);
+      const status = await codex.runSlashCommand(session, { command: "status" });
+      expect(status.status?.session.name).toBe("slash");
+      expect(status.status?.model).toEqual({ label: "gpt-test", source: "Codex CLI config" });
+      expect(status.status?.permissions).toEqual({ sandbox: "danger-full-access", approvals: "never" });
+      expect(status.status?.commands.supported).toBe(CODEX_SLASH_COMMANDS.length);
 
-    const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model-with-reasoning", "context-remaining"], useThemeColors: true } });
-    expect(applied.message).toContain("/statusline");
-    expect((await codex.listMessages(session)).at(-1)?.text).toContain("statuslineItems: model-with-reasoning, context-remaining");
+      const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model-with-reasoning", "context-remaining"], useThemeColors: true } });
+      expect(applied.message).toContain("/statusline");
+      expect(await codex.listMessages(session)).toEqual([]);
+    } finally {
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
+      if (previousCodexModel === undefined) delete process.env.CODEX_MODEL;
+      else process.env.CODEX_MODEL = previousCodexModel;
+      if (previousCodexReasoning === undefined) delete process.env.CODEX_MODEL_REASONING_EFFORT;
+      else process.env.CODEX_MODEL_REASONING_EFFORT = previousCodexReasoning;
+      if (previousCodexSandbox === undefined) delete process.env.CODEX_SANDBOX_MODE;
+      else process.env.CODEX_SANDBOX_MODE = previousCodexSandbox;
+      if (previousCodexApprovals === undefined) delete process.env.CODEX_APPROVAL_POLICY;
+      else process.env.CODEX_APPROVAL_POLICY = previousCodexApprovals;
+    }
   });
 
   test("codex hydrate clears stale running session state", async () => {
