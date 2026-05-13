@@ -196,30 +196,7 @@ export class CodexManager {
     const controller = new AbortController();
     this.running.set(session.id, { controller });
     await this.sessions.update(session.id, { status: "running" });
-    let events: AsyncGenerator<ThreadEvent>;
-    try {
-      events = (await thread.runStreamed(prompt, { signal: controller.signal })).events;
-    } catch (error) {
-      this.running.delete(session.id);
-      await this.sessions.update(session.id, { status: "error" });
-      throw error;
-    }
-    void consumeCodexEvents({
-      events: this.events,
-      eventStream: events,
-      git: this.git,
-      isDeleted: () => this.deleted.has(session.id),
-      markNotRunning: () => this.running.delete(session.id),
-      markCancelled: () => this.cancelled.delete(session.id),
-      session,
-      sessions: this.sessions,
-      thread,
-      appendAssistantMessage: (text) => this.append(session.id, activeThread.id, createAssistantMessage(text)),
-      recordUsage: (usage) => {
-        this.usage.set(session.id, usage);
-      },
-      updateThreadId: (codexThreadId) => this.threadManager.updateCodexThreadId(session, activeThread, codexThreadId),
-    });
+    void this.consumeRunStream(session, activeThread.id, activeThread, thread, prompt, controller);
 
     return { running: true, threadId: activeThread.id, codexThreadId: thread.id ?? activeThread.codexThreadId };
   }
@@ -257,6 +234,55 @@ export class CodexManager {
     this.messages.set(threadId, next);
     await this.history.save(threadId, next);
     this.events.publish(sessionId, { type: "codex.event", payload: { message } });
+  }
+
+  private async consumeRunStream(
+    session: Session,
+    threadId: string,
+    activeThread: Awaited<ReturnType<CodexThreadManager["active"]>>,
+    thread: ReturnType<CodexThreadManager["sdkThreadFor"]>,
+    prompt: string,
+    controller: AbortController,
+  ) {
+    let eventStream: AsyncGenerator<ThreadEvent>;
+    try {
+      eventStream = (await thread.runStreamed(prompt, { signal: controller.signal })).events;
+    } catch (error) {
+      await this.handleRunStartFailure(session, threadId, error);
+      return;
+    }
+
+    await consumeCodexEvents({
+      events: this.events,
+      eventStream,
+      git: this.git,
+      isDeleted: () => this.deleted.has(session.id),
+      markNotRunning: () => this.running.delete(session.id),
+      markCancelled: () => this.cancelled.delete(session.id),
+      session,
+      sessions: this.sessions,
+      thread,
+      appendAssistantMessage: (text) => this.append(session.id, threadId, createAssistantMessage(text)),
+      recordUsage: (usage) => {
+        this.usage.set(session.id, usage);
+      },
+      updateThreadId: (codexThreadId) => this.threadManager.updateCodexThreadId(session, activeThread, codexThreadId),
+    });
+  }
+
+  private async handleRunStartFailure(session: Session, threadId: string, error: unknown) {
+    this.running.delete(session.id);
+    const cancelled = this.cancelled.delete(session.id);
+    if (this.deleted.has(session.id)) return;
+    const message = cancelled ? "Codex run cancelled." : error instanceof Error ? error.message : "Codex run failed to start.";
+    await this.append(session.id, threadId, createAssistantMessage(message));
+    await this.sessions.update(session.id, { status: cancelled ? "idle" : "error" });
+    if (!cancelled) {
+      this.events.publish(session.id, {
+        type: "codex.event",
+        payload: { type: "turn.failed", error: { message } },
+      });
+    }
   }
 
   private async runPromptSlash(session: Session, command: string, prompt: string): Promise<CodexSlashCommandResult> {

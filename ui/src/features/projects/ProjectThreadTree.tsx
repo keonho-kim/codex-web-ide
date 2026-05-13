@@ -57,7 +57,8 @@ export function ProjectThreadTree({
     queries: sessionEntries.map((entry) => ({
       queryKey: ["codex", entry.session.id, "threads"],
       queryFn: () => api<ThreadListResponse>(`/api/sessions/${entry.session.id}/codex/threads`),
-      enabled: Boolean(entry.session.id),
+      enabled: Boolean(entry.session.id && (entry.project.id === activeProjectId || expanded.has(entry.project.id))),
+      staleTime: 10000,
     })),
   });
   const threadsBySessionId = useMemo(() => new Map(sessionEntries.map((entry, index) => [entry.session.id, threadQueries[index]])), [sessionEntries, threadQueries]);

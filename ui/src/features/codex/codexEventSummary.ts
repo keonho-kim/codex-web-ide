@@ -55,17 +55,17 @@ function summarizePayload(record: Record<string, unknown>, meta: { id: string; t
   if (type === "turn.failed") return summarizeFailure(meta, type, objectValue(record.error)?.message ?? record.error);
   if (type === "error") return summarizeFailure(meta, type, record.message);
   if (type === "turn.completed") return summarizeTurnCompleted(record, meta, type);
-  if (type === "turn.started") return baseSummary(meta, { kind: "turn", label: type, title: "Turn started", status: "in_progress", preview: "Codex started processing the prompt." });
-  if (type === "thread.started") return baseSummary(meta, { kind: "turn", label: type, title: "Thread started", status: "in_progress", preview: stringValue(record.thread_id) });
+  if (type === "turn.started") return baseSummary(meta, { kind: "turn", label: type, title: "Starting work", preview: "Codex is preparing the next step." });
+  if (type === "thread.started") return baseSummary(meta, { kind: "turn", label: type, title: "Connected to Codex", preview: "Thread is ready." });
 
   const detail = eventDetail(record);
   return baseSummary(meta, {
     kind: "event",
     label: type,
-    title: type,
-    detail,
-    preview: detail ? previewText(detail) : undefined,
-    body: detail,
+    title: friendlyEventTitle(type),
+    detail: detail ?? "Codex reported activity.",
+    preview: detail ? previewText(detail) : "Codex reported activity.",
+    body: detail ?? "Codex reported activity.",
   });
 }
 
@@ -93,14 +93,15 @@ function summarizeItem(type: string, item: Record<string, unknown>, meta: { id: 
   if (itemType === "web_search") return summarizeTextItem(type, item, meta, sourceItemId, "search", "Web search", stringValue(item.query));
   if (itemType === "todo_list") return summarizeTodo(type, item, meta, sourceItemId);
   if (itemType === "error") return summarizeFailure(meta, type, item.message, sourceItemId);
+  const detail = readableItemType(itemType);
   return baseSummary(meta, {
     kind: "event",
     label: type,
-    title: itemType,
+    title: "Codex activity",
     status: eventStatus(type),
-    detail: itemType,
-    preview: itemType,
-    body: safeStringify(item),
+    detail,
+    preview: detail,
+    body: detail,
     sourceItemId,
   });
 }
@@ -233,7 +234,7 @@ function eventStatus(type: string) {
 }
 
 function fallbackSummary(label: string): CodexEventSummary {
-  return { id: randomId(), kind: "event", label, title: label, timestamp: Date.now() };
+  return { id: randomId(), kind: "event", label, title: "Codex activity", timestamp: Date.now() };
 }
 
 function eventDetail(record: Record<string, unknown>) {
@@ -275,6 +276,18 @@ function bodyText(text: string) {
 
 function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function friendlyEventTitle(type: string) {
+  if (type.includes("approval")) return "Approval requested";
+  if (type.includes("git")) return "Git updated";
+  if (type.includes("tool")) return "Tool activity";
+  if (type.includes("command")) return "Command activity";
+  return "Codex activity";
+}
+
+function readableItemType(type: string) {
+  return titleCase(type.replace(/[._-]+/g, " "));
 }
 
 function safeStringify(value: unknown) {

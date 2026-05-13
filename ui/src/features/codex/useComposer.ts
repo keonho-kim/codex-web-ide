@@ -132,9 +132,20 @@ export function useComposer({
       });
       return { sessionId: targetSessionId };
     },
-    onSuccess: async ({ sessionId: targetSessionId }) => {
+    onMutate: () => {
+      const previousDraft = draft;
+      const previousMentions = selectedMentions;
       editor?.commands.clearContent();
       clearComposer();
+      return { previousDraft, previousMentions };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context?.previousDraft && !context?.previousMentions.length) return;
+      editor?.commands.setContent(textDocument(context.previousDraft));
+      setDraft(context.previousDraft);
+      setSelectedMentions(context.previousMentions);
+    },
+    onSuccess: async ({ sessionId: targetSessionId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId] }),
         queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId, "threads"] }),

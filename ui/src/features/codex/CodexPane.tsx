@@ -14,11 +14,6 @@ export function CodexPane({
   onSessionCreated(sessionId: string): void;
   sessionId?: string;
 }) {
-  const messages = useQuery({
-    queryKey: ["codex", sessionId, "messages"],
-    queryFn: () => api<CodexMessage[]>(`/api/sessions/${sessionId}/codex/messages`),
-    enabled: Boolean(sessionId),
-  });
   const status = useQuery({
     queryKey: ["codex", sessionId, "resume"],
     queryFn: () => api<{ running: boolean; messages: CodexMessage[]; thread: CodexThreadRecord | null }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
@@ -32,7 +27,7 @@ export function CodexPane({
         <SectionTitle label={status.data?.thread?.title || "Codex"} />
         <span className="text-[11px] text-codex">{status.data?.running ? "running" : "ready"}</span>
       </div>
-      <CodexTimeline messages={messages.data ?? []} running={status.data?.running ?? false} sessionId={sessionId} />
+      <CodexTimeline messages={status.data?.messages ?? []} running={status.data?.running ?? false} sessionId={sessionId} />
       <Composer activeProjectId={activeProjectId} onSessionCreated={onSessionCreated} sessionId={sessionId} running={status.data?.running ?? false} />
     </section>
   );

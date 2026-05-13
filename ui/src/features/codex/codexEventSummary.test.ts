@@ -69,12 +69,27 @@ test("summarizes other work items with readable details", () => {
   expect(summary.body).toContain("add ui/src/App.test.tsx");
 });
 
-test("marks thread and turn lifecycle events with progress states", () => {
+test("summarizes thread and turn lifecycle events with friendly labels", () => {
   const started = summarizeCodexEvent(messageEvent({ id: "event-start", timestamp: 400, payload: { type: "thread.started", thread_id: "thread-1" } }));
   const completed = summarizeCodexEvent(messageEvent({ id: "event-done", timestamp: 500, payload: { type: "turn.completed", usage: { input_tokens: 1, output_tokens: 2, reasoning_output_tokens: 3 } } }));
 
-  expect(started).toMatchObject({ kind: "turn", title: "Thread started", status: "in_progress" });
+  expect(started).toMatchObject({ kind: "turn", title: "Connected to Codex", preview: "Thread is ready." });
   expect(completed).toMatchObject({ kind: "turn", title: "Turn completed", status: "completed" });
+});
+
+test("uses friendly labels for unknown raw Codex events", () => {
+  const summary = summarizeCodexEvent(messageEvent({
+    id: "event-raw",
+    timestamp: 600,
+    payload: { type: "thread.unrecognized_internal_event", thread_id: "thread-1" },
+  }));
+
+  expect(summary).toMatchObject({
+    id: "event-raw",
+    kind: "event",
+    title: "Codex activity",
+    preview: "Codex reported activity.",
+  });
 });
 
 function messageEvent(envelope: unknown): Pick<MessageEvent, "type" | "data"> {

@@ -30,6 +30,7 @@ function eventEntries(
   assistantMessages: Array<{ text: string; timestamp: number }>,
 ): CodexTimelineEntry[] {
   if (event.messageId && messageIds.has(event.messageId)) return [];
+  if (isRoutineLifecycleEvent(event)) return [];
   if (event.kind !== "assistant") return [{ kind: "event", id: `event-${event.id}`, timestamp: event.timestamp, event }];
 
   const text = event.text ?? event.detail ?? "";
@@ -58,4 +59,8 @@ function hasStoredAssistantReplacement(text: string, eventTimestamp: number, ass
 
 function normalizeTimelineText(text: string) {
   return text.trim().replace(/\s+/g, " ");
+}
+
+function isRoutineLifecycleEvent(event: CodexEventSummary) {
+  return event.kind === "turn" && event.status !== "failed";
 }

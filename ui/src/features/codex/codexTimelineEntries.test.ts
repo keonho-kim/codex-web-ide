@@ -49,6 +49,17 @@ test("changes the scroll key when assistant text streams or running state change
   expect(codexTimelineScrollKey(next, true)).not.toBe(codexTimelineScrollKey(next, false));
 });
 
+test("hides routine thread lifecycle events from the chat timeline", () => {
+  const entries = buildCodexTimelineEntries([], [
+    { id: "thread-start", kind: "turn", label: "thread.started", title: "Connected to Codex", timestamp: 100 },
+    { id: "turn-done", kind: "turn", label: "turn.completed", title: "Turn completed", status: "completed", timestamp: 200 },
+    { id: "failure", kind: "error", label: "turn.failed", title: "Error", status: "failed", timestamp: 300 },
+  ]);
+
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({ kind: "event", id: "event-failure" });
+});
+
 function assistantEvent(input: { id: string; text: string; timestamp: number }): CodexEventSummary {
   return {
     id: input.id,
