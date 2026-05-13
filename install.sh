@@ -141,7 +141,7 @@ ensure_bun() {
 }
 
 resolve_latest_version() {
-  step "Resolving latest release tag from GitHub"
+  step "Resolving latest release tag from GitHub" >&2
   latest_url="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest")"
   latest_tag="${latest_url##*/}"
 
