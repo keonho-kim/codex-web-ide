@@ -1,6 +1,6 @@
 {
   "name": "codex-web-ide",
-  "version": "0.1.5",
+  "version": "0.1.6-dev.1",
   "description": "Local-first Codex development environment with a web UI.",
   "type": "module",
   "bin": {

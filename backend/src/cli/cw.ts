@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+export {};
+
 type ManagedCommandKind = "job" | "preview" | "service";
 
 const args = process.argv.slice(2);
