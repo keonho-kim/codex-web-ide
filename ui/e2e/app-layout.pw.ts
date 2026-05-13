@@ -9,6 +9,10 @@ async function openSeededApp(page: Page) {
   await openApp(page);
 }
 
+function composerTextBox(page: Page) {
+  return page.getByTestId("composer-input").getByRole("textbox", { name: "Composer", exact: true });
+}
+
 function json(body: unknown) {
   return {
     body: JSON.stringify(body),
@@ -64,6 +68,9 @@ async function installNoThreadProjectRoutes(page: Page) {
     route.fulfill(json({ activeProjectId: project.id, recentProjectIds: [project.id], defaultProjectsDir: "/tmp", host: "127.0.0.1", port: 17325, previewPortStart: 17330, previewPortEnd: 17399 })),
   );
   await page.route("**/api/sessions/events**", (route) => route.fulfill({ body: "retry: 1000\n\n: connected\n\n", contentType: "text/event-stream" }));
+  await page.route("**/api/codex/runtime-defaults", (route) =>
+    route.fulfill(json({ model: { label: "Codex SDK default", source: "runtime default", reasoningEffort: "high", reasoningSource: "Codex CLI config" }, permissions: { sandbox: "workspace-write", approvals: "on-request" }, theme: { name: "light", source: "runtime default" } })),
+  );
   await page.route("**/api/sessions", async (route) => {
     if (route.request().method() === "POST") {
       session = { id: "session-empty", projectId: project.id, cwd: project.cwd, name: project.name, createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" };
@@ -79,8 +86,9 @@ async function installNoThreadProjectRoutes(page: Page) {
       json({
         session: session ?? { id: "session-empty", projectId: project.id, cwd: project.cwd, name: project.name, createdAt: Date.now(), lastActiveAt: Date.now(), status: "idle" },
         thread: runStarted ? thread : null,
-        model: { label: "Codex SDK default", source: "runtime default" },
+        model: { label: "Codex SDK default", source: "runtime default", reasoningEffort: "high", reasoningSource: "Codex CLI config" },
         permissions: { sandbox: "workspace-write", approvals: "on-request" },
+        theme: { name: "light", source: "runtime default" },
         git: { branch: "main", detached: false, commit: "abc123", dirty: false, stagedCount: 0, unstagedCount: 0, untrackedCount: 0 },
         usage: { note: "Not available yet" },
         commands: { supported: 40, source: "test" },
@@ -200,7 +208,7 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
   }
 
   await page.getByRole("tab", { name: "Chat", exact: true }).click();
-  await expect(page.locator('[contenteditable="true"]')).toBeVisible();
+  await expect(composerTextBox(page)).toBeVisible();
   if (compact) {
     await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Projects" })).toBeVisible();
@@ -239,11 +247,11 @@ test("starts a new chat from the composer when a project has no threads", async 
   await expect(page.getByText("Context:")).toHaveCount(0);
   const statusline = page.getByTestId("codex-statusline");
   await expect(statusline).toBeVisible();
-  await expect(statusline).toContainText("Codex SDK default medium");
+  await expect(statusline).toContainText("Codex SDK default high");
   await expect(statusline).toContainText("Ready");
   await expect(statusline).toContainText("Tasks 0");
 
-  await page.locator('[contenteditable="true"]').click();
+  await composerTextBox(page).click();
   await page.keyboard.type("이 프로젝트를 설명해줘");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect.poll(mock.runStarted).toBe(true);
@@ -254,7 +262,7 @@ test("starts a new chat from the composer when a project has no threads", async 
   await page.getByRole("button", { name: "Interrupt Codex", exact: true }).click();
   await expect.poll(mock.cancelCalled).toBe(true);
   mock.releaseRun();
-  await expect(page.locator('[contenteditable="true"]')).toHaveText("");
+  await expect(composerTextBox(page)).toHaveText("");
 });
 
 test("supports editor shortcuts and Monaco context actions", async ({ page }, testInfo) => {
@@ -305,18 +313,18 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
   test.skip(testInfo.project.name !== "desktop", "Composer slash-command editing is covered on desktop; responsive layout is covered separately.");
   await openSeededApp(page);
 
-  await page.locator('[contenteditable="true"]').click();
+  await composerTextBox(page).click();
   await page.keyboard.type("/");
   await expect(page.getByTestId("slash-command-suggestions")).toBeVisible();
   expect(await page.getByTestId("slash-command-option").count()).toBeGreaterThan(10);
   await page.keyboard.type("pl");
   await expect(page.getByTestId("slash-command-option").first()).toContainText("/plan");
   await page.keyboard.press("Enter");
-  await expect(page.locator('[contenteditable="true"]')).toContainText("/plan");
+  await expect(composerTextBox(page)).toContainText("/plan");
   await page.keyboard.press("Control+A");
   await page.keyboard.press("Backspace");
 
-  await page.locator('[contenteditable="true"]').click();
+  await composerTextBox(page).click();
   await page.keyboard.type("/statusline");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "/statusline" })).toBeVisible();
@@ -332,7 +340,7 @@ test("keeps chat visible as the primary small-screen project view", async ({ pag
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
-  await expect(page.locator('[contenteditable="true"]')).toBeVisible();
+  await expect(composerTextBox(page)).toBeVisible();
 });
 
 test("keeps responsive orientation layouts usable", async ({ page }, testInfo) => {

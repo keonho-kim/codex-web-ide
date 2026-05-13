@@ -5,49 +5,53 @@ import { cn } from "@/lib/classes";
 import { normalizeStatuslineItems, type CodexStatusLineItem } from "@/lib/statusline";
 import type { CodexStatusSnapshot, Job, ServiceInstance } from "@/lib/types";
 import { useUiStore } from "@/store/uiStore";
+import { applyCodexRuntimeDefaults, useCodexRuntimeDefaults } from "@/features/codex/runtimeDefaults";
 
 export function CodexStatusLine({ running, sessionId }: { running?: boolean; sessionId?: string }) {
   const settings = useUiStore((state) => state.codexCommandSettings);
+  const overrides = useUiStore((state) => state.codexCommandSettingOverrides);
+  const runtimeDefaults = useCodexRuntimeDefaults();
   const status = useQuery({
     queryKey: ["codex", sessionId, "status"],
     queryFn: () => api<CodexStatusSnapshot>(`/api/sessions/${sessionId}/codex/status`),
     enabled: Boolean(sessionId),
-    refetchInterval: running ? 1000 : 3000,
+    refetchInterval: running ? 5000 : 10000,
   });
   const jobs = useQuery({
     queryKey: ["jobs", sessionId],
     queryFn: () => api<Job[]>(`/api/sessions/${sessionId}/jobs`),
     enabled: Boolean(sessionId),
-    refetchInterval: running ? 1000 : 5000,
+    refetchInterval: running ? 5000 : 10000,
   });
   const services = useQuery({
     queryKey: ["services", sessionId],
     queryFn: () => api<ServiceInstance[]>(`/api/sessions/${sessionId}/services`),
     enabled: Boolean(sessionId),
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
 
+  const effectiveSettings = useMemo(() => applyCodexRuntimeDefaults(settings, status.data ?? runtimeDefaults.data, overrides), [overrides, runtimeDefaults.data, settings, status.data]);
   const segments = useMemo(
     () =>
-      normalizeStatuslineItems(settings.statuslineItems)
+      normalizeStatuslineItems(effectiveSettings.statuslineItems)
         .map((item) =>
           statuslineSegment(item, {
             jobs: jobs.data ?? [],
-            model: settings.model,
-            reasoning: settings.reasoningEffort,
+            model: effectiveSettings.model,
+            reasoning: effectiveSettings.reasoningEffort,
             running: Boolean(running),
             services: services.data ?? [],
             status: status.data,
           }),
         )
         .filter((segment): segment is StatusLineSegment => Boolean(segment)),
-    [jobs.data, running, services.data, settings.model, settings.reasoningEffort, settings.statuslineItems, status.data],
+    [effectiveSettings.model, effectiveSettings.reasoningEffort, effectiveSettings.statuslineItems, jobs.data, running, services.data, status.data],
   );
 
   return (
     <div
       aria-label="Codex status line"
-      className="flex min-h-11 items-center gap-2 overflow-hidden border-b border-hairline bg-panel px-2.5 py-2 font-mono text-[11px]"
+      className="flex min-h-11 items-center gap-2 overflow-hidden bg-canvas px-2.5 py-2 font-mono text-[11px]"
       data-testid="codex-statusline"
     >
       {segments.length > 0 ? (
@@ -55,7 +59,7 @@ export function CodexStatusLine({ running, sessionId }: { running?: boolean; ses
           {segments.map((segment, index) => (
             <span className="inline-flex min-w-0 items-center gap-2" key={segment.item}>
               {index > 0 ? <span className="text-muted">·</span> : null}
-              <span className={cn("truncate", segmentClass(segment.item, settings.useThemeColors))} title={segment.title ?? segment.value}>
+              <span className={cn("truncate", segmentClass(segment.item, effectiveSettings.useThemeColors))} title={segment.title ?? segment.value}>
                 {segment.value}
               </span>
             </span>

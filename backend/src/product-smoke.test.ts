@@ -375,7 +375,7 @@ describe("product smoke coverage", () => {
     const repeatedErrors: string[] = [];
     const repeated = createSignalShutdown(
       () => new Promise<void>(() => undefined),
-      { timeoutMs: 60_000, exit: (code) => repeatedExits.push(code), log: () => undefined, error: (message) => repeatedErrors.push(message), removePid: async () => undefined },
+      { duplicateNoticeDelayMs: 0, timeoutMs: 60_000, exit: (code) => repeatedExits.push(code), log: () => undefined, error: (message) => repeatedErrors.push(message), removePid: async () => undefined },
     );
     repeated();
     repeated();
@@ -390,6 +390,17 @@ describe("product smoke coverage", () => {
     timedOut();
     await delay(20);
     expect(timeoutExits).toEqual([1]);
+  });
+
+  test("signal shutdown ignores immediate duplicate shutdown calls", () => {
+    const repeatedErrors: string[] = [];
+    const shutdown = createSignalShutdown(
+      () => new Promise<void>(() => undefined),
+      { timeoutMs: 60_000, exit: () => undefined, log: () => undefined, error: (message) => repeatedErrors.push(message), removePid: async () => undefined },
+    );
+    shutdown();
+    shutdown();
+    expect(repeatedErrors).toEqual([]);
   });
 
   test("marks managed services running after health check", async () => {
@@ -855,7 +866,7 @@ describe("product smoke coverage", () => {
     delete process.env.CODEX_SANDBOX_MODE;
     delete process.env.CODEX_APPROVAL_POLICY;
     await fs.mkdir(codexHome, { recursive: true });
-    await fs.writeFile(path.join(codexHome, "config.toml"), 'model = "gpt-test"\nmodel_reasoning_effort = "high"\nsandbox_mode = "danger-full-access"\napproval_policy = "never"\n');
+    await fs.writeFile(path.join(codexHome, "config.toml"), 'model = "gpt-test"\nmodel_reasoning_effort = "high"\nsandbox_mode = "danger-full-access"\napproval_policy = "never"\ntheme = "dark"\n');
     await execa("git", ["init"], { cwd: root });
     try {
       const store = new JsonStore(path.join(root, ".store"));
@@ -867,9 +878,11 @@ describe("product smoke coverage", () => {
 
       const status = await codex.runSlashCommand(session, { command: "status" });
       expect(status.status?.session.name).toBe("slash");
-      expect(status.status?.model).toEqual({ label: "gpt-test", source: "Codex CLI config" });
+      expect(status.status?.model).toEqual({ label: "gpt-test", source: "Codex CLI config", reasoningEffort: "high", reasoningSource: "Codex CLI config" });
       expect(status.status?.permissions).toEqual({ sandbox: "danger-full-access", approvals: "never" });
+      expect(status.status?.theme).toEqual({ name: "dark", source: "Codex CLI config" });
       expect(status.status?.commands.supported).toBe(CODEX_SLASH_COMMANDS.length);
+      expect(codex.runtimeDefaults().model.reasoningEffort).toBe("high");
 
       const applied = await codex.runSlashCommand(session, { command: "statusline", options: { statuslineItems: ["model-with-reasoning", "context-remaining"], useThemeColors: true } });
       expect(applied.message).toContain("/statusline");
@@ -1057,6 +1070,32 @@ describe("product smoke coverage", () => {
     }
   });
 
+  test("closes Bun front proxy while event streams are open", async () => {
+    const frontPort = await freePort();
+    const app = express();
+    app.get("/api/sessions/session/events", (_req, res) => {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+      res.write("retry: 1000\n\n");
+      res.write(": connected\n\n");
+    });
+    const services = { auth: { isAuthorizedHeaders: () => true } } as unknown as AppServices;
+    const front = await startBunFrontProxy({ app, host: "127.0.0.1", port: frontPort, services });
+    const controller = new AbortController();
+    try {
+      const response = await fetch(`http://127.0.0.1:${frontPort}/api/sessions/session/events`, { signal: controller.signal });
+      expect(response.status).toBe(200);
+      const startedAt = Date.now();
+      await front.close();
+      expect(Date.now() - startedAt).toBeLessThan(1400);
+    } finally {
+      controller.abort();
+    }
+  });
+
   test("starts the app server and serves health and static fallback", async () => {
     const home = await tempDir();
     const previousHome = process.env.CODEX_WEB_HOME;
@@ -1146,6 +1185,7 @@ describe("product smoke coverage", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toContain("exited with code 130");
       expect(result.stdout).toContain("Shutting down Codex Web IDE...");
+      expect(result.stdout).not.toContain("Shutdown already in progress.");
     } finally {
       if (!child.killed) child.kill("SIGTERM");
     }

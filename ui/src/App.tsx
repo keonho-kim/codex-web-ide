@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/features/projects/Sidebar";
 import { Topbar } from "@/features/app/Topbar";
+import { useCodexTheme } from "@/features/app/useCodexTheme";
 import { Workbench } from "@/features/Workbench";
 import { useAppData } from "@/features/app/useAppData";
 import { useSessionEvents } from "@/features/app/useSessionEvents";
@@ -23,6 +24,7 @@ export function App() {
   const workbenchTab = normalizeWorkbenchTab(useUiStore((state) => state.workbenchTab));
   const setWorkbenchTab = useUiStore((state) => state.setWorkbenchTab);
   const compact = useMediaQuery("(max-width: 1100px)");
+  useCodexTheme();
   const sessionEventIds = useMemo(
     () =>
       app.allSessions

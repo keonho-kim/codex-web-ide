@@ -6,6 +6,9 @@ export function registerCodexRoutes(app: Express, { codex, sessions }: AppServic
   app.get("/api/codex/slash-commands", asyncHandler(async (_req, res) => {
     res.json(await codex.slashCommands());
   }));
+  app.get("/api/codex/runtime-defaults", asyncHandler(async (_req, res) => {
+    res.json(codex.runtimeDefaults());
+  }));
   app.get("/api/sessions/:id/codex/messages", withSession(sessions, async (_req, res, session) => {
     res.json(await codex.listMessages(session));
   }));

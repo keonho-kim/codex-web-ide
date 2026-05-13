@@ -81,7 +81,7 @@ function TopbarStatus({ session }: { session?: Session }) {
     queryKey: ["git", sessionId, "state"],
     queryFn: () => api<GitState>(`/api/sessions/${sessionId}/git/state`),
     enabled: Boolean(sessionId),
-    refetchInterval: 3000,
+    refetchInterval: 10000,
   });
   const jobs = useQuery({
     queryKey: ["jobs", sessionId],

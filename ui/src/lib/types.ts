@@ -1,5 +1,6 @@
 export type {
   CodexMessage,
+  CodexRuntimeDefaults,
   CodexSlashCommandDefinition,
   CodexSlashCommandResult,
   CodexStatusSnapshot,
@@ -23,4 +24,6 @@ export type MentionPopupState = {
   trigger: "@" | "$";
   query: string;
   selectedIndex: number;
+  start: number;
+  end: number;
 };

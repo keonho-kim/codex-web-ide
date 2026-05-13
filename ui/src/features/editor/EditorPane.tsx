@@ -15,6 +15,7 @@ import { PreviewSuggestionToast } from "@/features/editor/PreviewSuggestionToast
 import { getSuggestedPreviewCommand, sameCommand } from "@/features/editor/previewCommands";
 import { QuickOpen } from "@/features/editor/QuickOpen";
 import { filterFiles, flattenFiles } from "@/features/editor/quickOpenFiles";
+import "@/lib/monacoEnvironment";
 
 type EditorMode = "raw" | "preview";
 type MonacoEditor = Parameters<OnMount>[0];

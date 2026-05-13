@@ -93,14 +93,9 @@ export type CodexStatusSnapshot = {
     status: SessionStatus;
   };
   thread: CodexThreadRecord | null;
-  model: {
-    label: string;
-    source: string;
-  };
-  permissions: {
-    sandbox: string;
-    approvals: string;
-  };
+  model: CodexRuntimeDefaults["model"];
+  permissions: CodexRuntimeDefaults["permissions"];
+  theme: CodexRuntimeDefaults["theme"];
   git: GitState;
   usage: {
     totalTokens?: number;
@@ -112,6 +107,23 @@ export type CodexStatusSnapshot = {
   };
   commands: {
     supported: number;
+    source: string;
+  };
+};
+
+export type CodexRuntimeDefaults = {
+  model: {
+    label: string;
+    source: string;
+    reasoningEffort: string;
+    reasoningSource: string;
+  };
+  permissions: {
+    sandbox: string;
+    approvals: string;
+  };
+  theme: {
+    name: "light" | "dark" | "system" | "github" | "solarized";
     source: string;
   };
 };

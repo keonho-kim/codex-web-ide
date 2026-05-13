@@ -18,7 +18,6 @@ export function CodexPane({
     queryKey: ["codex", sessionId, "resume"],
     queryFn: () => api<{ running: boolean; messages: CodexMessage[]; thread: CodexThreadRecord | null }>(`/api/sessions/${sessionId}/codex/resume`, { method: "POST" }),
     enabled: Boolean(sessionId),
-    refetchInterval: (query) => (query.state.data?.running ? 1000 : false),
   });
 
   return (
