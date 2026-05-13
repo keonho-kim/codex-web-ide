@@ -1,31 +1,68 @@
 # Codex Web IDE
 
-Local-first Codex development environment with a focused web UI for projects, files, conversations, previews, jobs, services, terminals, and Git workflows.
+<p align="center">
+  <strong>Local-first Codex development environment for Termux, Linux, WSL, and macOS.</strong>
+</p>
 
-Codex Web IDE is designed for Termux first, with the same Bun-based runtime kept practical on macOS, Linux, and WSL.
+<p align="center">
+  <a href="https://github.com/keonho-kim/codex-web-ide/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/keonho-kim/codex-web-ide?sort=semver">
+  </a>
+  <img alt="Runtime: Bun" src="https://img.shields.io/badge/runtime-Bun-202627">
+  <img alt="Termux first" src="https://img.shields.io/badge/platform-Termux%20first-466a76">
+  <img alt="Status: early stage" src="https://img.shields.io/badge/status-early%20stage-7b6a42">
+</p>
+
+Codex Web IDE turns a local Codex runtime into a focused browser workspace for project sessions, files, Codex conversations, previews, jobs, services, terminals, and Git workflows. It is designed for Android tablets through Termux first, while keeping the same Bun-based runtime practical on Linux, WSL, and macOS.
+
+## Contents
+
+- [Highlights](#highlights)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [Managed Commands](#managed-commands)
+- [External Access](#external-access)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Release Workflow](#release-workflow)
+- [Environment](#environment)
+- [Project Status](#project-status)
 
 ## Highlights
 
-- **Installable CLI**: run the app with `cw start` or `codex-web start`.
-- **Local runtime**: files, Git, Codex sessions, terminals, jobs, previews, and services stay on your machine.
-- **Web UI for real work**: project/session navigation, file tree, Monaco editor, Codex chat, managed commands, preview panel, and Git controls.
-- **Managed execution**: use `cw job`, `cw preview`, and `cw service` so the backend can track processes, logs, ports, and lifecycle.
-- **Termux-first remote access**: pair Tailscale with Telegram approval auth when exposing the app beyond loopback.
+- **Installable CLI:** run the app with `cw start` or `codex-web start`.
+- **Local-first runtime:** files, Git, Codex sessions, terminals, jobs, previews, and services stay on your machine.
+- **Real development workspace:** project/session navigation, file tree, Monaco editor, Codex chat, managed commands, preview panel, and Git controls.
+- **Managed process lifecycle:** use `cw job`, `cw preview`, and `cw service` so the backend can track commands, logs, ports, and status.
+- **Termux-first remote access:** expose the app through Tailscale and Telegram approval auth instead of public port forwarding.
+- **Portable release archives:** production installs use prebuilt GitHub Release artifacts, so target devices do not need to build the web UI locally.
 
 ## Requirements
 
 - Bun 1.1+
 - Git
+- curl and tar
 - Codex CLI or SDK access
 - Optional project runtimes such as Python, Go, Rust, or Node.js, depending on the projects you open
 
+Supported release targets:
+
+| Platform | CPU |
+| --- | --- |
+| Termux / proot Linux | `arm64`, `x64` |
+| Linux / WSL | `arm64`, `x64` |
+| macOS | `arm64`, `x64` |
+
 ## Install
 
-Install the latest release with the installer script:
+Install the latest GitHub Release:
 
 ```bash
 curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | sh
 ```
+
+By default, the installer resolves the current latest release tag before downloading the matching production archive.
 
 Verify the CLI:
 
@@ -34,27 +71,27 @@ cw doctor
 cw start
 ```
 
-The default app URL is:
+Open the app:
 
 ```text
 http://127.0.0.1:17321
 ```
 
-The installer detects Termux, Linux, WSL, proot-based Linux, and macOS on `arm64` and `x64`. To pin a version, pass `CW_VERSION` to the shell that runs the installer:
+Pin a specific release when you need reproducible installs:
 
 ```bash
 curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | CW_VERSION=v0.1.4 sh
 ```
 
-The installer downloads a production release archive that already contains the built web UI and runtime dependencies:
+Use `CW_VERSION` only when you want to pin a release. Version values without a leading `v` are normalized automatically, so `CW_VERSION=0.1.4` resolves to `v0.1.4`.
 
-```bash
+The installer downloads a release archive that already contains the built web UI and runtime dependencies:
+
+```text
 https://github.com/<owner>/<repo>/releases/download/v0.1.4/codex-web-ide-0.1.4-linux-arm64.tgz
 ```
 
-The installer does not run `bun install -g`, so target Termux/proot/macOS machines do not need to build native runtime dependencies locally.
-
-Re-running the installer is safe. If the latest tag is unchanged, it overwrites the same release directory and rewrites the launchers. If the latest tag changed, it installs a new release directory and points the launchers at it.
+It does not run `bun install -g`, so Termux, proot, Linux, WSL, and macOS machines do not need to compile native runtime dependencies during normal installation.
 
 Upgrade an installed release in place:
 
@@ -64,47 +101,19 @@ cw upgrade
 
 `cw upgrade` reruns the release installer for the same install root and prunes older release directories after a successful install. It does not remove user data under `~/.codex-web`.
 
-Uninstall the release installation and its command launchers:
+Uninstall the release installation and command launchers:
 
 ```bash
 cw uninstall
 ```
 
-## Local Package Development
-
-Use this path only when you are developing the release package from a local checkout on a machine that can run builds.
-
-Build the web UI, prepare the install launcher, and pack a portable production archive:
-
-```bash
-bun install
-bun run pack:production
-```
-
-The normal install path should use the GitHub Release artifact instead, so Termux/proot/macOS users do not need to run `bun run build` locally.
-
-## Release Workflow
-
-GitHub Releases are built from version tags. To publish `v0.1.4`, push a tag that matches `package.json`:
-
-```bash
-git tag v0.1.4
-git push origin v0.1.4
-```
-
-The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.4-linux-arm64.tgz` and `dist/codex-web-ide-0.1.4-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
-
 ## Quick Start
+
+Initialize a project session and start the local server:
 
 ```bash
 cw init /path/to/project
 cw start
-```
-
-Open the app:
-
-```text
-http://127.0.0.1:17321
 ```
 
 Useful runtime commands:
@@ -116,12 +125,18 @@ cw stop
 cw restart
 ```
 
+The default app URL is:
+
+```text
+http://127.0.0.1:17321
+```
+
 ## Managed Commands
 
 Run project commands through Codex Web IDE so process state, logs, ports, and previews remain visible in the UI.
 
 ```bash
-cw job bun run build
+cw job bun test
 cw preview bun run dev
 cw service python bot.py
 ```
@@ -140,7 +155,7 @@ cw job --approve-dangerous git reset --hard
 
 ## External Access
 
-`cw start` defaults to authentication disabled and should stay on loopback for local use.
+`cw start` defaults to loopback access with authentication disabled. Keep that default for local-only use.
 
 For remote access, prefer Tailscale over public port forwarding:
 
@@ -150,7 +165,11 @@ tailscale ip -4
 cw start --host 0.0.0.0 --port 17321 --auth enable
 ```
 
-Then open `http://<tailscale-ip>:17321` from another device in the same tailnet and approve the browser session from Telegram.
+Then open the app from another device in the same tailnet:
+
+```text
+http://<tailscale-ip>:17321
+```
 
 See [External Access With Tailscale And Telegram Auth](docs/external-access.md) for the full setup and security checklist.
 
@@ -167,10 +186,12 @@ The backend owns filesystem access, command execution, previews, services, termi
 
 ## Development
 
+Use this path when you are developing Codex Web IDE from a local checkout.
+
 ```bash
 bun install
-bun run build
 bun test
+bun run build
 ```
 
 Start the app from source:
@@ -192,6 +213,25 @@ bun run setup:e2e
 bun run test:e2e
 ```
 
+Package a local production archive on a machine that can run builds:
+
+```bash
+bun run pack:production
+```
+
+The normal install path should use the GitHub Release artifact instead, so Termux, proot, Linux, WSL, and macOS users do not need to run `bun run build` locally.
+
+## Release Workflow
+
+GitHub Releases are built from version tags. To publish `v0.1.4`, push a tag that matches `package.json`:
+
+```bash
+git tag v0.1.4
+git push origin v0.1.4
+```
+
+The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.4-linux-arm64.tgz` and `dist/codex-web-ide-0.1.4-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
+
 ## Environment
 
 ```text
@@ -209,4 +249,4 @@ CODEX_WEB_PREVIEW_PORT_END     Preview port range end, default 17399
 
 ## Project Status
 
-This repository is early-stage and intentionally local-first. The implementation follows [PRODUCT.md](PRODUCT.md) for product scope and [DESIGN.md](DESIGN.md) for UI direction.
+Codex Web IDE is early-stage and intentionally local-first. The implementation follows [PRODUCT.md](PRODUCT.md) for product scope and [DESIGN.md](DESIGN.md) for UI direction.
