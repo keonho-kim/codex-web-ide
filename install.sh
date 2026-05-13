@@ -10,6 +10,10 @@ info() {
   printf '%s\n' "$*"
 }
 
+step() {
+  info "==> $*"
+}
+
 die() {
   printf 'Error: %s\n' "$*" >&2
   exit 1
@@ -109,7 +113,7 @@ ensure_tar() {
 }
 
 install_bun_with_official_installer() {
-  info "Bun was not found. Installing Bun from ${bun_install_url}..."
+  step "Bun was not found. Installing Bun from ${bun_install_url}"
   if has_cmd bash; then
     curl -fsSL "$bun_install_url" | bash
   else
@@ -137,6 +141,7 @@ ensure_bun() {
 }
 
 resolve_latest_version() {
+  step "Resolving latest release tag from GitHub"
   latest_url="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest")"
   latest_tag="${latest_url##*/}"
 
@@ -210,8 +215,9 @@ case "$arch" in
   *) die "Unsupported CPU architecture: $(uname -m 2>/dev/null || printf unknown)" ;;
 esac
 
-info "Installing ${package_name} for ${target}/${arch}..."
+step "Detected ${target}/${arch}; installing ${package_name}"
 
+step "Checking required tools"
 ensure_curl
 ensure_tar
 release_platform="$(resolve_release_platform)"
@@ -232,9 +238,11 @@ archive_path="${tmp_dir}/${artifact_name}"
 extract_dir="${tmp_dir}/extract"
 stage_dir="${tmp_dir}/stage"
 
-info "Installing production release package: ${tarball_url}"
+step "Downloading production release package"
+info "    ${tarball_url}"
 curl -fL "$tarball_url" -o "$archive_path"
 
+step "Extracting package"
 mkdir -p "$extract_dir" "$stage_dir" "$install_root"
 tar -xzf "$archive_path" -C "$extract_dir"
 
@@ -242,14 +250,21 @@ if [ ! -x "${extract_dir}/${package_name}/dist/bin/cw" ]; then
   die "Release package is missing executable dist/bin/cw."
 fi
 
+step "Installing files to ${install_dir}"
 mv "${extract_dir}/${package_name}" "${stage_dir}/${package_name}"
 rm -rf "$install_dir"
 mv "${stage_dir}/${package_name}" "$install_dir"
 
 global_bin_dir="$(resolve_global_bin_dir)"
+step "Writing command launchers to ${global_bin_dir}"
 mkdir -p "$global_bin_dir"
 write_global_launcher "cw"
 write_global_launcher "codex-web"
+
+if [ "${CW_PRUNE_OLD_INSTALLS:-0}" = "1" ]; then
+  step "Pruning old release installs from ${install_root}"
+  find "$install_root" -mindepth 1 -maxdepth 1 -type d ! -name "$(basename "$install_dir")" -exec rm -rf {} +
+fi
 
 if [ -x "${global_bin_dir}/cw" ]; then
   info "Installed ${package_name}."

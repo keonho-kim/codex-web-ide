@@ -1,4 +1,3 @@
-import { startServer } from "@backend/server";
 import { createPlatformAdapter } from "@backend/platform/adapter";
 import { JsonStore } from "@backend/managers/storage";
 import { WorkspaceManager } from "@backend/managers/workspaceManager";
@@ -18,16 +17,22 @@ export async function start(input: string[]) {
   const previewPortStart = numberFlag(input, "--preview-port-start");
   const previewPortEnd = numberFlag(input, "--preview-port-end");
   const auth = parseAuthFlag(input);
+  console.log("Starting Codex Web IDE");
+  console.log(`${startupLabel("Config")} host=${host ?? "workspace default"} port=${port ?? "workspace default"} auth=${auth}`);
   if (previewPortStart && previewPortEnd && previewPortStart > previewPortEnd) {
     throw new Error("--preview-port-start must be less than or equal to --preview-port-end.");
   }
+  console.log(`${startupLabel("Check")} Looking for an already running server`);
   const runningUrl = await runningServerUrl();
   if (runningUrl) {
     console.log(`Codex Web IDE already running on ${runningUrl}`);
     return;
   }
+  console.log(`${startupLabel("Check")} Running startup diagnostics`);
   await printStartupDoctorWarnings({ previewPortStart, previewPortEnd });
   let shutdown: () => void = () => undefined;
+  console.log(`${startupLabel("Server")} Starting local backend`);
+  const { startServer } = await import("@backend/server");
   const server = await startServer({
     host,
     port,
@@ -36,9 +41,13 @@ export async function start(input: string[]) {
     auth,
     onShutdownRequest: () => shutdown(),
   });
+  console.log(`${startupLabel("Store")} Saving runtime settings`);
   await persistRuntimeSettings(server.host, server.port, previewPortStart, previewPortEnd);
+  console.log(`${startupLabel("Store")} Writing pid file`);
   await writePidFile(server.port, server.host);
+  console.log(`${startupLabel("Access")} Resolving local and LAN URLs`);
   const access = await collectStartupAccessInfo(server.host, server.port);
+  console.log("");
   console.log(formatStartupAccessInfo(access, Boolean(server.auth?.enabled)));
   if (server.auth?.enabled) await sendStartupAccessTelegram(access).catch((error) => console.warn(`Telegram startup notice failed: ${error instanceof Error ? error.message : String(error)}`));
   shutdown = createSignalShutdown(server.close);
@@ -96,8 +105,8 @@ export async function init(input: string[]) {
 }
 
 export async function update() {
-  console.log("Use Bun to update the installed package:");
-  console.log("  bun update -g codex-web-ide");
+  console.log("Use the release installer to upgrade the installed package:");
+  console.log("  cw upgrade");
 }
 
 async function printStartupDoctorWarnings({
@@ -113,6 +122,7 @@ async function printStartupDoctorWarnings({
   const warnings = await collectStartupDoctorWarnings({
     previewStart: previewPortStart ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_START || settings.previewPortStart),
     previewEnd: previewPortEnd ?? Number(process.env.CODEX_WEB_PREVIEW_PORT_END || settings.previewPortEnd),
+    onProgress: (message) => console.log(`${startupLabel("Check")} ${message}`),
   });
   if (warnings.length === 0) return;
   console.log("Startup warnings:");
@@ -157,3 +167,7 @@ async function persistRuntimeSettings(host: string, port: number, previewPortSta
 
 export type SignalShutdownOptions = RuntimeSupervisorOptions;
 export const createSignalShutdown = createRuntimeSupervisor;
+
+function startupLabel(name: string) {
+  return `${name}:`.padEnd(9);
+}

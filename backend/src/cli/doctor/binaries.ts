@@ -24,18 +24,23 @@ export function defaultBinaryChecks(): BinaryCheck[] {
   ];
 }
 
-export async function checkBinaries(checks: BinaryCheck[]): Promise<BinaryResult[]> {
+export async function checkBinaries(checks: BinaryCheck[], onProgress?: (message: string) => void): Promise<BinaryResult[]> {
   return Promise.all(
-    checks.map(async (check) => ({
-      ...check,
-      version: await binaryVersion(check.command, check.versionArgs),
-    })),
+    checks.map(async (check) => {
+      onProgress?.(`Checking ${check.name} (${check.command})`);
+      const version = await binaryVersion(check.command, check.versionArgs);
+      onProgress?.(`${check.name}: ${version ? "found" : "missing"}`);
+      return {
+        ...check,
+        version,
+      };
+    }),
   );
 }
 
 async function binaryVersion(name: string, versionArgs: string[]) {
   try {
-    const { stdout, stderr } = await execa(name, versionArgs);
+    const { stdout, stderr } = await execa(name, versionArgs, { timeout: 8_000 });
     return (stdout || stderr).split("\n")[0] || null;
   } catch {
     return null;

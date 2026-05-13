@@ -1,9 +1,11 @@
 import { collectDoctorReport } from "@backend/cli/doctor/checks";
 
 export async function runDoctor() {
-  const report = await collectDoctorReport();
-
   console.log("codex-web doctor");
+  console.log("");
+  const report = await collectDoctorReport({
+    onProgress: (message) => console.log(`${label("Check")} ${message}`),
+  });
   console.log("");
   console.log(`${label("Platform")} ${report.platform}`);
   console.log(`${label("Home")} ${report.home}`);

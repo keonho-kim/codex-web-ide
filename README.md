@@ -54,6 +54,22 @@ https://github.com/<owner>/<repo>/releases/download/v0.1.4/codex-web-ide-0.1.4-l
 
 The installer does not run `bun install -g`, so target Termux/proot/macOS machines do not need to build native runtime dependencies locally.
 
+Re-running the installer is safe. If the latest tag is unchanged, it overwrites the same release directory and rewrites the launchers. If the latest tag changed, it installs a new release directory and points the launchers at it.
+
+Upgrade an installed release in place:
+
+```bash
+cw upgrade
+```
+
+`cw upgrade` reruns the release installer for the same install root and prunes older release directories after a successful install. It does not remove user data under `~/.codex-web`.
+
+Uninstall the release installation and its command launchers:
+
+```bash
+cw uninstall
+```
+
 ## Local Package Development
 
 Use this path only when you are developing the release package from a local checkout on a machine that can run builds.

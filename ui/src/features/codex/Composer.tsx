@@ -26,7 +26,7 @@ export function Composer({
   const canStart = Boolean((sessionId || activeProjectId) && composer.draft.trim() && !isBusy);
 
   return (
-    <div className="relative" onKeyDownCapture={(event) => composer.onKeyDown(event, isBusy)}>
+    <div className="relative" onBeforeInputCapture={(event) => composer.onBeforeInput(event, isBusy)} onKeyDownCapture={(event) => composer.onKeyDown(event, isBusy)}>
       <div className="relative overflow-hidden rounded-lg border border-control bg-canvas shadow-sm transition-colors focus-within:border-primary" data-testid="composer-input">
         <CodexStatusLine running={isBusy} sessionId={sessionId} />
         <ComposerMentions mentions={composer.selectedMentions} onRemove={composer.removeMention} />
@@ -79,5 +79,5 @@ export function Composer({
 
 function ComposerHint() {
   const rawMode = useUiStore((state) => state.codexCommandSettings.rawMode);
-  return <span className="truncate text-[11px] text-muted max-[700px]:whitespace-normal">{rawMode ? "Raw mode keeps input unchanged." : "Enter sends one line. Ctrl+Enter inserts a line."}</span>;
+  return <span className="truncate text-[11px] text-muted max-[700px]:whitespace-normal">{rawMode ? "Raw mode keeps input unchanged." : "Enter sends. Shift+Enter inserts a line."}</span>;
 }

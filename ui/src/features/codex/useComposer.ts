@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ export function useComposer({
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [activeSlashCommand, setActiveSlashCommand] = useState<CodexSlashCommandDefinition | null>(null);
   const [slashDialogOpen, setSlashDialogOpen] = useState(false);
+  const allowNextParagraphInput = useRef(false);
   const activeMentionSearch = mentionSearch ?? parseMentionSearch(draft);
 
   const editor = useEditor({
@@ -41,14 +42,14 @@ export function useComposer({
       },
     },
     onUpdate: ({ editor }) => {
-      const text = editor.getText();
+      const text = editorText(editor);
       setDraft(text);
       setMentionSearch(parseMentionSearch(text));
     },
   });
 
   useEffect(() => {
-    if (!editor || editor.getText() === draft) return;
+    if (!editor || editorText(editor) === draft) return;
     editor.commands.setContent(textDocument(draft), { emitUpdate: false });
   }, [draft, editor]);
 
@@ -212,6 +213,7 @@ export function useComposer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, running = false) => {
+    if (isComposingKeyboardEvent(event)) return;
     if (slashSuggestions.length > 0) {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
@@ -250,20 +252,38 @@ export function useComposer({
       }
     }
     if (event.defaultPrevented || running) return;
-    if (event.key === "Enter" && event.ctrlKey) return;
     if (event.key !== "Enter") return;
-    const lines = lineCount(draft);
-    if (!event.shiftKey && lines <= 1) {
-      event.preventDefault();
-      submitComposer();
-      return;
-    }
-    if (event.shiftKey && lines > 1) {
-      event.preventDefault();
-      submitComposer();
+    if (event.shiftKey) {
+      allowNextParagraphInput.current = true;
+      window.setTimeout(() => {
+        allowNextParagraphInput.current = false;
+      }, 0);
       return;
     }
     event.preventDefault();
+    submitComposer();
+  };
+
+  const onBeforeInput = (event: FormEvent<HTMLDivElement>, running = false) => {
+    const nativeEvent = event.nativeEvent as InputEvent;
+    if (running || nativeEvent.isComposing) return;
+    if (nativeEvent.inputType !== "insertParagraph" && nativeEvent.inputType !== "insertLineBreak") return;
+    if (slashSuggestions.length > 0) {
+      event.preventDefault();
+      selectSlashCommand(slashSuggestions[selectedSlashIndex] ?? slashSuggestions[0]);
+      return;
+    }
+    if (activeMentionSearch && suggestions.length > 0) {
+      event.preventDefault();
+      addMention(suggestions[activeMentionSearch.selectedIndex] ?? suggestions[0]);
+      return;
+    }
+    if (allowNextParagraphInput.current) {
+      allowNextParagraphInput.current = false;
+      return;
+    }
+    event.preventDefault();
+    submitComposer();
   };
 
   return {
@@ -277,6 +297,7 @@ export function useComposer({
     error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : slashCommand.error ? getErrorMessage(slashCommand.error) : null,
     mentionSearch,
     activeMentionSearch,
+    onBeforeInput,
     onKeyDown,
     removeMention,
     runCodex: submitComposer,
@@ -291,8 +312,16 @@ export function useComposer({
   };
 }
 
-function textDocument(text: string) {
-  return text ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] } : "";
+export function textDocument(text: string) {
+  return text
+    ? {
+        type: "doc",
+        content: text.split(/\r?\n/).map((line) => ({
+          type: "paragraph",
+          ...(line ? { content: [{ type: "text", text: line }] } : {}),
+        })),
+      }
+    : "";
 }
 
 function parseSlashSearch(text: string) {
@@ -318,6 +347,10 @@ function commandRank(command: CodexSlashCommandDefinition, query: string) {
   return 3;
 }
 
-function lineCount(text: string) {
-  return Math.max(1, text.split(/\r?\n/).length);
+export function editorText(editor: { getText(options?: { blockSeparator?: string }): string }) {
+  return editor.getText({ blockSeparator: "\n" });
+}
+
+function isComposingKeyboardEvent(event: KeyboardEvent<HTMLDivElement>) {
+  return event.nativeEvent.isComposing || event.key === "Process" || event.keyCode === 229;
 }
