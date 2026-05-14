@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { CodexSlashCommandDefinition, CodexSlashCommandResult, ComposerMention, Session } from "@/lib/types";
 import { useUiStore } from "@/store/uiStore";
-import { mentionKey, parseMentionSearch } from "@/features/codex/mentionUtils";
+import type { ComposerInputHandle } from "@/features/codex/ComposerTextarea";
+import { mentionKey, mentionLabel, parseMentionSearch } from "@/features/codex/mentionUtils";
 
 export function useComposer({
   activeProjectId,
@@ -30,28 +29,20 @@ export function useComposer({
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [activeSlashCommand, setActiveSlashCommand] = useState<CodexSlashCommandDefinition | null>(null);
   const [slashDialogOpen, setSlashDialogOpen] = useState(false);
-  const allowNextParagraphInput = useRef(false);
+  const textareaRef = useRef<ComposerInputHandle | null>(null);
   const activeMentionSearch = mentionSearch ?? parseMentionSearch(draft);
 
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: draft,
-    editorProps: {
-      attributes: {
-        class: "max-h-[180px] min-h-[88px] w-full overflow-y-auto rounded-t-md bg-canvas px-2.5 py-2 text-sm text-ink outline-none max-[700px]:min-h-[76px] [&_p]:m-0",
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const text = editorText(editor);
-      setDraft(text);
-      setMentionSearch(parseMentionSearch(text));
-    },
-  });
+  const updateDraft = (text: string, cursorIndex = text.length) => {
+    const normalizedText = normalizeComposerDraft(text);
+    const nextMentions = useUiStore.getState().composerMentions.filter((mention) => normalizedText.includes(mentionLabel(mention)));
+    setDraft(normalizedText);
+    if (nextMentions.length !== useUiStore.getState().composerMentions.length) setSelectedMentions(nextMentions);
+    setMentionSearch(parseMentionSearch(normalizedText, cursorIndex));
+  };
 
-  useEffect(() => {
-    if (!editor || editorText(editor) === draft) return;
-    editor.commands.setContent(textDocument(draft), { emitUpdate: false });
-  }, [draft, editor]);
+  const focusComposer = (cursorIndex?: number) => {
+    textareaRef.current?.focusAt(cursorIndex);
+  };
 
   const fileMentions = useQuery({
     queryKey: ["mentions", "files", sessionId, activeMentionSearch?.query],
@@ -97,23 +88,19 @@ export function useComposer({
         method: "POST",
         body: { command, args: args ?? "", options: options ?? {} },
       }),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (result.draft) {
-        editor?.commands.setContent(textDocument(result.draft));
-        setDraft(result.draft);
+        updateDraft(result.draft);
       } else {
-        editor?.commands.clearContent();
         clearComposer();
       }
       if (result.status || result.command === "status") {
         setWorkbenchTab("system");
         setControlTab("usage");
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["codex", sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ["codex", sessionId, "status"] }),
-        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
+      void queryClient.invalidateQueries({ queryKey: ["codex", sessionId, "status"] });
+      void queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
 
@@ -135,38 +122,38 @@ export function useComposer({
     onMutate: () => {
       const previousDraft = draft;
       const previousMentions = selectedMentions;
-      editor?.commands.clearContent();
       clearComposer();
       return { previousDraft, previousMentions };
     },
     onError: (_error, _variables, context) => {
       if (!context?.previousDraft && !context?.previousMentions.length) return;
-      editor?.commands.setContent(textDocument(context.previousDraft));
-      setDraft(context.previousDraft);
+      updateDraft(context.previousDraft);
       setSelectedMentions(context.previousMentions);
     },
-    onSuccess: async ({ sessionId: targetSessionId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId] }),
-        queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId, "threads"] }),
-        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
-      ]);
+    onSuccess: ({ sessionId: targetSessionId }) => {
+      void queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId, "resume"] });
+      void queryClient.invalidateQueries({ queryKey: ["codex", targetSessionId, "threads"] });
+      void queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
   const cancelCodex = useMutation({
     mutationFn: () => api(`/api/sessions/${sessionId}/codex/cancel`, { method: "POST" }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["codex", sessionId] });
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["codex", sessionId, "resume"] });
     },
   });
 
   const addMention = (mention: ComposerMention) => {
-    setSelectedMentions(selectedMentions.some((item) => mentionKey(item) === mentionKey(mention)) ? selectedMentions : [...selectedMentions, mention]);
-    const nextText = draft.replace(/(^|\s)([@$])([^\s@$]*)$/, "$1");
-    editor?.commands.setContent(textDocument(nextText));
-    setDraft(nextText);
+    const search = activeMentionSearch ?? parseMentionSearch(draft, textareaRef.current?.selectionStart() ?? draft.length);
+    if (!search) return;
+    const nextMentions = selectedMentions.some((item) => mentionKey(item) === mentionKey(mention)) ? selectedMentions : [...selectedMentions, mention];
+    const replacement = `${mentionLabel(mention)} `;
+    const nextCursor = search.start + replacement.length;
+    const nextText = `${draft.slice(0, search.start)}${replacement}${draft.slice(search.end)}`;
+    setSelectedMentions(nextMentions);
+    updateDraft(nextText, nextCursor);
     setMentionSearch(null);
-    editor?.commands.focus();
+    focusComposer(nextCursor);
   };
 
   const selectSlashCommand = (command: CodexSlashCommandDefinition) => {
@@ -177,13 +164,11 @@ export function useComposer({
     }
     if (command.supportsInlineArgs && command.nativeSurface === "composer") {
       const nextText = `/${command.command} `;
-      editor?.commands.setContent(textDocument(nextText));
-      setDraft(nextText);
-      editor?.commands.focus();
+      updateDraft(nextText);
+      focusComposer();
       return;
     }
     if (command.nativeSurface === "tab") {
-      editor?.commands.clearContent();
       clearComposer();
       setWorkbenchTab("system");
       setControlTab("usage");
@@ -211,7 +196,6 @@ export function useComposer({
         setSlashDialogOpen(true);
       } else {
         if (parsed.command.nativeSurface === "tab") {
-          editor?.commands.clearContent();
           clearComposer();
           setWorkbenchTab("system");
           setControlTab("usage");
@@ -239,8 +223,7 @@ export function useComposer({
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        editor?.commands.setContent("");
-        setDraft("");
+        updateDraft("");
         return;
       }
     }
@@ -264,35 +247,7 @@ export function useComposer({
     }
     if (event.defaultPrevented || running) return;
     if (event.key !== "Enter") return;
-    if (event.shiftKey) {
-      allowNextParagraphInput.current = true;
-      window.setTimeout(() => {
-        allowNextParagraphInput.current = false;
-      }, 0);
-      return;
-    }
-    event.preventDefault();
-    submitComposer();
-  };
-
-  const onBeforeInput = (event: FormEvent<HTMLDivElement>, running = false) => {
-    const nativeEvent = event.nativeEvent as InputEvent;
-    if (running || nativeEvent.isComposing) return;
-    if (nativeEvent.inputType !== "insertParagraph" && nativeEvent.inputType !== "insertLineBreak") return;
-    if (slashSuggestions.length > 0) {
-      event.preventDefault();
-      selectSlashCommand(slashSuggestions[selectedSlashIndex] ?? slashSuggestions[0]);
-      return;
-    }
-    if (activeMentionSearch && suggestions.length > 0) {
-      event.preventDefault();
-      addMention(suggestions[activeMentionSearch.selectedIndex] ?? suggestions[0]);
-      return;
-    }
-    if (allowNextParagraphInput.current) {
-      allowNextParagraphInput.current = false;
-      return;
-    }
+    if (event.shiftKey) return;
     event.preventDefault();
     submitComposer();
   };
@@ -304,11 +259,9 @@ export function useComposer({
     cancelCodex: () => cancelCodex.mutate(),
     cancelPending: cancelCodex.isPending,
     draft,
-    editor,
     error: runCodex.error ? getErrorMessage(runCodex.error) : cancelCodex.error ? getErrorMessage(cancelCodex.error) : slashCommand.error ? getErrorMessage(slashCommand.error) : null,
     mentionSearch,
     activeMentionSearch,
-    onBeforeInput,
     onKeyDown,
     removeMention,
     runCodex: submitComposer,
@@ -320,19 +273,9 @@ export function useComposer({
     slashSuggestions,
     selectSlashCommand,
     setSlashDialogOpen,
+    textareaRef,
+    updateDraft,
   };
-}
-
-export function textDocument(text: string) {
-  return text
-    ? {
-        type: "doc",
-        content: text.split(/\r?\n/).map((line) => ({
-          type: "paragraph",
-          ...(line ? { content: [{ type: "text", text: line }] } : {}),
-        })),
-      }
-    : "";
 }
 
 function parseSlashSearch(text: string) {
@@ -358,8 +301,8 @@ function commandRank(command: CodexSlashCommandDefinition, query: string) {
   return 3;
 }
 
-export function editorText(editor: { getText(options?: { blockSeparator?: string }): string }) {
-  return editor.getText({ blockSeparator: "\n" });
+export function normalizeComposerDraft(text: string) {
+  return text.replace(/\r\n/g, "\n");
 }
 
 function isComposingKeyboardEvent(event: KeyboardEvent<HTMLDivElement>) {

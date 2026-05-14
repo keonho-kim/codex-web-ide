@@ -66,6 +66,7 @@ export type UiState = {
     rawMode: boolean;
     theme: string;
   };
+  codexCommandSettingOverrides: Partial<Record<keyof UiState["codexCommandSettings"], boolean>>;
   setActiveProjectId(id?: string): void;
   setActiveSessionId(id?: string): void;
   setActiveFilePath(path?: string): void;
@@ -122,8 +123,9 @@ export const useUiStore = create<UiState>()(
         approvals: "on-request",
         vimMode: false,
         rawMode: false,
-        theme: "system",
+        theme: "light",
       },
+      codexCommandSettingOverrides: {},
       setActiveProjectId: (activeProjectId) => {
         if (get().activeProjectId === activeProjectId) return;
         set({ activeProjectId });
@@ -265,6 +267,10 @@ export const useUiStore = create<UiState>()(
             ...settings,
             statuslineItems: normalizeStatuslineItems(settings.statuslineItems ?? state.codexCommandSettings.statuslineItems),
           },
+          codexCommandSettingOverrides: {
+            ...state.codexCommandSettingOverrides,
+            ...Object.fromEntries(Object.keys(settings).map((key) => [key, true])),
+          },
         })),
     }),
     {
@@ -285,6 +291,7 @@ export const useUiStore = create<UiState>()(
         collapsedMainPanels: normalizeCollapsedMainPanels(state.collapsedMainPanels),
         workbenchLayout: state.workbenchLayout,
         codexCommandSettings: state.codexCommandSettings,
+        codexCommandSettingOverrides: state.codexCommandSettingOverrides,
       }),
       merge: (persisted, current) => {
         const persistedState = persisted as Partial<UiState> | undefined;
@@ -298,6 +305,7 @@ export const useUiStore = create<UiState>()(
             statuslineItems: normalizeStatuslineItems(persistedSettings?.statuslineItems),
             useThemeColors: persistedSettings?.useThemeColors ?? current.codexCommandSettings.useThemeColors,
           },
+          codexCommandSettingOverrides: persistedState?.codexCommandSettingOverrides ?? current.codexCommandSettingOverrides,
           collapsedMainPanels: normalizeCollapsedMainPanels(persistedState?.collapsedMainPanels),
         };
       },

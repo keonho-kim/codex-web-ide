@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
+import type { Socket } from "node:net";
 import type { AppServices } from "@backend/api/context";
 import { frontProxyWebSocketHandlers } from "@backend/proxy/bunFrontProxy/bridge";
 import { clientAddress, isWebSocketRequest, proxyHttpRequest } from "@backend/proxy/bunFrontProxy/http";
@@ -7,6 +8,13 @@ import { previewWebSocketTarget } from "@backend/proxy/bunFrontProxy/target";
 import type { BunServe } from "@backend/proxy/bunFrontProxy/types";
 
 const FRONT_PROXY_IDLE_TIMEOUT_SECONDS = 255;
+const INTERNAL_SERVER_SHUTDOWN_GRACE_MS = 300;
+
+type InternalListener = {
+  port: number;
+  server: Server;
+  sockets: Set<Socket>;
+};
 
 export function canUseBunFrontProxy() {
   return typeof (globalThis as typeof globalThis & { Bun?: { serve?: BunServe } }).Bun?.serve === "function";
@@ -56,28 +64,44 @@ export async function startBunFrontProxy({
   return {
     close: async () => {
       front.stop(true);
-      await closeInternal(internal.server);
+      await closeInternal(internal);
     },
   };
 }
 
 function listenInternal(app: Express) {
-  return new Promise<{ server: Server; port: number }>((resolve, reject) => {
+  return new Promise<InternalListener>((resolve, reject) => {
+    const sockets = new Set<Socket>();
     const server = app.listen(0, "127.0.0.1", () => {
       const address = server.address();
       if (!address || typeof address === "string") {
         reject(new Error("Internal server did not expose a TCP port."));
         return;
       }
-      resolve({ server, port: address.port });
+      resolve({ server, port: address.port, sockets });
+    });
+    server.on("connection", (socket) => {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
     });
     server.once("error", reject);
   });
 }
 
-function closeInternal(server: Server) {
+function closeInternal(internal: InternalListener) {
   return new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
+    const forceDrain = setTimeout(() => {
+      internal.server.closeIdleConnections?.();
+      internal.server.closeAllConnections?.();
+      for (const socket of internal.sockets) socket.destroy();
+    }, INTERNAL_SERVER_SHUTDOWN_GRACE_MS);
+    forceDrain.unref?.();
+
+    internal.server.close((error) => {
+      clearTimeout(forceDrain);
+      if (error) reject(error);
+      else resolve();
+    });
   });
 }
 

@@ -3,13 +3,17 @@ import { Check, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CodexSettingsForm, type CodexSettingsPatch } from "@/features/codex/CodexSettingsForm";
+import { applyCodexRuntimeDefaults, useCodexRuntimeDefaults } from "@/features/codex/runtimeDefaults";
 import { useUiStore } from "@/store/uiStore";
 
 export function GlobalSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange(open: boolean): void }) {
   const settings = useUiStore((state) => state.codexCommandSettings);
+  const overrides = useUiStore((state) => state.codexCommandSettingOverrides);
   const updateSettings = useUiStore((state) => state.updateCodexCommandSettings);
   const [local, setLocal] = useState<CodexSettingsPatch>({});
-  const merged = useMemo(() => ({ ...settings, ...local }), [local, settings]);
+  const runtimeDefaults = useCodexRuntimeDefaults();
+  const defaultsApplied = useMemo(() => applyCodexRuntimeDefaults(settings, runtimeDefaults.data, overrides), [overrides, runtimeDefaults.data, settings]);
+  const merged = useMemo(() => ({ ...defaultsApplied, ...local }), [defaultsApplied, local]);
 
   const apply = () => {
     updateSettings(local);

@@ -6,6 +6,7 @@ export type CodexSettingsPatch = Partial<CodexCommandSettings>;
 
 export const titleItems = ["project", "thread", "branch", "status"];
 export const experimentalFeatures = ["goals", "plugins", "collaboration modes", "realtime", "multi agents"];
+const reasoningOptions = ["minimal", "low", "medium", "high", "xhigh"];
 
 export function CodexSettingsForm({
   values,
@@ -30,7 +31,7 @@ export function CodexSettingsForm({
         <h3 className="text-xs font-semibold uppercase text-muted">Runtime</h3>
         <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
           <Select label="Model" value={values.model} options={["Codex SDK default", "gpt-5.5", "gpt-5.4", "gpt-5.3-codex"]} onChange={(model) => onChange({ model })} />
-          <Select label="Reasoning" value={values.reasoningEffort} options={["low", "medium", "high", "xhigh"]} onChange={(reasoningEffort) => onChange({ reasoningEffort })} />
+          <Select label="Reasoning" value={values.reasoningEffort} options={reasoningOptions} onChange={(reasoningEffort) => onChange({ reasoningEffort })} />
           <Select label="Sandbox" value={values.sandbox} options={["read-only", "workspace-write", "danger-full-access"]} onChange={(sandbox) => onChange({ sandbox })} />
           <Select label="Approvals" value={values.approvals} options={["untrusted", "on-request", "never"]} onChange={(approvals) => onChange({ approvals })} />
         </div>
@@ -75,7 +76,7 @@ export function CommandSettingsBody({ command, values, onChange }: { command: st
     return (
       <div className="grid grid-cols-2 gap-3">
         <Select label="Model" value={String(values.model ?? "Codex SDK default")} options={["Codex SDK default", "gpt-5.5", "gpt-5.4", "gpt-5.3-codex"]} onChange={(model) => onChange({ model })} />
-        <Select label="Reasoning" value={String(values.reasoningEffort ?? "medium")} options={["low", "medium", "high", "xhigh"]} onChange={(reasoningEffort) => onChange({ reasoningEffort })} />
+        <Select label="Reasoning" value={String(values.reasoningEffort ?? "medium")} options={reasoningOptions} onChange={(reasoningEffort) => onChange({ reasoningEffort })} />
       </div>
     );
   }

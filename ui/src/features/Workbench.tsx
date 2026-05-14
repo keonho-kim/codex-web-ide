@@ -7,10 +7,10 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { normalizeWorkbenchTab, useUiStore, type WorkbenchTab } from "@/store/uiStore";
 import { workbenchTabs } from "@/features/workbenchTabs";
 import { CodexPane } from "@/features/codex/CodexPane";
-import { FilePane } from "@/features/files/FilePane";
 
 const ControlPane = lazy(() => import("@/features/control/ControlPane").then((module) => ({ default: module.ControlPane })));
 const EditorPane = lazy(() => import("@/features/editor/EditorPane").then((module) => ({ default: module.EditorPane })));
+const FilePane = lazy(() => import("@/features/files/FilePane").then((module) => ({ default: module.FilePane })));
 
 export function Workbench({
   activeProjectId,
@@ -75,7 +75,9 @@ export function Workbench({
                           <PanelLeftClose data-icon="inline-start" />
                         </Button>
                       </div>
-                      <FilePane sessionId={sessionId} />
+                      <Suspense fallback={<PaneLoading />}>
+                        <FilePane sessionId={sessionId} />
+                      </Suspense>
                     </div>
                   </Panel>
                   <PanelResizeHandle className="w-2 bg-page transition-colors hover:bg-selected-border" />
@@ -118,7 +120,9 @@ function CompactEditorPane({ sessionId }: { sessionId?: string }) {
               <SheetDescription className="sr-only">Browse and manage files in the active project.</SheetDescription>
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-hairline bg-canvas">
-              <FilePane sessionId={sessionId} showTitle={false} />
+              <Suspense fallback={<PaneLoading />}>
+                <FilePane sessionId={sessionId} showTitle={false} />
+              </Suspense>
             </div>
           </SheetContent>
         </Sheet>

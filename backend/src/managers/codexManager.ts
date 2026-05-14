@@ -6,7 +6,7 @@ import type { EventBus } from "@backend/events/eventBus";
 import type { GitManager } from "@backend/managers/gitManager";
 import type { SessionManager } from "@backend/managers/sessionManager";
 import type { SkillManager } from "@backend/managers/skillManager";
-import type { CodexMessage, CodexSlashCommandResult, CodexStatusSnapshot, ComposerMention, Session } from "@backend/shared/types";
+import type { CodexMessage, CodexRuntimeDefaults, CodexSlashCommandResult, CodexStatusSnapshot, ComposerMention, Session } from "@backend/shared/types";
 import type { CodexHistoryStore } from "@backend/managers/codex/historyStore";
 import { consumeCodexEvents, createAssistantMessage } from "@backend/managers/codex/events";
 import { buildCodexMentionContext, validateCodexMentions } from "@backend/managers/codex/mentions";
@@ -78,8 +78,7 @@ export class CodexManager {
 
   async status(session: Session): Promise<CodexStatusSnapshot> {
     const thread = await this.threadManager.current(session);
-    const cliConfig = loadCodexCliConfig();
-    const threadOptions = codexThreadOptionsFromConfig(cliConfig);
+    const runtimeDefaults = this.runtimeDefaults();
     return {
       session: {
         id: session.id,
@@ -88,19 +87,35 @@ export class CodexManager {
         status: session.status,
       },
       thread,
-      model: {
-        label: threadOptions.model || "Codex SDK default",
-        source: process.env.CODEX_MODEL ? "CODEX_MODEL" : cliConfig.model ? "Codex CLI config" : "runtime default",
-      },
-      permissions: {
-        sandbox: threadOptions.sandboxMode ?? "workspace-write",
-        approvals: threadOptions.approvalPolicy ?? "on-request",
-      },
+      model: runtimeDefaults.model,
+      permissions: runtimeDefaults.permissions,
+      theme: runtimeDefaults.theme,
       git: await this.git.state(session.cwd),
       usage: this.usage.get(session.id) ?? { note: "Token usage appears after Codex emits usage events for this session." },
       commands: {
         supported: CODEX_SLASH_COMMANDS.length,
         source: "OpenAI Codex TUI 0.129.0 slash command registry",
+      },
+    };
+  }
+
+  runtimeDefaults(): CodexRuntimeDefaults {
+    const cliConfig = loadCodexCliConfig();
+    const threadOptions = codexThreadOptionsFromConfig(cliConfig);
+    return {
+      model: {
+        label: threadOptions.model || "Codex SDK default",
+        source: process.env.CODEX_MODEL ? "CODEX_MODEL" : cliConfig.model ? "Codex CLI config" : "runtime default",
+        reasoningEffort: threadOptions.modelReasoningEffort ?? "medium",
+        reasoningSource: process.env.CODEX_MODEL_REASONING_EFFORT ? "CODEX_MODEL_REASONING_EFFORT" : cliConfig.modelReasoningEffort ? "Codex CLI config" : "runtime default",
+      },
+      permissions: {
+        sandbox: threadOptions.sandboxMode ?? "workspace-write",
+        approvals: threadOptions.approvalPolicy ?? "on-request",
+      },
+      theme: {
+        name: cliConfig.theme ?? "light",
+        source: cliConfig.theme ? "Codex CLI config" : "runtime default",
       },
     };
   }

@@ -14,7 +14,7 @@ export function useGitPanel(sessionId?: string) {
     queryKey: ["git", sessionId, "state"],
     queryFn: () => api<GitState>(`/api/sessions/${sessionId}/git/state`),
     enabled: Boolean(sessionId),
-    refetchInterval: 3000,
+    refetchInterval: 10000,
   });
   const status = useQuery({
     queryKey: ["git", sessionId, "status"],

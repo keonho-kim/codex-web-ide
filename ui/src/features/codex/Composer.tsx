@@ -1,10 +1,8 @@
-import { EditorContent } from "@tiptap/react";
 import { ArrowUp, CircleStop } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/classes";
 import { useUiStore } from "@/store/uiStore";
 import { CodexStatusLine } from "@/features/codex/CodexStatusLine";
-import { ComposerMentions } from "@/features/codex/ComposerMentions";
+import { ComposerTextarea } from "@/features/codex/ComposerTextarea";
 import { MentionSuggestions } from "@/features/codex/MentionSuggestions";
 import { SlashCommandDialog } from "@/features/codex/SlashCommandDialog";
 import { SlashCommandSuggestions } from "@/features/codex/SlashCommandSuggestions";
@@ -26,17 +24,23 @@ export function Composer({
   const canStart = Boolean((sessionId || activeProjectId) && composer.draft.trim() && !isBusy);
 
   return (
-    <div className="relative" onBeforeInputCapture={(event) => composer.onBeforeInput(event, isBusy)} onKeyDownCapture={(event) => composer.onKeyDown(event, isBusy)}>
+    <div className="relative">
       <div className="relative overflow-hidden rounded-lg border border-control bg-canvas shadow-sm transition-colors focus-within:border-primary" data-testid="composer-input">
         <CodexStatusLine running={isBusy} sessionId={sessionId} />
-        <ComposerMentions mentions={composer.selectedMentions} onRemove={composer.removeMention} />
         {!composer.draft ? (
-          <span className={cn("pointer-events-none absolute left-3 text-sm text-muted", composer.selectedMentions.length > 0 ? "top-24" : "top-[58px]")}>
+          <span className="pointer-events-none absolute top-[58px] left-3 text-sm text-muted">
             Ask Codex. Use @ for files and $ for skills.
           </span>
         ) : null}
-        <EditorContent editor={composer.editor} />
-        <div className="flex min-h-12 items-center justify-between gap-2 border-t border-hairline bg-panel/60 px-2.5 py-1.5 max-[700px]:flex-col max-[700px]:items-stretch">
+        <ComposerTextarea
+          ref={composer.textareaRef}
+          mentions={composer.selectedMentions}
+          value={composer.draft}
+          readOnly={isBusy}
+          onChange={composer.updateDraft}
+          onKeyDown={(event) => composer.onKeyDown(event, isBusy)}
+        />
+        <div className="flex min-h-12 items-center justify-between gap-2 bg-canvas px-2.5 py-1.5 max-[700px]:flex-col max-[700px]:items-stretch">
           <ComposerHint />
           <div className="flex shrink-0 items-center justify-end gap-2 max-[700px]:w-full">
             {isBusy ? (

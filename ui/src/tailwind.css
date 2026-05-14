@@ -41,6 +41,131 @@
     background: var(--color-page);
   }
 
+  :root,
+  :root[data-codex-theme="light"] {
+    --color-primary: #466a76;
+    --color-primary-foreground: #f8faf9;
+    --color-ink: #202627;
+    --color-muted: #687174;
+    --color-page: #eceeee;
+    --color-canvas: #f7f8f7;
+    --color-panel: #f1f3f2;
+    --color-hairline: #d6dcdd;
+    --color-control: #bec8ca;
+    --color-subtle: #e2e7e7;
+    --color-selected: #dce8eb;
+    --color-selected-border: #91aab1;
+    --color-success: #4f7464;
+    --color-success-soft: #e2ebe7;
+    --color-warning: #7b6a42;
+    --color-warning-soft: #ede7d8;
+    --color-codex: #626b85;
+    --color-codex-soft: #e7eaf0;
+    --color-background: #f7f8f7;
+    --color-foreground: #202627;
+    --color-secondary: #eef1f0;
+    --color-secondary-foreground: #202627;
+    --color-accent: #e5eaeb;
+    --color-accent-foreground: #2d444b;
+    --color-destructive: #b24b45;
+    --color-border: #d6dcdd;
+    --color-input: #bec8ca;
+    --color-ring: #466a76;
+  }
+
+  :root[data-codex-theme="dark"] {
+    --color-primary: #8fb7c0;
+    --color-primary-foreground: #101415;
+    --color-ink: #e3e9e9;
+    --color-muted: #9aa7aa;
+    --color-page: #111516;
+    --color-canvas: #171c1d;
+    --color-panel: #202627;
+    --color-hairline: #30393b;
+    --color-control: #516064;
+    --color-subtle: #2a3234;
+    --color-selected: #243840;
+    --color-selected-border: #6f939c;
+    --color-success: #9ac4ae;
+    --color-success-soft: #1e332b;
+    --color-warning: #d0b878;
+    --color-warning-soft: #3a321d;
+    --color-codex: #b7bdd5;
+    --color-codex-soft: #2b3040;
+    --color-background: #171c1d;
+    --color-foreground: #e3e9e9;
+    --color-secondary: #202627;
+    --color-secondary-foreground: #e3e9e9;
+    --color-accent: #263033;
+    --color-accent-foreground: #d8eeee;
+    --color-destructive: #e07a73;
+    --color-border: #30393b;
+    --color-input: #516064;
+    --color-ring: #8fb7c0;
+  }
+
+  :root[data-codex-theme="github"] {
+    --color-primary: #0969da;
+    --color-primary-foreground: #ffffff;
+    --color-ink: #24292f;
+    --color-muted: #57606a;
+    --color-page: #f6f8fa;
+    --color-canvas: #ffffff;
+    --color-panel: #f6f8fa;
+    --color-hairline: #d0d7de;
+    --color-control: #8c959f;
+    --color-subtle: #d8dee4;
+    --color-selected: #ddf4ff;
+    --color-selected-border: #54aeef;
+    --color-success: #1a7f37;
+    --color-success-soft: #dafbe1;
+    --color-warning: #9a6700;
+    --color-warning-soft: #fff8c5;
+    --color-codex: #8250df;
+    --color-codex-soft: #fbefff;
+    --color-background: #ffffff;
+    --color-foreground: #24292f;
+    --color-secondary: #f6f8fa;
+    --color-secondary-foreground: #24292f;
+    --color-accent: #eaeef2;
+    --color-accent-foreground: #24292f;
+    --color-destructive: #cf222e;
+    --color-border: #d0d7de;
+    --color-input: #8c959f;
+    --color-ring: #0969da;
+  }
+
+  :root[data-codex-theme="solarized"] {
+    --color-primary: #2aa198;
+    --color-primary-foreground: #002b36;
+    --color-ink: #eee8d5;
+    --color-muted: #93a1a1;
+    --color-page: #002b36;
+    --color-canvas: #073642;
+    --color-panel: #0b3a46;
+    --color-hairline: #164b58;
+    --color-control: #586e75;
+    --color-subtle: #13434f;
+    --color-selected: #123f4b;
+    --color-selected-border: #2aa198;
+    --color-success: #859900;
+    --color-success-soft: #243d20;
+    --color-warning: #b58900;
+    --color-warning-soft: #423715;
+    --color-codex: #6c71c4;
+    --color-codex-soft: #202a4d;
+    --color-background: #073642;
+    --color-foreground: #eee8d5;
+    --color-secondary: #0b3a46;
+    --color-secondary-foreground: #eee8d5;
+    --color-accent: #13434f;
+    --color-accent-foreground: #eee8d5;
+    --color-destructive: #dc322f;
+    --color-border: #164b58;
+    --color-input: #586e75;
+    --color-ring: #2aa198;
+  }
+
   html {
     background: var(--color-page);
   }
@@ -50,7 +175,7 @@
     overflow-x: hidden;
     overflow-y: auto;
     background:
-      linear-gradient(180deg, rgb(247 248 247 / 0.72), rgb(236 238 238 / 0) 18rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-canvas) 72%, transparent), color-mix(in srgb, var(--color-page) 0%, transparent) 18rem),
       var(--color-page);
     text-rendering: geometricPrecision;
   }

@@ -11,7 +11,7 @@ export function useAppData() {
   const setActiveProjectId = useUiStore((state) => state.setActiveProjectId);
   const setActiveSessionId = useUiStore((state) => state.setActiveSessionId);
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => api<Project[]>("/api/projects") });
-  const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => api<Session[]>("/api/sessions"), refetchInterval: 3000 });
+  const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => api<Session[]>("/api/sessions"), refetchInterval: 10000 });
   const settings = useQuery({ queryKey: ["workspace-settings"], queryFn: () => api<WorkspaceSettings>("/api/workspace/settings") });
   const orderedProjects = orderProjects(projects.data ?? [], settings.data);
   const activeProject = orderedProjects.find((project) => project.id === activeProjectId);

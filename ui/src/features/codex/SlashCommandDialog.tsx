@@ -6,6 +6,7 @@ import { normalizeStatuslineItems } from "@/lib/statusline";
 import type { CodexSlashCommandDefinition } from "@/lib/types";
 import { useUiStore } from "@/store/uiStore";
 import { CommandSettingsBody } from "@/features/codex/CodexSettingsForm";
+import { applyCodexRuntimeDefaults, useCodexRuntimeDefaults } from "@/features/codex/runtimeDefaults";
 
 type Options = Record<string, unknown>;
 
@@ -21,11 +22,14 @@ export function SlashCommandDialog({
   onApply(command: CodexSlashCommandDefinition, options: Options, args?: string): void;
 }) {
   const settings = useUiStore((state) => state.codexCommandSettings);
+  const overrides = useUiStore((state) => state.codexCommandSettingOverrides);
   const updateSettings = useUiStore((state) => state.updateCodexCommandSettings);
   const [args, setArgs] = useState("");
   const [local, setLocal] = useState<Options>({});
+  const runtimeDefaults = useCodexRuntimeDefaults();
 
-  const merged = useMemo(() => ({ ...settings, ...local }), [local, settings]);
+  const defaultsApplied = useMemo(() => applyCodexRuntimeDefaults(settings, runtimeDefaults.data, overrides), [overrides, runtimeDefaults.data, settings]);
+  const merged = useMemo(() => ({ ...defaultsApplied, ...local }), [defaultsApplied, local]);
   if (!command) return null;
 
   const apply = () => {

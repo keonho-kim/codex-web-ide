@@ -57,7 +57,18 @@ test("hides routine thread lifecycle events from the chat timeline", () => {
   ]);
 
   expect(entries).toHaveLength(1);
-  expect(entries[0]).toMatchObject({ kind: "event", id: "event-failure" });
+  expect(entries[0]).toMatchObject({ kind: "activity", id: "activity-failure" });
+});
+
+test("groups consecutive work events into one activity entry", () => {
+  const entries = buildCodexTimelineEntries([], [
+    { id: "cmd-1", kind: "command", label: "item.completed", title: "rg --files", timestamp: 100 },
+    { id: "tool-1", kind: "tool", label: "item.completed", title: "mcp.read", timestamp: 110 },
+  ]);
+
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({ kind: "activity" });
+  if (entries[0].kind === "activity") expect(entries[0].events).toHaveLength(2);
 });
 
 function assistantEvent(input: { id: string; text: string; timestamp: number }): CodexEventSummary {
