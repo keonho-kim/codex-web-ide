@@ -56,13 +56,27 @@ Supported release targets:
 
 ## Install
 
-Install the latest GitHub Release:
+Install the latest npm package:
+
+```bash
+npm install -g @keonhokim/codex-web
+```
+
+or with Bun:
+
+```bash
+bun install -g @keonhokim/codex-web
+```
+
+The npm package includes the built web UI and runtime source. It expects Bun to be available on `PATH` because the `cw` launcher runs the Bun-based CLI.
+
+Install the latest GitHub Release archive directly when you want the portable platform tarball installer:
 
 ```bash
 curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/install.sh | sh
 ```
 
-By default, the installer resolves the current latest release tag before downloading the matching production archive.
+By default, the installer resolves the current latest GitHub Release tag before downloading the matching production archive.
 
 Verify the CLI:
 
@@ -85,13 +99,13 @@ curl -fsSL https://github.com/keonho-kim/codex-web-ide/releases/latest/download/
 
 Use `CW_VERSION` only when you want to pin a release. Version values without a leading `v` are normalized automatically, so `CW_VERSION=0.1.4` resolves to `v0.1.4`.
 
-The installer downloads a release archive that already contains the built web UI and runtime dependencies:
+The GitHub Release installer downloads an archive that already contains the built web UI and runtime dependencies:
 
 ```text
 https://github.com/<owner>/<repo>/releases/download/v0.1.4/codex-web-ide-0.1.4-linux-arm64.tgz
 ```
 
-It does not run `bun install -g`, so Termux, proot, Linux, WSL, and macOS machines do not need to compile native runtime dependencies during normal installation.
+It does not run `bun install -g`, so Termux, proot, Linux, WSL, and macOS machines do not need to compile native runtime dependencies during direct archive installation.
 
 Upgrade an installed release in place:
 
@@ -219,7 +233,13 @@ Package a local production archive on a machine that can run builds:
 bun run pack:production
 ```
 
-The normal install path should use the GitHub Release artifact instead, so Termux, proot, Linux, WSL, and macOS users do not need to run `bun run build` locally.
+Prepare the npm publish package locally:
+
+```bash
+bun run pack:npm
+```
+
+Use the npm package or GitHub Release artifact for normal installs so Termux, proot, Linux, WSL, and macOS users do not need to run `bun run build` locally.
 
 ## Release Workflow
 
@@ -231,6 +251,8 @@ git push origin v0.1.4
 ```
 
 The GitHub Actions release workflow checks the installer, runs release-safe tests, builds the package, creates platform production archives such as `dist/codex-web-ide-0.1.4-linux-arm64.tgz` and `dist/codex-web-ide-0.1.4-macos-arm64.tgz`, and uploads them with `install.sh` to the matching GitHub Release.
+
+The npm release workflow prepares `dist/npm/package`, publishes `@keonhokim/codex-web`, and sets the published version as the npm `latest` dist-tag for every matching release tag.
 
 ## Environment
 

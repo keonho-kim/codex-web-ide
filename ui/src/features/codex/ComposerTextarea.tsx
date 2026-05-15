@@ -6,6 +6,7 @@ import { mentionLabel } from "@/features/codex/mentionUtils";
 export type ComposerInputHandle = {
   focusAt(index?: number): void;
   selectionStart(): number;
+  value(): string;
 };
 
 export const ComposerTextarea = forwardRef<
@@ -35,6 +36,10 @@ export const ComposerTextarea = forwardRef<
       selectionStart() {
         const editor = editorRef.current;
         return editor ? getSelectionOffset(editor) : value.length;
+      },
+      value() {
+        const editor = editorRef.current;
+        return editor ? readEditableText(editor) : value;
       },
     }),
     [value.length],

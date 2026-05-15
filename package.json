@@ -1,6 +1,6 @@
 {
   "name": "codex-web-ide",
-  "version": "0.1.6-dev.4",
+  "version": "0.1.6-dev.5",
   "description": "Local-first Codex development environment with a web UI.",
   "type": "module",
   "bin": {
@@ -29,6 +29,7 @@
     "build:web": "bunx --bun vite build ui",
     "build:package": "bun run scripts/build-package.ts",
     "pack:local": "bun run build && bun pm pack --destination dist",
+    "pack:npm": "bun run build && bun run scripts/prepare-npm-package.ts",
     "pack:production": "bun run build && bun run scripts/pack-production.ts",
     "test": "bun test backend/src ui/src",
     "setup:e2e": "bun run scripts/setup-playwright.ts",
