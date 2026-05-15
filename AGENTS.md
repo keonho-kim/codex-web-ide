@@ -80,6 +80,23 @@ When solving a task:
 - Do not run destructive Git commands without explicit user approval.
 - Require approval for `reset --hard`, `clean -fd`, force push, branch deletion, and rebase operations.
 
+## Development and Release Workflow
+
+When a user asks for development work:
+
+- Create a feature branch first using the `feat/<feature_name>` naming pattern.
+- Implement the requested change with the minimum necessary scope.
+- Run the relevant tests and `bun run build` before considering the work complete.
+
+When a user explicitly asks to deploy after development:
+
+- Merge the completed feature branch into `main` and push `main`.
+- Create and push a new version tag after the merge.
+- Unless the user explicitly asks for a stable release, keep using the dev tag line by incrementing the latest dev suffix. For example, if the latest tag is `v0.1.6-dev.5`, the next default deployment tag is `v0.1.6-dev.6`.
+- Confirm that both the GitHub Release workflow and the NPM Release workflow complete successfully.
+- If the deployment includes npm publishing, verify the public package metadata with `npm view`, then verify both `npm install -g @keonhokim/codex-web` and `bun install -g @keonhokim/codex-web` from the published package.
+- After a successful deploy, delete the completed work branch locally and remotely only when the user requested deploy-and-cleanup or otherwise explicitly authorized branch deletion.
+
 ## Honesty and Reporting
 
 - Be honest about what changed, what was not changed, what was tested, and what remains uncertain.
