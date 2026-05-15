@@ -44,6 +44,10 @@ export function useComposer({
     textareaRef.current?.focusAt(cursorIndex);
   };
 
+  const currentDraft = () => normalizeComposerDraft(textareaRef.current?.value() ?? draft);
+
+  const mentionsForDraft = (text: string) => selectedMentions.filter((mention) => text.includes(mentionLabel(mention)));
+
   const fileMentions = useQuery({
     queryKey: ["mentions", "files", sessionId, activeMentionSearch?.query],
     queryFn: () =>
@@ -105,7 +109,7 @@ export function useComposer({
   });
 
   const runCodex = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ mentions, prompt }: { mentions: ComposerMention[]; prompt: string }) => {
       let targetSessionId = sessionId;
       if (!targetSessionId) {
         if (!activeProjectId) throw new Error("Select a project before starting Codex.");
@@ -115,13 +119,13 @@ export function useComposer({
       }
       await api(`/api/sessions/${targetSessionId}/codex/run`, {
         method: "POST",
-        body: { prompt: draft, mentions: selectedMentions },
+        body: { prompt, mentions },
       });
       return { sessionId: targetSessionId };
     },
-    onMutate: () => {
-      const previousDraft = draft;
-      const previousMentions = selectedMentions;
+    onMutate: ({ mentions, prompt }) => {
+      const previousDraft = draft || prompt;
+      const previousMentions = selectedMentions.length > 0 ? selectedMentions : mentions;
       clearComposer();
       return { previousDraft, previousMentions };
     },
@@ -186,9 +190,12 @@ export function useComposer({
   };
 
   const submitComposer = () => {
-    if (!draft.trim() || runCodex.isPending || slashCommand.isPending) return;
+    const prompt = currentDraft();
+    const promptMentions = mentionsForDraft(prompt);
+    if (prompt !== draft) updateDraft(prompt, textareaRef.current?.selectionStart() ?? prompt.length);
+    if (!prompt.trim() || runCodex.isPending || slashCommand.isPending) return;
     if (!sessionId && !activeProjectId) return;
-    const parsed = parseSlashInvocation(draft, slashCommands.data ?? []);
+    const parsed = parseSlashInvocation(prompt, slashCommands.data ?? []);
     if (parsed) {
       if (!sessionId) return;
       if (parsed.command.nativeSurface === "modal" || (parsed.command.requiresConfirmation && !parsed.args)) {
@@ -204,7 +211,7 @@ export function useComposer({
       }
       return;
     }
-    runCodex.mutate();
+    runCodex.mutate({ prompt, mentions: promptMentions });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, running = false) => {
