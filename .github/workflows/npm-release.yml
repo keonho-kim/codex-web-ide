@@ -69,7 +69,7 @@ jobs:
             npm publish dist/npm/package --access public --tag latest
           fi
 
-          npm access public "${PACKAGE_NAME}" || true
+          npm access set status=public "${PACKAGE_NAME}" || true
           npm dist-tag add "${PACKAGE_NAME}@${PACKAGE_VERSION}" latest
 
           public_npmrc="$(mktemp)"
