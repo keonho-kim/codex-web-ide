@@ -17,11 +17,9 @@ Codex Web IDE turns a local Codex runtime into a focused browser workspace for p
 
 ## Contents
 
-- [Highlights](#highlights)
-- [Requirements](#requirements)
-- [Install](#install)
-- [Quick Start](#quick-start)
-- [Managed Commands](#managed-commands)
+- [Product Description](#product-description)
+- [Installation](#installation)
+- [CLI Commands](#cli-commands)
 - [External Access](#external-access)
 - [Architecture](#architecture)
 - [Development](#development)
@@ -29,7 +27,13 @@ Codex Web IDE turns a local Codex runtime into a focused browser workspace for p
 - [Environment](#environment)
 - [Project Status](#project-status)
 
-## Highlights
+## Product Description
+
+Codex Web IDE is a local-first browser workspace for running Codex against real projects on your machine. It combines project sessions, file browsing, Monaco editing, Codex chat, managed shell commands, previews, services, terminals, and Git workflows behind a Bun-powered local backend.
+
+The product is designed for Android tablets through Termux first, while keeping the same workflow practical on Linux, WSL, and macOS.
+
+### Highlights
 
 - **Installable CLI:** run the app with `cw start` or `codex-web start`.
 - **Local-first runtime:** files, Git, Codex sessions, terminals, jobs, previews, and services stay on your machine.
@@ -38,7 +42,9 @@ Codex Web IDE turns a local Codex runtime into a focused browser workspace for p
 - **Termux-first remote access:** expose the app through Tailscale and Telegram approval auth instead of public port forwarding.
 - **Portable release archives:** production installs use prebuilt GitHub Release artifacts, so target devices do not need to build the web UI locally.
 
-## Requirements
+## Installation
+
+### Requirements
 
 - Bun 1.1+
 - Git
@@ -54,7 +60,7 @@ Supported release targets:
 | Linux / WSL | `arm64`, `x64` |
 | macOS | `arm64`, `x64` |
 
-## Install
+### npm package
 
 Install the latest npm package:
 
@@ -62,13 +68,17 @@ Install the latest npm package:
 npm install -g @keonhokim/codex-web
 ```
 
-or with Bun:
+The npm package includes the built web UI and runtime source. It expects Bun to be available on `PATH` because the `cw` launcher runs the Bun-based CLI.
+
+### Bun global package
+
+Install the same published package with Bun:
 
 ```bash
 bun install -g @keonhokim/codex-web
 ```
 
-The npm package includes the built web UI and runtime source. It expects Bun to be available on `PATH` because the `cw` launcher runs the Bun-based CLI.
+### GitHub Release archive
 
 Install the latest GitHub Release archive directly when you want the portable platform tarball installer:
 
@@ -107,21 +117,11 @@ https://github.com/<owner>/<repo>/releases/download/v0.1.4/codex-web-ide-0.1.4-l
 
 It does not run `bun install -g`, so Termux, proot, Linux, WSL, and macOS machines do not need to compile native runtime dependencies during direct archive installation.
 
-Upgrade an installed release in place:
+## CLI Commands
 
-```bash
-cw upgrade
-```
+Both `cw` and `codex-web` point to the same CLI.
 
-`cw upgrade` reruns the release installer for the same install root and prunes older release directories after a successful install. It does not remove user data under `~/.codex-web`.
-
-Uninstall the release installation and command launchers:
-
-```bash
-cw uninstall
-```
-
-## Quick Start
+### Quick start
 
 Initialize a project session and start the local server:
 
@@ -130,24 +130,46 @@ cw init /path/to/project
 cw start
 ```
 
-Useful runtime commands:
-
-```bash
-cw status
-cw open
-cw stop
-cw restart
-```
-
-The default app URL is:
+Open the default app URL:
 
 ```text
 http://127.0.0.1:17321
 ```
 
-## Managed Commands
+### Server commands
 
-Run project commands through Codex Web IDE so process state, logs, ports, and previews remain visible in the UI.
+| Command | Purpose |
+| --- | --- |
+| `cw start [options]` | Start the local backend and serve the web UI. |
+| `cw stop` | Stop the running local backend through the shutdown API. |
+| `cw restart [options]` | Stop the current backend and start it again. |
+| `cw status` | Print whether the backend is running, plus the PID and URL when available. |
+| `cw open` | Open the running app URL in the system browser. |
+| `cw doctor` | Check required binaries, storage access, the app port, and sampled preview ports. |
+
+`cw start` and `cw restart` accept:
+
+- `--host 127.0.0.1`
+- `--port 17321`
+- `--preview-port-start 17330`
+- `--preview-port-end 17399`
+- `--auth enable|disable`
+
+### Workspace and install commands
+
+| Command | Purpose |
+| --- | --- |
+| `cw init [project-path]` | Add Codex Web IDE project guidance to a project. |
+| `cw config telegram` | Configure Telegram approval auth for remote access. |
+| `cw update` | Print upgrade guidance for release installs. |
+| `cw upgrade` | Rerun the release installer for the current install root and prune older release directories after success. |
+| `cw uninstall` | Remove the release installation and managed command launchers. |
+
+`cw upgrade` does not remove user data under `~/.codex-web`.
+
+### Managed project commands
+
+Run project commands through Codex Web IDE so process state, logs, ports, and previews remain visible in the UI:
 
 ```bash
 cw job bun test
@@ -157,11 +179,11 @@ cw service python bot.py
 
 Use:
 
-- `cw job` for commands expected to finish.
-- `cw preview` for browser-viewable development servers.
-- `cw service` for long-running background processes.
+- `cw job [--approve-dangerous] <command...>` for commands expected to finish.
+- `cw preview [--approve-dangerous] <command...>` for browser-viewable development servers.
+- `cw service [--approve-dangerous] <command...>` for long-running background processes.
 
-Dangerous commands are blocked unless explicitly approved:
+Dangerous commands are blocked unless explicitly approved with `--approve-dangerous`:
 
 ```bash
 cw job --approve-dangerous git reset --hard
