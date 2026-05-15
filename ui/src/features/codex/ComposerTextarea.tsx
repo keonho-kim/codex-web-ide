@@ -48,7 +48,7 @@ export const ComposerTextarea = forwardRef<
     const cursor = pendingCursorRef.current ?? (shouldRestoreSelection ? getSelectionOffset(editor) : null);
     const didRender = renderEditableContentIfNeeded(editor, value, mentions);
     pendingCursorRef.current = null;
-    if ((didRender || cursor !== null) && cursor !== null && shouldRestoreSelection) setSelectionOffset(editor, Math.min(cursor, value.length));
+    if (didRender && cursor !== null && shouldRestoreSelection) setSelectionOffset(editor, Math.min(cursor, value.length));
   }, [mentions, value]);
 
   const emitChange = () => {
@@ -56,12 +56,12 @@ export const ComposerTextarea = forwardRef<
     if (!editor) return;
     const text = readEditableText(editor);
     const cursor = getSelectionOffset(editor);
-    pendingCursorRef.current = cursor;
     onChange(text, cursor);
   };
 
   const handleInput = (event: FormEvent<HTMLDivElement>) => {
-    if (composingRef.current || (event.nativeEvent as InputEvent).isComposing) return;
+    const nativeEvent = event.nativeEvent as InputEvent;
+    if (composingRef.current || nativeEvent.isComposing || isCompositionInput(nativeEvent)) return;
     emitChange();
   };
 
@@ -303,6 +303,10 @@ function insertTextAtSelection(text: string) {
   range.collapse(true);
   selection.removeAllRanges();
   selection.addRange(range);
+}
+
+function isCompositionInput(event: InputEvent) {
+  return event.inputType === "insertCompositionText" || event.inputType === "deleteCompositionText";
 }
 
 function isMentionBoundary(value: string | undefined) {

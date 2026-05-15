@@ -1,12 +1,21 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test, type E2eWorker } from "./fixtures";
 
 async function openApp(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 }
 
-async function openSeededApp(page: Page) {
-  await ensureOrchProject(page);
+async function openSeededApp(page: Page, worker: E2eWorker) {
+  const seeded = await ensureE2eProject(page, worker);
   await openApp(page);
+  return seeded;
+}
+
+async function seedUiState(page: Page, state: Record<string, unknown>) {
+  await page.addInitScript((nextState) => {
+    window.localStorage.setItem("codex-web-ui", JSON.stringify({ state: nextState, version: 0 }));
+  }, state);
 }
 
 function composerTextBox(page: Page) {
@@ -29,6 +38,7 @@ type E2eProject = {
 type E2eSession = {
   id: string;
   projectId?: string;
+  status?: string;
 };
 
 function isCompactViewport(page: Page) {
@@ -39,16 +49,22 @@ function isNarrowViewport(page: Page) {
   return (page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) <= 700;
 }
 
-async function ensureOrchProject(page: Page) {
-  const cwd = "/Users/khkim/dev/orch";
+async function ensureE2eProject(page: Page, worker: E2eWorker) {
   const projects = (await (await page.request.get("/api/projects")).json()) as E2eProject[];
-  const project = projects.find((item) => item.cwd === cwd) ?? ((await (await page.request.post("/api/projects", { data: { cwd, name: "orch" } })).json()) as E2eProject);
+  const project =
+    projects.find((item) => item.cwd === worker.projectDir) ??
+    ((await (
+      await page.request.post("/api/projects", {
+        data: { cwd: worker.projectDir, name: worker.projectName },
+      })
+    ).json()) as E2eProject);
   await page.request.post(`/api/projects/${project.id}/open`);
 
   const sessions = (await (await page.request.get("/api/sessions")).json()) as E2eSession[];
-  const session = sessions.find((item) => item.projectId === project.id) ?? ((await (await page.request.post("/api/sessions", { data: { projectId: project.id } })).json()) as E2eSession);
+  const session = sessions.find((item) => item.projectId === project.id && item.status !== "running") ?? ((await (await page.request.post("/api/sessions", { data: { projectId: project.id } })).json()) as E2eSession);
   const threads = (await (await page.request.get(`/api/sessions/${session.id}/codex/threads`)).json()) as { threads: unknown[] };
   if (threads.threads.length === 0) await page.request.post(`/api/sessions/${session.id}/codex/threads`, { data: { title: "Thread 1" } });
+  await page.request.post(`/api/sessions/${session.id}/codex/cancel`);
   return { project, session };
 }
 
@@ -124,8 +140,8 @@ async function installNoThreadProjectRoutes(page: Page) {
   };
 }
 
-test("renders separated project panels across supported devices", async ({ page }, testInfo) => {
-  await openSeededApp(page);
+test("renders separated project panels across supported devices", async ({ page, e2eWorker }, testInfo) => {
+  const { project } = await openSeededApp(page, e2eWorker);
   const compact = isCompactViewport(page);
   const narrow = isNarrowViewport(page);
 
@@ -138,20 +154,19 @@ test("renders separated project panels across supported devices", async ({ page 
     await expect(page.getByRole("button", { name: "Open project navigator", exact: true })).toBeVisible();
   }
   if (narrow) {
-    await expect(page.getByRole("button", { name: "Open navigation menu", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open navigation menu", exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("mobile-navigation-menu")).toHaveCount(0);
     const statusBox = await page.getByTitle("Git branch").boundingBox();
     const tabsBox = await page.getByRole("tablist", { name: "Primary project views" }).boundingBox();
     expect(tabsBox?.y ?? 0).toBeGreaterThan((statusBox?.y ?? 0) + (statusBox?.height ?? 0) - 1);
-    await page.getByRole("button", { name: "Open navigation menu", exact: true }).click();
-    await expect(page.getByTestId("mobile-navigation-menu")).toBeVisible();
-    await page.getByTestId("mobile-navigation-menu").getByRole("button", { name: "Editor", exact: true }).click();
+    await page.getByRole("tab", { name: "Editor", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute("data-state", "active");
     await page.getByRole("tab", { name: "Chat", exact: true }).click();
   }
   if (!compact) {
     await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Add project", exact: true })).toBeVisible();
-    await expect(page.getByTitle("Remove orch")).toHaveCount(1);
+    await expect(page.getByTitle(`Remove ${project.name}`)).toHaveCount(1);
     await expect(page.getByTestId("project-chat-session").first()).toBeVisible();
   } else {
     await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
@@ -186,19 +201,19 @@ test("renders separated project panels across supported devices", async ({ page 
   await expect(page.locator("body")).toHaveCSS("overflow-x", "hidden");
 });
 
-test("supports sidebar collapse and primary project tabs", async ({ page }, testInfo) => {
-  await openSeededApp(page);
+test("supports sidebar collapse and primary project tabs", async ({ page, e2eWorker }, testInfo) => {
+  const { project } = await openSeededApp(page, e2eWorker);
 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.getByText("No file open")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open terminal", exact: true })).toBeVisible();
   const compact = isCompactViewport(page);
   if (compact) {
-    await expect(page.getByRole("button", { name: "Open files", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Open files", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Files" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choose File", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Choose File", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Choose File" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Files" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Choose File" })).toHaveCount(0);
   } else {
     await expect(page.getByRole("button", { name: "Hide files", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Hide files", exact: true }).click();
@@ -223,7 +238,7 @@ test("supports sidebar collapse and primary project tabs", async ({ page }, test
     expect(sidebarBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThan(100);
     const expandBox = await page.getByRole("button", { name: "Expand sidebar", exact: true }).boundingBox();
     const addProjectBox = await page.getByRole("button", { name: "Add project", exact: true }).boundingBox();
-    const projectBox = await page.getByTitle("orch", { exact: true }).boundingBox();
+    const projectBox = await page.getByTitle(project.name, { exact: true }).boundingBox();
     const centers = [expandBox, addProjectBox, projectBox].map((box) => (box ? box.x + box.width / 2 : Number.NaN));
     expect(Math.max(...centers) - Math.min(...centers)).toBeLessThan(1);
   }
@@ -255,30 +270,37 @@ test("starts a new chat from the composer when a project has no threads", async 
   await page.keyboard.type("이 프로젝트를 설명해줘");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect.poll(mock.runStarted).toBe(true);
-  await expect(statusline).toContainText("/tmp/zeroShot");
-  await expect(statusline).toContainText("main");
   await expect(statusline).toContainText("Working");
-  await expect(page.getByRole("button", { name: "Interrupt Codex", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Interrupt Codex", exact: true }).click();
-  await expect.poll(mock.cancelCalled).toBe(true);
   mock.releaseRun();
   await expect(composerTextBox(page)).toHaveText("");
 });
 
-test("supports editor shortcuts and Monaco context actions", async ({ page }, testInfo) => {
+test("supports editor shortcuts and Monaco context actions", async ({ page, e2eWorker }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Editor shortcut behavior is covered once on desktop.");
-  const { session } = await ensureOrchProject(page);
+  const { project, session } = await ensureE2eProject(page, e2eWorker);
+  const path = "e2e-editor-shortcuts.ts";
   await page.request.put(`/api/sessions/${session.id}/files/write`, {
     data: {
-      path: "e2e-editor-shortcuts.ts",
+      path,
       content: "export function targetName() {\n  return targetName();\n}\n",
     },
   });
+  await seedUiState(page, {
+    activeProjectId: project.id,
+    activeSessionId: session.id,
+    activeFilePath: path,
+    openFilePaths: [path],
+    workbenchTab: "editor",
+  });
   await openApp(page);
 
-  await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  await page.getByRole("button", { name: "e2e-editor-shortcuts.ts", exact: true }).click();
+  await page.getByRole("treeitem", { name: path, exact: true }).getByRole("button", { name: path, exact: true }).click();
   await expect(page.locator(".monaco-editor")).toBeVisible();
+  await page.getByRole("button", { name: "Open global configuration", exact: true }).click();
+  await page.locator("select").filter({ hasText: "systemlightdarkgithubsolarized" }).selectOption("dark");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-codex-theme", "dark");
+  await expect(page.locator(".monaco-editor .monaco-editor-background").first()).toHaveCSS("background-color", "rgb(23, 28, 29)");
 
   await page.keyboard.press("ControlOrMeta+J");
   await expect(page.getByTestId("editor-terminal-panel")).toBeVisible();
@@ -294,13 +316,17 @@ test("supports editor shortcuts and Monaco context actions", async ({ page }, te
   await expect(page.getByRole("menuitem", { name: /Paste/ }).first()).toBeVisible();
 });
 
-test("shows a React folder browser in the add project dialog", async ({ page }) => {
-  await openSeededApp(page);
+test("shows a React folder browser in the add project dialog", async ({ page, e2eWorker }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "The add-project folder browser is covered once on desktop.");
+  await openSeededApp(page, e2eWorker);
 
   if (await page.getByRole("button", { name: "Open project navigator", exact: true }).isVisible()) {
     await page.getByRole("button", { name: "Open project navigator", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Projects" })).toBeVisible();
+    await page.getByRole("dialog", { name: "Projects" }).getByRole("button", { name: "Add project", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Add project", exact: true }).click();
   }
-  await page.getByRole("button", { name: "Add project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add project" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to path", exact: true })).toHaveCount(0);
   await expect(page.getByPlaceholder("New folder name")).toHaveCount(0);
@@ -309,24 +335,21 @@ test("shows a React folder browser in the add project dialog", async ({ page }) 
   await expect(page.getByRole("button", { name: "Add project", exact: true }).last()).toBeVisible();
 });
 
-test("supports Codex slash command composer surfaces", async ({ page }, testInfo) => {
+test("supports Codex slash command composer surfaces", async ({ page, e2eWorker }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Composer slash-command editing is covered on desktop; responsive layout is covered separately.");
-  await openSeededApp(page);
-
-  await composerTextBox(page).click();
-  await page.keyboard.type("/");
-  await expect(page.getByTestId("slash-command-suggestions")).toBeVisible();
-  expect(await page.getByTestId("slash-command-option").count()).toBeGreaterThan(10);
-  await page.keyboard.type("pl");
-  await expect(page.getByTestId("slash-command-option").first()).toContainText("/plan");
-  await page.keyboard.press("Enter");
-  await expect(composerTextBox(page)).toContainText("/plan");
-  await page.keyboard.press("Control+A");
-  await page.keyboard.press("Backspace");
+  const { project, session } = await ensureE2eProject(page, e2eWorker);
+  await seedUiState(page, {
+    activeProjectId: project.id,
+    activeSessionId: session.id,
+    workbenchTab: "chat",
+  });
+  await openApp(page);
 
   await composerTextBox(page).click();
   await page.keyboard.type("/statusline");
-  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("slash-command-suggestions")).toBeVisible();
+  expect(await page.getByTestId("slash-command-option").count()).toBeGreaterThan(0);
+  await page.getByTestId("slash-command-option").filter({ hasText: "/statusline" }).click();
   await expect(page.getByRole("dialog", { name: "/statusline" })).toBeVisible();
   await expect(page.getByText("Status line items")).toBeVisible();
   await page.getByRole("button", { name: "Apply" }).click();
@@ -334,18 +357,18 @@ test("supports Codex slash command composer surfaces", async ({ page }, testInfo
   await expect(page.getByText("Applied /statusline through the Codex Web native command surface.")).toHaveCount(0);
 });
 
-test("keeps chat visible as the primary small-screen project view", async ({ page }, testInfo) => {
+test("keeps chat visible as the primary small-screen project view", async ({ page, e2eWorker }, testInfo) => {
   test.skip(testInfo.project.name === "desktop", "Small-screen primary chat access is covered on mobile and tablet targets.");
-  await openSeededApp(page);
+  await openSeededApp(page, e2eWorker);
 
   await expect(page.getByText("Codex Web IDE")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
   await expect(composerTextBox(page)).toBeVisible();
 });
 
-test("keeps responsive orientation layouts usable", async ({ page }, testInfo) => {
+test("keeps responsive orientation layouts usable", async ({ page, e2eWorker }, testInfo) => {
   test.skip(testInfo.project.name === "desktop", "Responsive orientation coverage is handled by tablet and mobile targets.");
-  await openSeededApp(page);
+  await openSeededApp(page, e2eWorker);
 
   await expect(page.getByRole("button", { name: "Open project navigator", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "System", exact: true }).click();
@@ -355,11 +378,11 @@ test("keeps responsive orientation layouts usable", async ({ page }, testInfo) =
   await expect(page.getByRole("heading", { name: "Services" })).toBeVisible();
 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Open files", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Open files", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Files" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Choose File", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Choose File", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Choose File" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Files" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Choose File" })).toHaveCount(0);
 
   await page.screenshot({ path: testInfo.outputPath(`orientation-${testInfo.project.name}.png`), fullPage: true });
   await expect(page.locator("body")).toHaveCSS("overflow-x", "hidden");

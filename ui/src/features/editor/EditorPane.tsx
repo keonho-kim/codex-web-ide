@@ -9,8 +9,10 @@ import { cn } from "@/lib/classes";
 import { confirmDangerousCommand, requiresDangerousApproval } from "@/lib/commandSafety";
 import type { FileTreeNode, PreviewInstance } from "@/lib/types";
 import { useUiStore } from "@/store/uiStore";
+import { useResolvedCodexTheme } from "@/features/app/useCodexTheme";
 import { isPreviewablePath } from "@/features/editor/documentTypes";
 import { registerEditorActions } from "@/features/editor/editorActions";
+import { monacoThemeForCodexTheme, registerCodexMonacoThemes } from "@/features/editor/monacoThemes";
 import { PreviewSuggestionToast } from "@/features/editor/PreviewSuggestionToast";
 import { getSuggestedPreviewCommand, sameCommand } from "@/features/editor/previewCommands";
 import { QuickOpen } from "@/features/editor/QuickOpen";
@@ -28,10 +30,12 @@ function preloadEditorTerminalPanel() {
 }
 
 loader.config({ monaco });
+registerCodexMonacoThemes(monaco);
 
 export function EditorPane({ sessionId }: { sessionId?: string }) {
   const queryClient = useQueryClient();
   const editorRef = useRef<MonacoEditor | null>(null);
+  const { resolvedTheme } = useResolvedCodexTheme();
   const [mode, setMode] = useState<EditorMode>("raw");
   const [activePreviewTabId, setActivePreviewTabId] = useState<string | undefined>();
   const [iframeVersion] = useState(0);
@@ -84,6 +88,7 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
     ? (previews.data ?? []).some((preview) => preview.status === "running" && sameCommand(preview.command, previewCommand))
     : false;
   const dirty = Boolean(activeFilePath && file.data && draft !== file.data.content);
+  const monacoTheme = monacoThemeForCodexTheme(resolvedTheme);
 
   const save = useMutation({
     mutationFn: () => api("/api/sessions/" + sessionId + "/files/write", { method: "PUT", body: { path: activeFilePath, content: draft } }),
@@ -119,6 +124,10 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
   useEffect(() => {
     if (selectedPreviewId && previews.data?.some((preview) => preview.id === selectedPreviewId)) setActivePreviewTabId(selectedPreviewId);
   }, [previews.data, selectedPreviewId]);
+
+  useEffect(() => {
+    monaco.editor.setTheme(monacoTheme);
+  }, [monacoTheme]);
 
   useEffect(() => {
     if (editorBottomPanelOpen) {
@@ -291,9 +300,11 @@ export function EditorPane({ sessionId }: { sessionId?: string }) {
             height="100%"
             path={activeFilePath}
             value={draft}
-            theme="vs-light"
+            theme={monacoTheme}
             options={{ minimap: { enabled: false }, fontSize: 14, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 18, bottom: 18 }, contextmenu: true }}
             onMount={(editor, monacoInstance) => {
+              registerCodexMonacoThemes(monacoInstance);
+              monacoInstance.editor.setTheme(monacoTheme);
               editorRef.current = editor;
               registerEditorActions(editor, monacoInstance, toggleTerminalPanel);
             }}

@@ -19,16 +19,9 @@ export default defineConfig({
   testDir: "./ui/e2e",
   testMatch: "**/*.pw.ts",
   reporter: "line",
-  workers: 1,
+  workers: 8,
   use: {
-    baseURL: "http://127.0.0.1:17325",
     trace: "retain-on-failure",
-  },
-  webServer: {
-    command: "bun run cw start --host 127.0.0.1 --port 17325 --auth disable",
-    url: "http://127.0.0.1:17325/api/health",
-    reuseExistingServer: false,
-    timeout: 15000,
   },
   projects: [
     {

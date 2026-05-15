@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Files, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Files, FolderSearch, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -109,14 +109,14 @@ function CompactEditorPane({ sessionId }: { sessionId?: string }) {
       <div className="flex h-11 items-center justify-between border-b border-hairline bg-panel px-3">
         <Sheet>
           <SheetTrigger asChild>
-            <Button aria-label="Open files" title="Open files" type="button" variant="outline" size="sm">
-              <Files data-icon="inline-start" />
-              Files
+            <Button aria-label="Choose File" title="Choose File" type="button" variant="outline" size="sm">
+              <FolderSearch data-icon="inline-start" />
+              Choose File
             </Button>
           </SheetTrigger>
           <SheetContent className="w-[min(92vw,420px)] border-hairline bg-page p-3" side="left">
             <SheetHeader className="p-0 pr-8">
-              <SheetTitle className="text-sm text-ink">Files</SheetTitle>
+              <SheetTitle className="text-sm text-ink">Choose File</SheetTitle>
               <SheetDescription className="sr-only">Browse and manage files in the active project.</SheetDescription>
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-hairline bg-canvas">
